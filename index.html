@@ -262,16 +262,11 @@
   <div class="auth-gate" id="authGate">
     <div class="auth-box">
       <h2>Just the Bits — synced</h2>
-      <p>Sign in to sync your bits across phone and laptop. We will email you a 6-digit code — no password.</p>
-      <div id="stepEmail">
-        <input type="email" id="magicEmail" placeholder="you@email.com" autocomplete="email" inputmode="email" />
-        <button id="magicSend">Email me a code</button>
-      </div>
-      <div id="stepCode" style="display:none">
-        <input type="text" id="codeInput" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" />
-        <button id="codeVerify">Sign in</button>
-        <button id="codeBack" style="background:transparent;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-top:4px">use a different email</button>
-      </div>
+      <p>Use the same email and password on each device to keep your bits in sync. Pick something you will remember.</p>
+      <input type="email" id="authEmail" placeholder="you@email.com" autocomplete="email" inputmode="email" />
+      <input type="password" id="authPass" placeholder="password (6+ characters)" autocomplete="current-password" />
+      <button id="authSignin">Sign in</button>
+      <button id="authSignup" style="background:transparent;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-top:6px">First time here? Create account</button>
       <div class="auth-msg" id="magicMsg"></div>
     </div>
   </div>
@@ -782,8 +777,6 @@
       if (who) who.textContent = sbUser.email || "signed in";
     } else {
       gate.classList.add("open");
-      var se = document.getElementById("stepEmail"), sc = document.getElementById("stepCode");
-      if (se && sc) { se.style.display = "block"; sc.style.display = "none"; }
       setSyncStatus("");
     }
   }
@@ -801,40 +794,30 @@
       updateAuthUI();
       if (sbUser) { pullState(true); subscribeRealtime(); }
     });
-    var pendingEmail = "";
-    var sendBtn = document.getElementById("magicSend");
-    if (sendBtn) sendBtn.onclick = function () {
-      var email = document.getElementById("magicEmail").value.trim();
-      if (!email) return;
-      pendingEmail = email;
-      sendBtn.textContent = "Sending...";
-      sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } })
-        .then(function (res) {
-          sendBtn.textContent = "Email me a code";
-          if (res.error) { document.getElementById("magicMsg").textContent = "Error: " + res.error.message; return; }
-          document.getElementById("stepEmail").style.display = "none";
-          document.getElementById("stepCode").style.display = "block";
-          document.getElementById("magicMsg").textContent = "Code sent to " + email + ". Check your email (and spam).";
-          setTimeout(function () { document.getElementById("codeInput").focus(); }, 0);
-        });
+    function readCreds() {
+      return { email: document.getElementById("authEmail").value.trim(), pass: document.getElementById("authPass").value };
+    }
+    var siBtn = document.getElementById("authSignin");
+    if (siBtn) siBtn.onclick = function () {
+      var c = readCreds();
+      if (!c.email || !c.pass) { document.getElementById("magicMsg").textContent = "Enter your email and password."; return; }
+      siBtn.textContent = "Signing in...";
+      sb.auth.signInWithPassword({ email: c.email, password: c.pass }).then(function (res) {
+        siBtn.textContent = "Sign in";
+        document.getElementById("magicMsg").textContent = res.error ? "Wrong email or password — or tap Create account." : "";
+      });
     };
-    var verifyBtn = document.getElementById("codeVerify");
-    if (verifyBtn) verifyBtn.onclick = function () {
-      var code = document.getElementById("codeInput").value.trim();
-      if (!code || !pendingEmail) return;
-      verifyBtn.textContent = "Signing in...";
-      sb.auth.verifyOtp({ email: pendingEmail, token: code, type: "email" })
-        .then(function (res) {
-          verifyBtn.textContent = "Sign in";
-          if (res.error) { document.getElementById("magicMsg").textContent = "That code did not work — check it or resend."; }
-          else { document.getElementById("magicMsg").textContent = ""; document.getElementById("codeInput").value = ""; }
-        });
-    };
-    var backBtn = document.getElementById("codeBack");
-    if (backBtn) backBtn.onclick = function () {
-      document.getElementById("stepCode").style.display = "none";
-      document.getElementById("stepEmail").style.display = "block";
-      document.getElementById("magicMsg").textContent = "";
+    var suBtn = document.getElementById("authSignup");
+    if (suBtn) suBtn.onclick = function () {
+      var c = readCreds();
+      if (!c.email || !c.pass) { document.getElementById("magicMsg").textContent = "Enter an email and a password (6+ characters)."; return; }
+      suBtn.textContent = "Creating...";
+      sb.auth.signUp({ email: c.email, password: c.pass }).then(function (res) {
+        suBtn.textContent = "First time here? Create account";
+        if (res.error) { document.getElementById("magicMsg").textContent = res.error.message; }
+        else if (!res.data.session) { document.getElementById("magicMsg").textContent = "Account created — now tap Sign in."; }
+        else { document.getElementById("magicMsg").textContent = ""; }
+      });
     };
     var outBtn = document.getElementById("signOut");
     if (outBtn) outBtn.onclick = function () {
