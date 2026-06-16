@@ -187,6 +187,19 @@
   .auth-msg { font-size: 13px; color: var(--accent); margin-top: 12px; min-height: 18px; }
   .sync-chip { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
   .sign-out { background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 10.5px; text-decoration: underline; padding: 0 4px; }
+
+  /* ——— first-run welcome ——— */
+  .welcome-gate { position: fixed; inset: 0; background: var(--page); z-index: 90; display: none; align-items: center; justify-content: center; padding: 28px; }
+  .welcome-gate.open { display: flex; }
+  .welcome-box { max-width: 400px; width: 100%; }
+  .welcome-box h2 { font-family: var(--serif, serif); font-size: 26px; margin: 0 0 4px; color: var(--ink); text-align: center; }
+  .welcome-box .wsub { text-align: center; color: var(--muted); font-size: 13px; margin: 0 0 22px; }
+  .welcome-row { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+  .welcome-row .wnum { flex: 0 0 auto; width: 24px; height: 24px; border-radius: 999px; background: var(--accent); color: var(--onaccent); font-family: var(--mono); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .welcome-row p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ink); }
+  .welcome-row p b { color: var(--ink); }
+  .welcome-priv { font-size: 12.5px; color: var(--muted); font-style: italic; text-align: center; margin: 18px 0 20px; line-height: 1.5; }
+  .welcome-go { width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--accent); color: var(--onaccent); font-family: var(--mono); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -257,6 +270,17 @@
       <div class="notes-index" style="margin-top:8px">
         <div id="boneList"></div>
       </div>
+    </div>
+  </div>
+  <div class="welcome-gate" id="welcomeGate">
+    <div class="welcome-box">
+      <h2>Just the Bits</h2>
+      <p class="wsub">a private notebook for working out your material</p>
+      <div class="welcome-row"><span class="wnum">1</span><p><b>Make an account</b> with any email and a password. It is just to keep your bits synced across your phone and laptop.</p></div>
+      <div class="welcome-row"><span class="wnum">2</span><p><b>Capture and shape bits</b> through four stages — concept, bit, stage-ready, stage-proven. Tap any bit to open its workbench.</p></div>
+      <div class="welcome-row"><span class="wnum">3</span><p><b>Add it to your home screen.</b> On iPhone: tap the Share button, then <b>Add to Home Screen</b>. It opens full-screen like an app.</p></div>
+      <p class="welcome-priv">Your bits are yours alone. No one else can see them — not even whoever shared this with you.</p>
+      <button class="welcome-go" id="welcomeGo">Get started</button>
     </div>
   </div>
   <div class="auth-gate" id="authGate">
@@ -964,6 +988,21 @@
   load();
   render();
   initSupabase();
+
+  // ——— first-run welcome ———
+  (function () {
+    var WKEY = "bits-welcomed";
+    try {
+      if (!localStorage.getItem(WKEY)) {
+        document.getElementById("welcomeGate").classList.add("open");
+      }
+    } catch (e) {}
+    var go = document.getElementById("welcomeGo");
+    if (go) go.onclick = function () {
+      try { localStorage.setItem(WKEY, "1"); } catch (e) {}
+      document.getElementById("welcomeGate").classList.remove("open");
+    };
+  })();
 })();
 </script>
 </body>
