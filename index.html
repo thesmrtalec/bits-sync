@@ -262,9 +262,16 @@
   <div class="auth-gate" id="authGate">
     <div class="auth-box">
       <h2>Just the Bits — synced</h2>
-      <p>Sign in with your email to keep your bits in sync across phone and laptop. We’ll send a one-tap sign-in link — no password.</p>
-      <input type="email" id="magicEmail" placeholder="you@email.com" autocomplete="email" />
-      <button id="magicSend">Send sign-in link</button>
+      <p>Sign in to sync your bits across phone and laptop. We will email you a 6-digit code — no password.</p>
+      <div id="stepEmail">
+        <input type="email" id="magicEmail" placeholder="you@email.com" autocomplete="email" inputmode="email" />
+        <button id="magicSend">Email me a code</button>
+      </div>
+      <div id="stepCode" style="display:none">
+        <input type="text" id="codeInput" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" />
+        <button id="codeVerify">Sign in</button>
+        <button id="codeBack" style="background:transparent;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-top:4px">use a different email</button>
+      </div>
       <div class="auth-msg" id="magicMsg"></div>
     </div>
   </div>
@@ -699,9 +706,10 @@
       try {
         var data = JSON.parse(reader.result);
         if (!data.bits) throw new Error("bad file");
-        if (!confirm("Replace this device\u2019s notebook with the backup? Anything on this device that isn\u2019t in the backup will be overwritten.")) return;
-        localStorage.setItem(KEY, JSON.stringify(data));
-        load(); render();
+        if (!confirm("Replace this device’s notebook with the backup? Anything on this device that isn’t in the backup will be overwritten.")) return;
+        hydrate(data);
+        save();
+        render();
       } catch (err) {
         alert("Couldn't read that file. It needs to be a backup exported from this notebook.");
       }
@@ -714,10 +722,10 @@
   function setSyncStatus(s) {
     var el2 = document.getElementById("syncStatus");
     if (!el2) return;
-    if (s === "synced") el2.textContent = "\u2601 synced";
-    else if (s === "saving") el2.textContent = "\u2601 saving\u2026";
-    else if (s === "offline") el2.textContent = "\u2601 offline (saved on device)";
-    else if (s === "error") el2.textContent = "\u2601 sync error";
+    if (s === "synced") el2.textContent = "☁ synced";
+    else if (s === "saving") el2.textContent = "☁ saving…";
+    else if (s === "offline") el2.textContent = "☁ offline (saved on device)";
+    else if (s === "error") el2.textContent = "☁ sync error";
     else el2.textContent = "";
   }
   function schedulePush() {
@@ -774,6 +782,8 @@
       if (who) who.textContent = sbUser.email || "signed in";
     } else {
       gate.classList.add("open");
+      var se = document.getElementById("stepEmail"), sc = document.getElementById("stepCode");
+      if (se && sc) { se.style.display = "block"; sc.style.display = "none"; }
       setSyncStatus("");
     }
   }
@@ -791,18 +801,40 @@
       updateAuthUI();
       if (sbUser) { pullState(true); subscribeRealtime(); }
     });
+    var pendingEmail = "";
     var sendBtn = document.getElementById("magicSend");
     if (sendBtn) sendBtn.onclick = function () {
       var email = document.getElementById("magicEmail").value.trim();
       if (!email) return;
-      sendBtn.textContent = "Sending\u2026";
-      sb.auth.signInWithOtp({ email: email, options: { emailRedirectTo: window.location.href } })
+      pendingEmail = email;
+      sendBtn.textContent = "Sending...";
+      sb.auth.signInWithOtp({ email: email, options: { shouldCreateUser: true } })
         .then(function (res) {
-          document.getElementById("magicMsg").textContent = res.error
-            ? ("Error: " + res.error.message)
-            : "Check your email for the sign-in link, then return here.";
-          sendBtn.textContent = "Send sign-in link";
+          sendBtn.textContent = "Email me a code";
+          if (res.error) { document.getElementById("magicMsg").textContent = "Error: " + res.error.message; return; }
+          document.getElementById("stepEmail").style.display = "none";
+          document.getElementById("stepCode").style.display = "block";
+          document.getElementById("magicMsg").textContent = "Code sent to " + email + ". Check your email (and spam).";
+          setTimeout(function () { document.getElementById("codeInput").focus(); }, 0);
         });
+    };
+    var verifyBtn = document.getElementById("codeVerify");
+    if (verifyBtn) verifyBtn.onclick = function () {
+      var code = document.getElementById("codeInput").value.trim();
+      if (!code || !pendingEmail) return;
+      verifyBtn.textContent = "Signing in...";
+      sb.auth.verifyOtp({ email: pendingEmail, token: code, type: "email" })
+        .then(function (res) {
+          verifyBtn.textContent = "Sign in";
+          if (res.error) { document.getElementById("magicMsg").textContent = "That code did not work — check it or resend."; }
+          else { document.getElementById("magicMsg").textContent = ""; document.getElementById("codeInput").value = ""; }
+        });
+    };
+    var backBtn = document.getElementById("codeBack");
+    if (backBtn) backBtn.onclick = function () {
+      document.getElementById("stepCode").style.display = "none";
+      document.getElementById("stepEmail").style.display = "block";
+      document.getElementById("magicMsg").textContent = "";
     };
     var outBtn = document.getElementById("signOut");
     if (outBtn) outBtn.onclick = function () {
@@ -819,7 +851,7 @@
     document.getElementById("wbBit").value = b.text;
     document.getElementById("wbPad").value = b.workshop || "";
     var m = document.getElementById("wbMeta");
-    m.textContent = b.workshop ? "" : "This bit\u2019s working notes live here \u2014 separate from the line itself.";
+    m.textContent = b.workshop ? "" : "This bit’s working notes live here — separate from the line itself.";
     document.getElementById("workbenchOverlay").classList.add("open");
     setTimeout(function () { document.getElementById("wbBit").focus(); }, 0);
   }
@@ -904,7 +936,7 @@
     list.innerHTML = "";
     var buried = (state.buried || []).slice().sort(function (a, b) { return (b.buriedAt || 0) - (a.buriedAt || 0); });
     if (buried.length === 0) {
-      note.textContent = "The boneyard is empty. Buried bits rest here \u2014 dig one up to bring it back as a concept.";
+      note.textContent = "The boneyard is empty. Buried bits rest here — dig one up to bring it back as a concept.";
       return;
     }
     note.textContent = "Buried bits rest here. Dig one up to restore it as a concept, or lay it to rest for good.";
@@ -912,7 +944,7 @@
       var card = el("div", "bone-card");
       card.appendChild(el("p", null, b.text));
       var actions = el("div", "bone-actions");
-      var dig = el("button", "bone-digup", "\u26cf dig up");
+      var dig = el("button", "bone-digup", "⛏ dig up");
       dig.onclick = function () {
         b.status = "concept";
         b.statusAt = Date.now();
