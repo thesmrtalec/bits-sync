@@ -214,7 +214,15 @@
   .tour-gate { position: fixed; inset: 0; background: var(--page); z-index: 88; display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .tour-gate.open { display: block; }
   .tour-box { max-width: 400px; width: 100%; margin: 0 auto; padding: 40px 24px 48px; box-sizing: border-box; }
-  .tour-skip { text-align: center; font-family: var(--mono); font-size: 11.5px; color: var(--muted); background: var(--card); border: 1px solid var(--rule); border-radius: 999px; padding: 7px 14px; margin: 0 0 20px; }
+  .modal-gate { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 92; display: none; align-items: center; justify-content: center; padding: 28px; }
+  .modal-gate.open { display: flex; }
+  .modal-box { max-width: 360px; width: 100%; background: var(--card); border-radius: 16px; padding: 28px 24px; text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+  .modal-box h2 { font-family: var(--serif, serif); font-size: 23px; margin: 0 0 8px; color: var(--ink); }
+  .modal-box p { font-size: 14.5px; line-height: 1.55; color: var(--ink); margin: 0 0 22px; }
+  .modal-go { width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--accent); color: var(--onaccent); font-family: var(--mono); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
+  .modal-skip { width: 100%; padding: 11px; border: none; background: transparent; color: var(--muted); font-family: var(--mono); font-size: 12px; margin-top: 6px; }
+  .tour-skip { display: block; width: 100%; text-align: center; font-family: var(--mono); font-size: 13.5px; font-weight: 700; letter-spacing: .02em; color: var(--onaccent); background: var(--accent); border: none; border-radius: 12px; padding: 15px 16px; margin: 0 0 24px; box-shadow: 0 2px 10px rgba(0,0,0,.18); }
+  .tour-skip:active { transform: translateY(1px); }
   .tour-box h2 { font-family: var(--serif, serif); font-size: 24px; margin: 0 0 4px; color: var(--ink); text-align: center; }
   .tour-box .tsub { text-align: center; color: var(--muted); font-size: 13px; margin: 0 0 22px; }
   .tour-stage { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 15px; }
@@ -313,16 +321,23 @@
       <button class="welcome-go" id="welcomeGo">Get started</button>
     </div>
   </div>
-  <div class="tour-gate" id="buryPop">
-    <div class="tour-box" style="max-width:360px;text-align:center">
+  <div class="modal-gate" id="tourIntro">
+    <div class="modal-box">
+      <h2>Quick tour?</h2>
+      <p>20 seconds on how this works. Skip it if you'd rather just poke around — it's always in ⚙️ when you want it.</p>
+      <button class="modal-go" id="introShow">Show me</button>
+      <button class="modal-skip" id="introSkip">Skip — I'll figure it out</button>
+    </div>
+  </div>
+  <div class="modal-gate" id="buryPop">
+    <div class="modal-box">
       <h2>Buried, not gone</h2>
-      <p style="font-size:14.5px;line-height:1.55;color:var(--ink);margin:0 0 20px">That bit went to the boneyard, not the trash. Tap the 🗝 key in the footer to dig through buried bits and resurrect any of them. (Deleting for good takes two taps in there — on purpose.)</p>
-      <button class="tour-go" id="buryPopGo">Got it</button>
+      <p>That bit went to the boneyard, not the trash. Tap the 🗝 key in the footer to dig back through buried bits and bring any of them back. (Deleting for good takes two taps in there — on purpose.)</p>
+      <button class="modal-go" id="buryPopGo">Got it</button>
     </div>
   </div>
   <div class="tour-gate" id="tourGate">
     <div class="tour-box">
-      <div class="tour-skip">Skip this — read it anytime in ⚙️</div>
       <h2>The four stages</h2>
       <p class="tsub">every bit climbs this ladder</p>
       <div class="tour-stage"><span class="tour-dot">concept</span><p>There's something funny here. You can feel it. You can't prove it yet.</p></div>
@@ -1102,8 +1117,18 @@
     var TKEY = "bits-toured";
     function maybeTour() {
       try { if (localStorage.getItem(TKEY)) return; } catch (e) {}
-      document.getElementById("tourGate").classList.add("open");
+      document.getElementById("tourIntro").classList.add("open");
     }
+    var iShow = document.getElementById("introShow");
+    if (iShow) iShow.onclick = function () {
+      document.getElementById("tourIntro").classList.remove("open");
+      document.getElementById("tourGate").classList.add("open");
+    };
+    var iSkip = document.getElementById("introSkip");
+    if (iSkip) iSkip.onclick = function () {
+      try { localStorage.setItem(TKEY, "1"); } catch (e) {}
+      document.getElementById("tourIntro").classList.remove("open");
+    };
     var go = document.getElementById("welcomeGo");
     if (go) go.onclick = function () {
       try { localStorage.setItem(WKEY, "1"); } catch (e) {}
@@ -1112,11 +1137,13 @@
     };
     var bpop = document.getElementById("buryPopGo");
     if (bpop) bpop.onclick = function () { document.getElementById("buryPop").classList.remove("open"); };
-    var tgo = document.getElementById("tourGo");
-    if (tgo) tgo.onclick = function () {
+    function dismissTour() {
       try { localStorage.setItem(TKEY, "1"); } catch (e) {}
       document.getElementById("tourGate").classList.remove("open");
-    };
+    }
+    var tgo = document.getElementById("tourGo");
+    if (tgo) tgo.onclick = dismissTour;
+
     // if welcome was already seen, still offer the tour once
     try { if (localStorage.getItem(WKEY) && !localStorage.getItem(TKEY)) maybeTour(); } catch (e) {}
   })();
