@@ -98,6 +98,9 @@
   .planned-skip { border: 1px solid var(--rule); color: var(--faint); }
 
   /* ——— capture ——— */
+  .cap-toggle { display: inline-flex; border: 1px solid var(--rule); border-radius: 999px; padding: 2px; margin-bottom: 8px; gap: 2px; }
+  .cap-opt { background: transparent; border: none; border-radius: 999px; padding: 4px 14px; font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; color: var(--muted); }
+  .cap-opt.active { background: var(--accent); color: var(--onaccent); font-weight: 700; }
   .capture { display: flex; gap: 10px; margin-bottom: 26px; align-items: stretch; }
   textarea { flex: 1; border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; font-size: 16px; font-family: var(--serif); line-height: 1.6; resize: vertical; min-height: 128px; color: var(--ink); background: var(--card); box-shadow: inset 0 1px 4px rgba(0,0,0,.12); }
   textarea::placeholder { color: var(--faint); font-style: italic; }
@@ -109,6 +112,8 @@
   .filter-btn { background: transparent; border: none; padding: 9px 10px; font-size: 12px; white-space: nowrap; flex: 0 0 auto; color: var(--faint); border-bottom: 2px solid transparent; font-family: var(--mono); letter-spacing: .04em; text-transform: uppercase; }
   .filter-btn.active { color: var(--accent2); font-weight: 700; border-bottom-color: var(--accent); }
   .tag-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 6px; }
+  .tag-filters.clamped { max-height: 62px; overflow: hidden; }
+  .tag-toggle { display: none; background: transparent; border: none; color: var(--accent); font-family: var(--mono); font-size: 11px; padding: 2px 4px; margin: 0 0 8px; text-decoration: underline; }
   .tag-chip { border: 1px solid var(--rule); border-radius: 999px; padding: 3px 11px; font-size: 12px; background: var(--card); color: var(--muted); font-family: var(--mono); }
   .tag-chip.active { background: var(--accent); border-color: var(--accent); color: var(--onaccent); }
 
@@ -148,6 +153,10 @@
   .backup button { background: var(--card); border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 4px 12px; font-size: 11.5px; font-family: var(--mono); }
   .backup button:hover { border-color: var(--accent); color: var(--accent); }
   .backup-note { font-size: 11.5px; color: var(--faint); font-style: italic; }
+  .util-menu { flex-basis: 100%; display: flex; flex-direction: column; gap: 8px; margin-top: 10px; padding: 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); }
+  .util-menu button { text-align: left; background: transparent; border: none; padding: 8px 6px; font-size: 14px; color: var(--ink); border-radius: 6px; }
+  .util-menu button:hover { background: var(--page); }
+  .util-menu .util-signout { color: var(--accent2, #b4452f); }
 
   /* ——— notes drawer ——— */
   .notes-tab { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 11.5px; padding: 4px 6px; }
@@ -200,6 +209,20 @@
   .welcome-row p b { color: var(--ink); }
   .welcome-priv { font-size: 12.5px; color: var(--muted); font-style: italic; text-align: center; margin: 18px 0 20px; line-height: 1.5; }
   .welcome-go { width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--accent); color: var(--onaccent); font-family: var(--mono); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
+
+  /* ——— first-run stage tour ——— */
+  .tour-gate { position: fixed; inset: 0; background: var(--page); z-index: 88; display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .tour-gate.open { display: block; }
+  .tour-box { max-width: 400px; width: 100%; margin: 0 auto; padding: 40px 24px 48px; box-sizing: border-box; }
+  .tour-skip { text-align: center; font-family: var(--mono); font-size: 11.5px; color: var(--muted); background: var(--card); border: 1px solid var(--rule); border-radius: 999px; padding: 7px 14px; margin: 0 0 20px; }
+  .tour-box h2 { font-family: var(--serif, serif); font-size: 24px; margin: 0 0 4px; color: var(--ink); text-align: center; }
+  .tour-box .tsub { text-align: center; color: var(--muted); font-size: 13px; margin: 0 0 22px; }
+  .tour-stage { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 15px; }
+  .tour-dot { flex: 0 0 auto; font-family: var(--mono); font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--onaccent); background: var(--accent); padding: 4px 0; border-radius: 999px; margin-top: 2px; width: 92px; text-align: center; box-sizing: border-box; }
+  .tour-stage p { margin: 0; font-size: 14.5px; line-height: 1.5; color: var(--ink); }
+  .tour-rule { height: 1px; background: var(--rule); margin: 4px 0 16px; }
+  .tour-dot.alt { background: var(--ink); }
+  .tour-go { width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--accent); color: var(--onaccent); font-family: var(--mono); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; margin-top: 8px; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -240,6 +263,10 @@
     <div id="planned"></div>
   </div>
 
+  <div class="cap-toggle" id="capToggle">
+    <button class="cap-opt active" data-stage="concept">concept</button>
+    <button class="cap-opt" data-stage="bit">bit</button>
+  </div>
   <div class="capture">
     <textarea id="draft" rows="3"></textarea>
     <button class="add-btn" id="addBtn">Add</button>
@@ -251,14 +278,18 @@
   <p class="empty" id="empty" style="display:none"></p>
 
   <div class="backup">
-    <button id="exportBtn">Export backup</button>
-    <button id="importBtn">Import</button>
-    <input type="file" id="importFile" accept=".json" style="display:none" />
     <button class="notes-tab" id="notesOpen">🗒 notes</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🗝️</button>
+    <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
     <span class="sync-chip" id="syncStatus"></span>
     <span class="backup-note" id="authWho"></span>
-    <button class="sign-out" id="signOut">sign out</button>
+    <div class="util-menu" id="utilMenu" style="display:none">
+      <button id="tourReplay">Replay tutorial</button>
+      <button id="exportBtn">Export backup</button>
+      <button id="importBtn">Import</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" />
+      <button id="signOut" class="util-signout">Sign out</button>
+    </div>
   </div>
   <div class="notes-overlay" id="boneOverlay">
     <div class="notes-inner">
@@ -275,12 +306,36 @@
   <div class="welcome-gate" id="welcomeGate">
     <div class="welcome-box">
       <h2>Just the Bits</h2>
-      <p class="wsub">a private notebook for working out your material</p>
-      <div class="welcome-row"><span class="wnum">1</span><p><b>Make an account</b> with any email and a password. It is just to keep your bits synced across your phone and laptop.</p></div>
-      <div class="welcome-row"><span class="wnum">2</span><p><b>Capture and shape bits</b> through four stages — concept, bit, stage-ready, stage-proven. Tap any bit to open its workbench.</p></div>
-      <div class="welcome-row"><span class="wnum">3</span><p><b>Add it to your home screen.</b> On iPhone: tap the Share button, then <b>Add to Home Screen</b>. It opens full-screen like an app.</p></div>
-      <p class="welcome-priv">Your bits are yours alone. No one else can see them — not even whoever shared this with you.</p>
+      <p class="wsub">all your bits, synced across your devices</p>
+      <div class="welcome-row"><span class="wnum">1</span><p><b>Make an account</b> — email and password, just to sync your devices.</p></div>
+      <div class="welcome-row"><span class="wnum">2</span><p><b>Capture bits</b> and move them concept → bit → ready → proven.</p></div>
+      <div class="welcome-row"><span class="wnum">3</span><p><b>Add to Home Screen</b> for the full-screen app. (iPhone: Share → Add to Home Screen.)</p></div>
       <button class="welcome-go" id="welcomeGo">Get started</button>
+    </div>
+  </div>
+  <div class="tour-gate" id="buryPop">
+    <div class="tour-box" style="max-width:360px;text-align:center">
+      <h2>Buried, not gone</h2>
+      <p style="font-size:14.5px;line-height:1.55;color:var(--ink);margin:0 0 20px">That bit went to the boneyard, not the trash. Tap the 🗝 key in the footer to dig through buried bits and resurrect any of them. (Deleting for good takes two taps in there — on purpose.)</p>
+      <button class="tour-go" id="buryPopGo">Got it</button>
+    </div>
+  </div>
+  <div class="tour-gate" id="tourGate">
+    <div class="tour-box">
+      <div class="tour-skip">Skip this — read it anytime in ⚙️</div>
+      <h2>The four stages</h2>
+      <p class="tsub">every bit climbs this ladder</p>
+      <div class="tour-stage"><span class="tour-dot">concept</span><p>There's something funny here. You can feel it. You can't prove it yet.</p></div>
+      <div class="tour-stage"><span class="tour-dot">bit</span><p>Find the funny and put it in words. No perfection here — we can keep editing!</p></div>
+      <div class="tour-stage"><span class="tour-dot">ready</span><p>Ready to say out loud. To strangers. On purpose. Yikes.</p></div>
+      <div class="tour-stage"><span class="tour-dot">proven</span><p>It got laughs. In public. Validation at last, you needy little freak.</p></div>
+      <div class="tour-rule"></div>
+      <div class="tour-stage"><span class="tour-dot alt">capture</span><p>Write it down. You won’t remember it in 30 seconds. <b>WRITE IT DOWN.</b> The concept / bit toggle says which drawer we toss it in.</p></div>
+      <div class="tour-stage"><span class="tour-dot alt">tags</span><p>Casually organize your mess. Buzzwords of your choice — topic, voice, theme, intended audience. Tap one to filter; the ones you use most rise to the top.</p></div>
+      <div class="tour-stage"><span class="tour-dot alt">workbench</span><p>Tap a bit to open its workbench — the line up top, a scratch pad below for rewrites and angles. Each bit keeps its own.</p></div>
+      <div class="tour-stage"><span class="tour-dot alt">notes</span><p>Endless blank space to fuel your existential crisis. Exercises, brain-dumps, half-thoughts — the stuff that isn’t a bit.</p></div>
+      <div class="tour-stage"><span class="tour-dot alt">vault</span><p>Dead bits in your basement. Think there’s still meat on the bone? Take a look. Ready to say goodbye? Delete for good from here.</p></div>
+      <button class="tour-go" id="tourGo">Let's go</button>
     </div>
   </div>
   <div class="auth-gate" id="authGate">
@@ -364,6 +419,7 @@
   var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [] };
   var stageFilter = "concept";
   var tagFilter = null;
+  var tagsExpanded = false;
   var tagEditing = null;
   var textEditing = null;
 
@@ -485,17 +541,39 @@
     });
 
     // tag filters
-    var allTags = [];
+    var tagCounts = {};
     state.bits.forEach(function (b) {
-      b.tags.forEach(function (t) { if (allTags.indexOf(t) === -1) allTags.push(t); });
+      b.tags.forEach(function (t) { tagCounts[t] = (tagCounts[t] || 0) + 1; });
     });
-    allTags.sort();
+    var allTags = Object.keys(tagCounts);
+    allTags.sort(function (a, b) {
+      if (tagCounts[b] !== tagCounts[a]) return tagCounts[b] - tagCounts[a]; // heavy-used first
+      return a.localeCompare(b);
+    });
     var tf = document.getElementById("tagFilters");
     tf.innerHTML = "";
+    if (!tagsExpanded) tf.classList.add("clamped"); else tf.classList.remove("clamped");
     allTags.forEach(function (t) {
       var chip = el("button", "tag-chip" + (tagFilter === t ? " active" : ""), t);
       chip.onclick = function () { tagFilter = tagFilter === t ? null : t; render(); };
       tf.appendChild(chip);
+    });
+    var toggle = document.getElementById("tagToggle");
+    if (!toggle) {
+      toggle = el("button", "tag-toggle");
+      toggle.id = "tagToggle";
+      tf.parentNode.insertBefore(toggle, tf.nextSibling);
+      toggle.onclick = function () { tagsExpanded = !tagsExpanded; render(); };
+    }
+    // show the toggle only when the chips actually overflow 2 rows
+    requestAnimationFrame(function () {
+      var overflowing = tf.scrollHeight - tf.clientHeight > 4;
+      if (tagsExpanded || overflowing) {
+        toggle.style.display = "inline-block";
+        toggle.textContent = tagsExpanded ? "show fewer" : "show all tags (" + allTags.length + ")";
+      } else {
+        toggle.style.display = "none";
+      }
     });
 
     // list
@@ -615,6 +693,12 @@
         state.buried.unshift(b);
         state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
         save(); render();
+        try {
+          if (!localStorage.getItem("bits-buried-once")) {
+            localStorage.setItem("bits-buried-once", "1");
+            document.getElementById("buryPop").classList.add("open");
+          }
+        } catch (e) {}
       };
       meta.appendChild(del);
 
@@ -635,13 +719,23 @@
   var draft = document.getElementById("draft");
   draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
+  var captureStage = "concept";
+  (function () {
+    var opts = document.querySelectorAll("#capToggle .cap-opt");
+    opts.forEach(function (o) {
+      o.onclick = function () {
+        captureStage = o.getAttribute("data-stage");
+        opts.forEach(function (x) { x.classList.toggle("active", x === o); });
+      };
+    });
+  })();
   function addBit() {
     var text = draft.value.trim();
     if (!text) return;
     state.bits.unshift({
       id: Date.now().toString(36),
       text: text,
-      status: "concept",
+      status: captureStage,
       tags: [],
       created: Date.now(),
       statusAt: Date.now()
@@ -651,6 +745,14 @@
     save(); render();
   }
   document.getElementById("addBtn").onclick = addBit;
+  document.getElementById("utilBtn").onclick = function () {
+    var m = document.getElementById("utilMenu");
+    m.style.display = m.style.display === "none" ? "flex" : "none";
+  };
+  document.getElementById("tourReplay").onclick = function () {
+    document.getElementById("utilMenu").style.display = "none";
+    document.getElementById("tourGate").classList.add("open");
+  };
   draft.addEventListener("keydown", function (e) {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) addBit();
   });
@@ -997,11 +1099,26 @@
         document.getElementById("welcomeGate").classList.add("open");
       }
     } catch (e) {}
+    var TKEY = "bits-toured";
+    function maybeTour() {
+      try { if (localStorage.getItem(TKEY)) return; } catch (e) {}
+      document.getElementById("tourGate").classList.add("open");
+    }
     var go = document.getElementById("welcomeGo");
     if (go) go.onclick = function () {
       try { localStorage.setItem(WKEY, "1"); } catch (e) {}
       document.getElementById("welcomeGate").classList.remove("open");
+      maybeTour();
     };
+    var bpop = document.getElementById("buryPopGo");
+    if (bpop) bpop.onclick = function () { document.getElementById("buryPop").classList.remove("open"); };
+    var tgo = document.getElementById("tourGo");
+    if (tgo) tgo.onclick = function () {
+      try { localStorage.setItem(TKEY, "1"); } catch (e) {}
+      document.getElementById("tourGate").classList.remove("open");
+    };
+    // if welcome was already seen, still offer the tour once
+    try { if (localStorage.getItem(WKEY) && !localStorage.getItem(TKEY)) maybeTour(); } catch (e) {}
   })();
 })();
 </script>
