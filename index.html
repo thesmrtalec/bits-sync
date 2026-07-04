@@ -126,7 +126,8 @@
   .edit-area { width: 100%; border: 1px solid var(--accent); border-radius: 7px; padding: 9px 10px; font-size: 16px; font-family: var(--serif); line-height: 1.6; margin: 0 0 9px; background: var(--card); color: var(--ink); min-height: 64px; resize: vertical; }
   .bit-meta { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
   .stage-btn { background: transparent; border: 1px solid; border-radius: 999px; padding: 2px 10px; font-size: 11px; font-family: var(--mono); letter-spacing: .03em; }
-  .st-concept { color: var(--st-concept); border-color: var(--st-concept); }
+  .st-observation { color: var(--st-concept); border-color: var(--st-concept); }
+  .st-confession { color: var(--st-proven); border-color: var(--st-proven); }
   .st-bit { color: var(--st-bit); border-color: var(--st-bit); }
   .st-ready { color: var(--st-ready); border-color: var(--st-ready); }
   .st-proven { color: var(--st-proven); border-color: var(--st-proven); }
@@ -148,10 +149,9 @@
   .bone-when { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
   .bone-del { margin-left: auto; background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 11px; padding: 2px 4px; }
   .bone-del:hover { color: var(--accent2); }
-  .i-tab { font-family: var(--serif); font-style: italic; }
-  .i-addrow { display: flex; gap: 8px; margin: 10px 0 12px; }
-  .i-addrow input { flex: 1; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; padding: 8px 12px; font-family: inherit; font-size: 15px; color: var(--ink); }
   .i-mined { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
+  .react-btn { background: transparent; border: 1px dashed var(--rule); border-radius: 7px; padding: 1px 7px; font-size: 13px; line-height: 1.5; filter: grayscale(1); opacity: .55; }
+  .react-btn.has-react { border-style: solid; filter: none; opacity: 1; }
   .set-back { background: transparent; border: none; color: var(--muted); font-family: var(--mono); font-size: 11px; padding: 0; margin-bottom: 10px; display: block; }
   .set-name { width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--rule); font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--ink); padding: 2px 0 6px; margin-bottom: 8px; }
   .set-total { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 0 0 12px; }
@@ -166,7 +166,6 @@
   .time-edit { display: flex; align-items: center; gap: 4px; }
   .time-step { background: transparent; border: 1px solid var(--rule); border-radius: 6px; padding: 2px 8px; font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.4; }
   .time-chip-active { border-style: solid; border-color: var(--accent); color: var(--ink); }
-  .stage-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; margin-top: 6px; }
   .empty { color: var(--faint); font-style: italic; font-size: 15px; padding: 14px 2px; }
 
   .backup { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--rule); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -301,8 +300,8 @@
   </div>
 
   <div class="cap-toggle" id="capToggle">
-    <button class="cap-opt active" data-stage="concept">concept</button>
-    <button class="cap-opt" data-stage="bit">bit</button>
+    <button class="cap-opt" data-stage="confession">confession</button>
+    <button class="cap-opt active" data-stage="observation">observation</button>
   </div>
   <div class="capture">
     <textarea id="draft" rows="3"></textarea>
@@ -316,9 +315,7 @@
 
   <div class="backup">
     <button class="notes-tab" id="notesOpen">🗒 notes</button>
-    <button class="notes-tab" id="setsOpen">≡ sets</button>
-    <button class="notes-tab i-tab" id="iOpen" title="Things that are true">I…</button>
-    <button class="notes-tab bone-key" id="shuffleBtn" aria-label="shuffle: deal a stale line with a truth" title="Shuffle — deal a stale line with a truth">🎲</button>
+    <button class="notes-tab bone-key" id="shuffleBtn" aria-label="shuffle: deal a stale line" title="Shuffle — deal a stale line">🎲</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🗝️</button>
     <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
     <span class="sync-chip" id="syncStatus"></span>
@@ -329,6 +326,11 @@
       <button id="importBtn">Import</button>
       <input type="file" id="importFile" accept=".json" style="display:none" />
       <button id="signOut" class="util-signout">Sign out</button>
+    </div>
+    <div class="util-menu" id="shuffleMenu" style="display:none">
+      <button data-pool="confession">deal a confession</button>
+      <button data-pool="observation">deal an observation</button>
+      <button data-pool="bit">deal a bit</button>
     </div>
   </div>
   <div class="notes-overlay" id="boneOverlay">
@@ -343,39 +345,12 @@
       </div>
     </div>
   </div>
-  <div class="notes-overlay" id="iOverlay">
-    <div class="notes-inner">
-      <div class="notes-head">
-        <h2>I…</h2>
-        <button class="notes-close" id="iClose">done</button>
-      </div>
-      <p class="bone-note">Things that are true. No pressure to be funny yet — the bits hide in the collisions, or in twenty minutes on any one line.</p>
-      <div class="i-addrow">
-        <input type="text" id="iDraft" placeholder="I…" />
-        <button class="bone-digup" id="iAdd">Add</button>
-      </div>
-      <div class="notes-index">
-        <div id="iList"></div>
-      </div>
-    </div>
-  </div>
-  <div class="notes-overlay" id="setsOverlay">
-    <div class="notes-inner">
-      <div class="notes-head">
-        <h2 id="setsTitle">Sets</h2>
-        <button class="notes-close" id="setsClose">done</button>
-      </div>
-      <div class="notes-index" style="margin-top:4px">
-        <div id="setsBody"></div>
-      </div>
-    </div>
-  </div>
   <div class="welcome-gate" id="welcomeGate">
     <div class="welcome-box">
       <h2>Just the Bits</h2>
       <p class="wsub">all your bits, synced across your devices</p>
       <div class="welcome-row"><span class="wnum">1</span><p><b>Make an account</b> — email and password, just to sync your devices.</p></div>
-      <div class="welcome-row"><span class="wnum">2</span><p><b>Capture bits</b> and move them concept → bit → ready → proven.</p></div>
+      <div class="welcome-row"><span class="wnum">2</span><p><b>Capture truths</b> — confessions and observations — and work them into bits.</p></div>
       <div class="welcome-row"><span class="wnum">3</span><p><b>Add to Home Screen</b> for the full-screen app. (iPhone: Share → Add to Home Screen.)</p></div>
       <button class="welcome-go" id="welcomeGo">Get started</button>
     </div>
@@ -397,14 +372,13 @@
   </div>
   <div class="tour-gate" id="tourGate">
     <div class="tour-box">
-      <h2>The four stages</h2>
-      <p class="tsub">every bit climbs this ladder</p>
-      <div class="tour-stage"><span class="tour-dot">concept</span><p>There's something funny here. You can feel it. You can't prove it yet.</p></div>
-      <div class="tour-stage"><span class="tour-dot">bit</span><p>Find the funny and put it in words. No perfection here — we can keep editing!</p></div>
-      <div class="tour-stage"><span class="tour-dot">ready</span><p>Ready to say out loud. To strangers. On purpose. Yikes.</p></div>
-      <div class="tour-stage"><span class="tour-dot">proven</span><p>It got laughs. In public. Validation at last, you needy little freak.</p></div>
+      <h2>The pipeline</h2>
+      <p class="tsub">raw truth in, bits out</p>
+      <div class="tour-stage"><span class="tour-dot">observation</span><p>Something's funny out there. You saw it. You can't prove it yet.</p></div>
+      <div class="tour-stage"><span class="tour-dot">confession</span><p>Something's funny in here. Admitting it is half the bit.</p></div>
+      <div class="tour-stage"><span class="tour-dot">bit</span><p>Find the funny and put it in words. Bits get timed and strung into sets.</p></div>
       <div class="tour-rule"></div>
-      <div class="tour-stage"><span class="tour-dot alt">capture</span><p>Write it down. You won’t remember it in 30 seconds. <b>WRITE IT DOWN.</b> The concept / bit toggle says which drawer we toss it in.</p></div>
+      <div class="tour-stage"><span class="tour-dot alt">capture</span><p>Write it down. You won’t remember it in 30 seconds. <b>WRITE IT DOWN.</b> The confession / observation toggle says which drawer we toss it in.</p></div>
       <div class="tour-stage"><span class="tour-dot alt">tags</span><p>Casually organize your mess. Buzzwords of your choice — topic, voice, theme, intended audience. Tap one to filter; the ones you use most rise to the top.</p></div>
       <div class="tour-stage"><span class="tour-dot alt">workbench</span><p>Tap a bit to open its workbench — the line up top, a scratch pad below for rewrites and angles. Each bit keeps its own.</p></div>
       <div class="tour-stage"><span class="tour-dot alt">notes</span><p>Endless blank space to fuel your existential crisis. Exercises, brain-dumps, half-thoughts — the stuff that isn’t a bit.</p></div>
@@ -464,14 +438,13 @@
   var sb = null, sbUser = null, syncChan = null, pushTimer = null;
   var DAY = 86400000;
   var STALE_DAYS = 14;
-  var NEXT = { concept: "bit", bit: "ready", ready: "proven", proven: "concept" };
+  var NEXT = { confession: "observation", observation: "bit", bit: "confession" };
   var STAGE = {
-    concept: { label: "concept", color: "#8b97a3" },
-    bit: { label: "bit", color: "#5a7d9a" },
-    ready: { label: "stage-ready", color: "#2f6db5" },
-    proven: { label: "stage-proven", color: "#16324f" }
+    confession: { label: "confession", color: "#4a4440" },
+    observation: { label: "observation", color: "#8b97a3" },
+    bit: { label: "bit", color: "#5a7d9a" }
   };
-  var STAGES = ["concept", "bit", "ready", "proven"];
+  var STAGES = ["confession", "observation", "bit"];
   var PLACEHOLDERS = [
     "Write it ugly.",
     "The funny version comes later. Write the bad one.",
@@ -491,7 +464,7 @@
   ];
 
   var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [] };
-  var stageFilter = "concept";
+  var stageFilter = "observation";
   var tagFilter = null;
   var tagsExpanded = false;
   var tagEditing = null;
@@ -499,9 +472,9 @@
 
   function hydrate(data) {
     state.bits = (data.bits || []).map(function (b) {
-      if (b.status === "raw") b.status = "concept";
-      if (b.status === "working") b.status = "bit";
-      if (!b.status) b.status = "concept";
+      if (b.status === "raw" || b.status === "concept") b.status = "observation";
+      if (b.status === "working" || b.status === "ready" || b.status === "proven") b.status = "bit";
+      if (!b.status) b.status = "observation";
       if (!b.tags) b.tags = [];
       return b;
     });
@@ -555,7 +528,7 @@
 
   function render() {
     // strip
-    var weekCount = state.bits.filter(function (b) { return b.created >= startOfWeek(); }).length;
+    var weekCount = state.bits.filter(function (b) { return b.status === "bit" && (b.statusAt || b.created) >= startOfWeek(); }).length;
     document.getElementById("weekCount").textContent = weekCount;
     document.getElementById("quotaShow").textContent = state.quota;
     document.getElementById("quotaInput").value = state.quota;
@@ -609,12 +582,43 @@
     // filters
     var filters = document.getElementById("filters");
     filters.innerHTML = "";
-    STAGES.forEach(function (s) {
-      var count = state.bits.filter(function (b) { return b.status === s; }).length;
-      var btn = el("button", "filter-btn" + (stageFilter === s ? " active" : ""), s + " (" + count + ")");
-      btn.onclick = function () { stageFilter = s; render(); };
+    function tabBtn(key, label, count) {
+      var btn = el("button", "filter-btn" + (stageFilter === key ? " active" : ""), label + " (" + count + ")");
+      btn.onclick = function () { stageFilter = key; setOpen = null; render(); };
       filters.appendChild(btn);
-    });
+    }
+    function stageCount(st) {
+      return state.bits.filter(function (b) { return b.status === st; }).length;
+    }
+    tabBtn("i", "I…", (state.truths || []).length);
+    tabBtn("confession", "confessions", stageCount("confession"));
+    tabBtn("observation", "observations", stageCount("observation"));
+    tabBtn("bit", "bits", stageCount("bit"));
+    tabBtn("sets", "sets", (state.sets || []).length);
+
+    var capT = document.getElementById("capToggle");
+    var capWrap = document.querySelector(".capture");
+    var tagT = document.getElementById("tagToggle");
+    if (stageFilter === "i" || stageFilter === "sets") {
+      document.getElementById("tagFilters").innerHTML = "";
+      if (tagT) tagT.style.display = "none";
+      document.getElementById("empty").style.display = "none";
+      document.getElementById("list").innerHTML = "";
+      capT.style.display = "none";
+      if (stageFilter === "i") {
+        capWrap.style.display = "";
+        draft.placeholder = "I…";
+        renderTruths();
+      } else {
+        capWrap.style.display = "none";
+        renderSets();
+      }
+      return;
+    }
+    capT.style.display = "";
+    capWrap.style.display = "";
+    if (tagT) tagT.style.display = "";
+    if (draft.placeholder === "I…") draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
     // tag filters
     var tagCounts = {};
@@ -719,6 +723,19 @@
       };
       meta.appendChild(stageBtn);
 
+      if (b.status === "bit") {
+        var REACTS = ["", "😒", "😆", "😂"];
+        var rBtn = el("button", "react-btn" + (b.react ? " has-react" : ""), b.react || "😶");
+        rBtn.title = "How'd it land? Tap to cycle";
+        rBtn.onclick = function () {
+          var ri = REACTS.indexOf(b.react || "");
+          var next = REACTS[(ri + 1) % REACTS.length];
+          if (next) b.react = next; else delete b.react;
+          save(); render();
+        };
+        meta.appendChild(rBtn);
+      }
+
       var sd = staleDays(b);
       if (sd > 0) {
         var st = el("span", "stale", "⏳ stale " + sd + "d");
@@ -790,17 +807,13 @@
       empty.style.display = "none";
     }
 
-    var iov = document.getElementById("iOverlay");
-    if (iov && iov.classList.contains("open")) renderTruths();
-    var sov = document.getElementById("setsOverlay");
-    if (sov && sov.classList.contains("open")) renderSets();
   }
 
   // wiring
   var draft = document.getElementById("draft");
   draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
-  var captureStage = "concept";
+  var captureStage = "observation";
   (function () {
     var opts = document.querySelectorAll("#capToggle .cap-opt");
     opts.forEach(function (o) {
@@ -813,6 +826,18 @@
   function addBit() {
     var text = draft.value.trim();
     if (!text) return;
+    if (stageFilter === "i") {
+      if (!state.truths) state.truths = [];
+      var n = Date.now();
+      text.split(/\r?\n/).forEach(function (line, i) {
+        var v = line.trim();
+        if (!v) return;
+        state.truths.push({ id: (n + i).toString(36), text: v, created: n });
+      });
+      draft.value = "";
+      save(); render();
+      return;
+    }
     state.bits.unshift({
       id: Date.now().toString(36),
       text: text,
@@ -1047,7 +1072,7 @@
     document.getElementById("wbPad").value = b.workshop || "";
     var m = document.getElementById("wbMeta");
     if (workbenchKind === "truth") {
-      m.textContent = b.workshop ? "" : "Riff on it. When a line shakes out, send this to bits from the I… list.";
+      m.textContent = b.workshop ? "" : "Riff on it. When a line shakes out, send this to bits from the I… tab.";
     } else {
       m.textContent = b.workshop ? "" : "This bit’s working notes live here — separate from the line itself.";
     }
@@ -1067,12 +1092,10 @@
   document.getElementById("wbPad").oninput = saveWorkbench;
   document.getElementById("wbClose").onclick = function () {
     saveWorkbench();
-    var wasTruth = workbenchKind === "truth";
     workbenchId = null;
     workbenchKind = "bit";
     document.getElementById("workbenchOverlay").classList.remove("open");
     render();
-    if (wasTruth) renderTruths();
   };
 
   // ——— notes drawer ———
@@ -1138,17 +1161,17 @@
     list.innerHTML = "";
     var buried = (state.buried || []).slice().sort(function (a, b) { return (b.buriedAt || 0) - (a.buriedAt || 0); });
     if (buried.length === 0) {
-      note.textContent = "The boneyard is empty. Buried bits rest here — dig one up to bring it back as a concept.";
+      note.textContent = "The boneyard is empty. Buried bits rest here — dig one up to bring it back as an observation.";
       return;
     }
-    note.textContent = "Buried bits rest here. Dig one up to restore it as a concept, or lay it to rest for good.";
+    note.textContent = "Buried bits rest here. Dig one up to restore it as an observation, or lay it to rest for good.";
     buried.forEach(function (b) {
       var card = el("div", "bone-card");
       card.appendChild(el("p", null, b.text));
       var actions = el("div", "bone-actions");
       var dig = el("button", "bone-digup", "⛏ dig up");
       dig.onclick = function () {
-        b.status = "concept";
+        b.status = "observation";
         b.statusAt = Date.now();
         delete b.buriedAt;
         state.buried = state.buried.filter(function (x) { return x.id !== b.id; });
@@ -1182,8 +1205,9 @@
 
   // ——— the I… list ———
   function renderTruths() {
-    var list = document.getElementById("iList");
+    var list = document.getElementById("list");
     list.innerHTML = "";
+    list.appendChild(el("p", "bone-note", "Things that are true. One per line — paste a whole list if you have one."));
     var truths = state.truths || [];
     if (truths.length === 0) {
       list.appendChild(el("p", "empty", "Nothing true yet. Suspicious."));
@@ -1209,7 +1233,7 @@
           statusAt: Date.now()
         });
         t.mined = (t.mined || 0) + 1;
-        save(); render(); renderTruths();
+        save(); render();
       };
       actions.appendChild(promote);
       if (t.mined) actions.appendChild(el("span", "i-mined", "mined ×" + t.mined));
@@ -1223,61 +1247,21 @@
         e.stopPropagation();
         if (del.textContent === "delete") { del.textContent = "sure?"; setTimeout(function () { if (del) del.textContent = "delete"; }, 2500); return; }
         state.truths = state.truths.filter(function (x) { return x.id !== t.id; });
-        save(); renderTruths();
+        save(); render();
       };
       actions.appendChild(del);
       card.appendChild(actions);
       list.appendChild(card);
     });
   }
-  function addTruth() {
-    var inp = document.getElementById("iDraft");
-    var v = inp.value.trim();
-    if (!v) return;
-    if (!state.truths) state.truths = [];
-    state.truths.push({ id: Date.now().toString(36), text: v, created: Date.now() });
-    inp.value = "";
-    save(); renderTruths();
-    inp.focus();
-  }
-  document.getElementById("iAdd").onclick = addTruth;
-  document.getElementById("iDraft").onkeydown = function (e) { if (e.key === "Enter") addTruth(); };
-  document.getElementById("iDraft").onpaste = function (e) {
-    var txt = (e.clipboardData || window.clipboardData).getData("text");
-    if (!txt || txt.indexOf("\n") === -1) return;
-    e.preventDefault();
-    if (!state.truths) state.truths = [];
-    var n = Date.now();
-    txt.split(/\r?\n/).forEach(function (line, i) {
-      var v = line.trim();
-      if (!v) return;
-      state.truths.push({ id: (n + i).toString(36), text: v, created: n });
-    });
-    document.getElementById("iDraft").value = "";
-    save(); renderTruths();
-  };
-  document.getElementById("iOpen").onclick = function () {
-    if (!state.truths) state.truths = [];
-    renderTruths();
-    document.getElementById("iOverlay").classList.add("open");
-  };
-  document.getElementById("iClose").onclick = function () {
-    document.getElementById("iOverlay").classList.remove("open");
-  };
 
-  // ——— shuffle: age-weighted deal into the workbench ———
-  function dealShuffle() {
-    var pool = [];
-    state.bits.forEach(function (b) {
-      if (b.status === "concept" || b.status === "bit") pool.push({ id: b.id, kind: "bit", at: b.statusAt || b.created });
-    });
-    (state.truths || []).forEach(function (t) {
-      pool.push({ id: t.id, kind: "truth", at: t.created });
-    });
+  // ——— shuffle: pick a pool, get an age-weighted deal ———
+  function dealShuffle(status) {
+    var pool = state.bits.filter(function (b) { return b.status === status; });
     if (pool.length === 0) return;
     var now = Date.now();
-    var weights = pool.map(function (x) {
-      return 1 + Math.floor((now - (x.at || now)) / DAY);
+    var weights = pool.map(function (b) {
+      return 1 + Math.floor((now - (b.statusAt || b.created || now)) / DAY);
     });
     var total = 0;
     weights.forEach(function (w) { total += w; });
@@ -1287,11 +1271,20 @@
       r -= weights[i];
       if (r <= 0) { pick = pool[i]; break; }
     }
-    openWorkbench(pick.id, pick.kind);
-    var age = Math.floor((now - (pick.at || now)) / DAY);
+    openWorkbench(pick.id, "bit");
+    var age = Math.floor((now - (pick.statusAt || pick.created || now)) / DAY);
     if (age > 0) document.getElementById("wbMeta").textContent = "untouched " + age + "d";
   }
-  document.getElementById("shuffleBtn").onclick = dealShuffle;
+  document.getElementById("shuffleBtn").onclick = function () {
+    var m = document.getElementById("shuffleMenu");
+    m.style.display = m.style.display === "none" ? "flex" : "none";
+  };
+  document.querySelectorAll("#shuffleMenu button").forEach(function (b) {
+    b.onclick = function () {
+      document.getElementById("shuffleMenu").style.display = "none";
+      dealShuffle(b.getAttribute("data-pool"));
+    };
+  });
 
   // ——— sets ———
   var setOpen = null;
@@ -1315,16 +1308,14 @@
     return null;
   }
   function renderSets() {
-    var body = document.getElementById("setsBody");
-    var title = document.getElementById("setsTitle");
+    var body = document.getElementById("list");
     body.innerHTML = "";
     if (!state.sets) state.sets = [];
     if (setOpen) {
       var s = state.sets.find(function (x) { return x.id === setOpen; });
-      if (!s) { setOpen = null; renderSets(); return; }
-      title.textContent = "Set";
+      if (!s) { setOpen = null; render(); return; }
       var back = el("button", "set-back", "‹ all sets");
-      back.onclick = function () { setOpen = null; renderSets(); };
+      back.onclick = function () { setOpen = null; render(); };
       body.appendChild(back);
       var name = document.createElement("input");
       name.type = "text";
@@ -1352,67 +1343,61 @@
         dn.disabled = idx === s.bitIds.length - 1;
         up.onclick = function () {
           s.bitIds.splice(idx - 1, 0, s.bitIds.splice(idx, 1)[0]);
-          s.updated = Date.now(); save(); renderSets();
+          s.updated = Date.now(); save(); render();
         };
         dn.onclick = function () {
           s.bitIds.splice(idx + 1, 0, s.bitIds.splice(idx, 1)[0]);
-          s.updated = Date.now(); save(); renderSets();
+          s.updated = Date.now(); save(); render();
         };
         mv.appendChild(up); mv.appendChild(dn);
         row.appendChild(mv);
         var p = el("p", null, f.bit.text);
         if (f.buried) { p.style.opacity = ".45"; p.textContent = f.bit.text + "  (buried)"; }
         row.appendChild(p);
+        if (f.bit.react) row.appendChild(el("span", null, f.bit.react));
         if (timeEditing === f.bit.id) {
           var te = el("span", "time-edit");
           var minus = el("button", "time-step", "−");
           minus.onclick = function () {
             var v = stepEst(f.bit.est, -1);
             if (v) f.bit.est = v; else delete f.bit.est;
-            save(); renderSets();
+            save(); render();
           };
           var val = el("button", "time-chip time-chip-active", f.bit.est ? fmtSec(f.bit.est) : "?");
-          val.onclick = function () { timeEditing = null; renderSets(); };
+          val.onclick = function () { timeEditing = null; render(); };
           var plus = el("button", "time-step", "+");
           plus.onclick = function () {
             f.bit.est = stepEst(f.bit.est, 1);
-            save(); renderSets();
+            save(); render();
           };
           te.appendChild(minus); te.appendChild(val); te.appendChild(plus);
           row.appendChild(te);
         } else {
           var chip = el("button", "time-chip", f.bit.est ? fmtSec(f.bit.est) : "?");
           chip.title = "Tap to set a rough time";
-          chip.onclick = function () { timeEditing = f.bit.id; renderSets(); };
+          chip.onclick = function () { timeEditing = f.bit.id; render(); };
           row.appendChild(chip);
         }
         var x = el("button", "bone-del", "✕");
         x.onclick = function () {
           s.bitIds.splice(idx, 1);
-          s.updated = Date.now(); save(); renderSets();
+          s.updated = Date.now(); save(); render();
         };
         row.appendChild(x);
         body.appendChild(row);
       });
       if (s.bitIds.length === 0) body.appendChild(el("p", "empty", "Empty set — tap any bit below and it joins the lineup."));
       body.appendChild(el("div", "set-add-head", "your bits — tap to add"));
-      var order = { proven: 0, ready: 1, bit: 2, concept: 3 };
-      var avail = state.bits
-        .filter(function (b) { return s.bitIds.indexOf(b.id) === -1; })
-        .slice()
-        .sort(function (a, b) { return (order[a.status] || 0) - (order[b.status] || 0); });
-      if (avail.length === 0) body.appendChild(el("p", "empty", "Every bit is already in this set."));
+      var avail = state.bits.filter(function (b) { return b.status === "bit" && s.bitIds.indexOf(b.id) === -1; });
+      if (avail.length === 0) body.appendChild(el("p", "empty", "No bits left to add — work something up in the bits tab."));
       avail.forEach(function (b) {
         var row = el("div", "set-row set-addable");
-        var dot = el("span", "stage-dot");
-        dot.style.background = (STAGE[b.status] || STAGE.concept).color;
-        dot.title = (STAGE[b.status] || STAGE.concept).label;
-        row.appendChild(dot);
         row.appendChild(el("p", null, b.text));
+        if (b.react) row.appendChild(el("span", null, b.react));
         if (b.est) row.appendChild(el("span", "time-chip", fmtSec(b.est)));
         row.onclick = function () {
           s.bitIds.push(b.id);
-          s.updated = Date.now(); save(); renderSets();
+          s.updated = Date.now(); save(); render();
         };
         body.appendChild(row);
       });
@@ -1424,7 +1409,7 @@
         var id = Date.now().toString(36);
         state.sets.unshift({ id: id, name: "", bitIds: [], created: Date.now(), updated: Date.now() });
         setOpen = id;
-        save(); renderSets();
+        save(); render();
       };
       body.appendChild(nw);
       if (state.sets.length === 0) {
@@ -1449,25 +1434,15 @@
           e.stopPropagation();
           if (del.textContent === "delete") { del.textContent = "sure?"; setTimeout(function () { if (del) del.textContent = "delete"; }, 2500); return; }
           state.sets = state.sets.filter(function (x) { return x.id !== s.id; });
-          save(); renderSets();
+          save(); render();
         };
         actions.appendChild(del);
         card.appendChild(actions);
-        card.onclick = function () { setOpen = s.id; renderSets(); };
+        card.onclick = function () { setOpen = s.id; render(); };
         body.appendChild(card);
       });
     }
   }
-  document.getElementById("setsOpen").onclick = function () {
-    if (!state.sets) state.sets = [];
-    setOpen = null;
-    renderSets();
-    document.getElementById("setsOverlay").classList.add("open");
-  };
-  document.getElementById("setsClose").onclick = function () {
-    setOpen = null;
-    document.getElementById("setsOverlay").classList.remove("open");
-  };
 
   load();
   render();
