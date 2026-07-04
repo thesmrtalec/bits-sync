@@ -151,10 +151,6 @@
   .i-tab { font-family: var(--serif); font-style: italic; }
   .i-addrow { display: flex; gap: 8px; margin: 10px 0 12px; }
   .i-addrow input { flex: 1; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; padding: 8px 12px; font-family: inherit; font-size: 15px; color: var(--ink); }
-  .i-collide-btn { background: transparent; border: 1px dashed var(--rule); border-radius: 9px; padding: 4px 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 12px; }
-  .i-collide { border: 1px dashed var(--accent); border-radius: 9px; padding: 12px 14px; margin: 0 0 14px; }
-  .i-collide p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink); font-weight: 600; }
-  .i-collide .i-x { font-family: var(--mono); font-size: 11px; color: var(--faint); margin: 6px 0; display: block; }
   .i-mined { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
   .empty { color: var(--faint); font-style: italic; font-size: 15px; padding: 14px 2px; }
 
@@ -306,6 +302,7 @@
   <div class="backup">
     <button class="notes-tab" id="notesOpen">🗒 notes</button>
     <button class="notes-tab i-tab" id="iOpen" title="Things that are true">I…</button>
+    <button class="notes-tab bone-key" id="shuffleBtn" aria-label="shuffle: deal a stale line with a truth" title="Shuffle — deal a stale line with a truth">🎲</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🗝️</button>
     <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
     <span class="sync-chip" id="syncStatus"></span>
@@ -341,8 +338,6 @@
         <input type="text" id="iDraft" placeholder="I…" />
         <button class="bone-digup" id="iAdd">Add</button>
       </div>
-      <button class="i-collide-btn" id="iCollide">⚡ deal two</button>
-      <div id="iCollideBox"></div>
       <div class="notes-index">
         <div id="iList"></div>
       </div>
@@ -1156,19 +1151,9 @@
   };
 
   // ——— the I… list ———
-  var iCollidePair = null;
   function renderTruths() {
     var list = document.getElementById("iList");
-    var box = document.getElementById("iCollideBox");
     list.innerHTML = "";
-    box.innerHTML = "";
-    if (iCollidePair) {
-      var cb = el("div", "i-collide");
-      cb.appendChild(el("p", null, iCollidePair[0].text));
-      cb.appendChild(el("span", "i-x", "× what’s true about both?"));
-      cb.appendChild(el("p", null, iCollidePair[1].text));
-      box.appendChild(cb);
-    }
     var truths = state.truths || [];
     if (truths.length === 0) {
       list.appendChild(el("p", "empty", "Nothing true yet. Suspicious."));
@@ -1208,7 +1193,6 @@
         e.stopPropagation();
         if (del.textContent === "delete") { del.textContent = "sure?"; setTimeout(function () { if (del) del.textContent = "delete"; }, 2500); return; }
         state.truths = state.truths.filter(function (x) { return x.id !== t.id; });
-        if (iCollidePair && (iCollidePair[0].id === t.id || iCollidePair[1].id === t.id)) iCollidePair = null;
         save(); renderTruths();
       };
       actions.appendChild(del);
@@ -1242,23 +1226,42 @@
     document.getElementById("iDraft").value = "";
     save(); renderTruths();
   };
-  document.getElementById("iCollide").onclick = function () {
-    var truths = state.truths || [];
-    if (truths.length < 2) return;
-    var a = Math.floor(Math.random() * truths.length), b;
-    do { b = Math.floor(Math.random() * truths.length); } while (b === a);
-    iCollidePair = [truths[a], truths[b]];
-    renderTruths();
-  };
   document.getElementById("iOpen").onclick = function () {
     if (!state.truths) state.truths = [];
     renderTruths();
     document.getElementById("iOverlay").classList.add("open");
   };
   document.getElementById("iClose").onclick = function () {
-    iCollidePair = null;
     document.getElementById("iOverlay").classList.remove("open");
   };
+
+  // ——— shuffle: age-weighted deal into the workbench ———
+  function dealShuffle() {
+    var pool = [];
+    state.bits.forEach(function (b) {
+      if (b.status === "concept" || b.status === "bit") pool.push({ id: b.id, kind: "bit", at: b.statusAt || b.created });
+    });
+    (state.truths || []).forEach(function (t) {
+      pool.push({ id: t.id, kind: "truth", at: t.created });
+    });
+    if (pool.length === 0) return;
+    var now = Date.now();
+    var weights = pool.map(function (x) {
+      return 1 + Math.floor((now - (x.at || now)) / DAY);
+    });
+    var total = 0;
+    weights.forEach(function (w) { total += w; });
+    var r = Math.random() * total;
+    var pick = pool[pool.length - 1];
+    for (var i = 0; i < pool.length; i++) {
+      r -= weights[i];
+      if (r <= 0) { pick = pool[i]; break; }
+    }
+    openWorkbench(pick.id, pick.kind);
+    var age = Math.floor((now - (pick.at || now)) / DAY);
+    if (age > 0) document.getElementById("wbMeta").textContent = "untouched " + age + "d";
+  }
+  document.getElementById("shuffleBtn").onclick = dealShuffle;
 
   load();
   render();
