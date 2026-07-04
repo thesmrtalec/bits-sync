@@ -148,6 +148,14 @@
   .bone-when { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
   .bone-del { margin-left: auto; background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 11px; padding: 2px 4px; }
   .bone-del:hover { color: var(--accent2); }
+  .i-tab { font-family: var(--serif); font-style: italic; }
+  .i-addrow { display: flex; gap: 8px; margin: 10px 0 12px; }
+  .i-addrow input { flex: 1; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; padding: 8px 12px; font-family: inherit; font-size: 15px; color: var(--ink); }
+  .i-collide-btn { background: transparent; border: 1px dashed var(--rule); border-radius: 9px; padding: 4px 12px; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+  .i-collide { border: 1px dashed var(--accent); border-radius: 9px; padding: 12px 14px; margin: 0 0 14px; }
+  .i-collide p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--ink); font-weight: 600; }
+  .i-collide .i-x { font-family: var(--mono); font-size: 11px; color: var(--faint); margin: 6px 0; display: block; }
+  .i-mined { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
   .empty { color: var(--faint); font-style: italic; font-size: 15px; padding: 14px 2px; }
 
   .backup { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--rule); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -297,6 +305,7 @@
 
   <div class="backup">
     <button class="notes-tab" id="notesOpen">🗒 notes</button>
+    <button class="notes-tab i-tab" id="iOpen" title="Things that are true">I…</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🗝️</button>
     <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
     <span class="sync-chip" id="syncStatus"></span>
@@ -318,6 +327,24 @@
       <p class="bone-note" id="boneNote"></p>
       <div class="notes-index" style="margin-top:8px">
         <div id="boneList"></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="iOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>I…</h2>
+        <button class="notes-close" id="iClose">done</button>
+      </div>
+      <p class="bone-note">Things that are true. No pressure to be funny yet — the bits hide in the collisions, or in twenty minutes on any one line.</p>
+      <div class="i-addrow">
+        <input type="text" id="iDraft" placeholder="I…" />
+        <button class="bone-digup" id="iAdd">Add</button>
+      </div>
+      <button class="i-collide-btn" id="iCollide">⚡ deal two</button>
+      <div id="iCollideBox"></div>
+      <div class="notes-index">
+        <div id="iList"></div>
       </div>
     </div>
   </div>
@@ -441,7 +468,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [] };
+  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [] };
   var stageFilter = "concept";
   var tagFilter = null;
   var tagsExpanded = false;
@@ -462,6 +489,7 @@
     state.planned = data.planned || [];
     state.notes = data.notes || [];
     state.buried = data.buried || [];
+    state.truths = data.truths || [];
     state.updatedAt = data.updatedAt || 0;
   }
   function load() {
@@ -738,6 +766,9 @@
     } else {
       empty.style.display = "none";
     }
+
+    var iov = document.getElementById("iOverlay");
+    if (iov && iov.classList.contains("open")) renderTruths();
   }
 
   // wiring
@@ -977,21 +1008,30 @@
   }
 
   // ——— bit workbench ———
-  var workbenchId = null;
-  function openWorkbench(id) {
-    var b = state.bits.find(function (x) { return x.id === id; });
-    if (!b) return;
+  var workbenchId = null, workbenchKind = "bit";
+  function benchFind() {
+    var pool = workbenchKind === "truth" ? (state.truths || []) : state.bits;
+    return pool.find(function (x) { return x.id === workbenchId; });
+  }
+  function openWorkbench(id, kind) {
+    workbenchKind = kind || "bit";
     workbenchId = id;
+    var b = benchFind();
+    if (!b) { workbenchId = null; workbenchKind = "bit"; return; }
     document.getElementById("wbBit").value = b.text;
     document.getElementById("wbPad").value = b.workshop || "";
     var m = document.getElementById("wbMeta");
-    m.textContent = b.workshop ? "" : "This bit’s working notes live here — separate from the line itself.";
+    if (workbenchKind === "truth") {
+      m.textContent = b.workshop ? "" : "Riff on it. If a line shakes out, send this to concepts from the I… list.";
+    } else {
+      m.textContent = b.workshop ? "" : "This bit’s working notes live here — separate from the line itself.";
+    }
     document.getElementById("workbenchOverlay").classList.add("open");
     setTimeout(function () { document.getElementById("wbBit").focus(); }, 0);
   }
   function saveWorkbench() {
     if (!workbenchId) return;
-    var b = state.bits.find(function (x) { return x.id === workbenchId; });
+    var b = benchFind();
     if (!b) return;
     var v = document.getElementById("wbBit").value.trim();
     if (v) b.text = v;
@@ -1002,9 +1042,12 @@
   document.getElementById("wbPad").oninput = saveWorkbench;
   document.getElementById("wbClose").onclick = function () {
     saveWorkbench();
+    var wasTruth = workbenchKind === "truth";
     workbenchId = null;
+    workbenchKind = "bit";
     document.getElementById("workbenchOverlay").classList.remove("open");
     render();
+    if (wasTruth) renderTruths();
   };
 
   // ——— notes drawer ———
@@ -1110,6 +1153,111 @@
   };
   document.getElementById("boneClose").onclick = function () {
     document.getElementById("boneOverlay").classList.remove("open");
+  };
+
+  // ——— the I… list ———
+  var iCollidePair = null;
+  function renderTruths() {
+    var list = document.getElementById("iList");
+    var box = document.getElementById("iCollideBox");
+    list.innerHTML = "";
+    box.innerHTML = "";
+    if (iCollidePair) {
+      var cb = el("div", "i-collide");
+      cb.appendChild(el("p", null, iCollidePair[0].text));
+      cb.appendChild(el("span", "i-x", "× what’s true about both?"));
+      cb.appendChild(el("p", null, iCollidePair[1].text));
+      box.appendChild(cb);
+    }
+    var truths = state.truths || [];
+    if (truths.length === 0) {
+      list.appendChild(el("p", "empty", "Nothing true yet. Suspicious."));
+      return;
+    }
+    truths.forEach(function (t) {
+      var card = el("div", "bone-card");
+      var p = el("p", null, t.text);
+      p.style.cursor = "pointer";
+      p.onclick = function () { openWorkbench(t.id, "truth"); };
+      card.appendChild(p);
+      var actions = el("div", "bone-actions");
+      var promote = el("button", "bone-digup", "→ concept");
+      promote.title = "Copy this line into concepts";
+      promote.onclick = function (e) {
+        e.stopPropagation();
+        state.bits.unshift({
+          id: Date.now().toString(36),
+          text: t.text,
+          status: "concept",
+          tags: [],
+          created: Date.now(),
+          statusAt: Date.now()
+        });
+        t.mined = (t.mined || 0) + 1;
+        save(); render(); renderTruths();
+      };
+      actions.appendChild(promote);
+      if (t.mined) actions.appendChild(el("span", "i-mined", "mined ×" + t.mined));
+      if (t.workshop && t.workshop.trim()) {
+        var mark = el("span", "i-mined", "✎");
+        mark.title = "Has workbench notes";
+        actions.appendChild(mark);
+      }
+      var del = el("button", "bone-del", "delete");
+      del.onclick = function (e) {
+        e.stopPropagation();
+        if (del.textContent === "delete") { del.textContent = "sure?"; setTimeout(function () { if (del) del.textContent = "delete"; }, 2500); return; }
+        state.truths = state.truths.filter(function (x) { return x.id !== t.id; });
+        if (iCollidePair && (iCollidePair[0].id === t.id || iCollidePair[1].id === t.id)) iCollidePair = null;
+        save(); renderTruths();
+      };
+      actions.appendChild(del);
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+  }
+  function addTruth() {
+    var inp = document.getElementById("iDraft");
+    var v = inp.value.trim();
+    if (!v) return;
+    if (!state.truths) state.truths = [];
+    state.truths.push({ id: Date.now().toString(36), text: v, created: Date.now() });
+    inp.value = "";
+    save(); renderTruths();
+    inp.focus();
+  }
+  document.getElementById("iAdd").onclick = addTruth;
+  document.getElementById("iDraft").onkeydown = function (e) { if (e.key === "Enter") addTruth(); };
+  document.getElementById("iDraft").onpaste = function (e) {
+    var txt = (e.clipboardData || window.clipboardData).getData("text");
+    if (!txt || txt.indexOf("\n") === -1) return;
+    e.preventDefault();
+    if (!state.truths) state.truths = [];
+    var n = Date.now();
+    txt.split(/\r?\n/).forEach(function (line, i) {
+      var v = line.trim();
+      if (!v) return;
+      state.truths.push({ id: (n + i).toString(36), text: v, created: n });
+    });
+    document.getElementById("iDraft").value = "";
+    save(); renderTruths();
+  };
+  document.getElementById("iCollide").onclick = function () {
+    var truths = state.truths || [];
+    if (truths.length < 2) return;
+    var a = Math.floor(Math.random() * truths.length), b;
+    do { b = Math.floor(Math.random() * truths.length); } while (b === a);
+    iCollidePair = [truths[a], truths[b]];
+    renderTruths();
+  };
+  document.getElementById("iOpen").onclick = function () {
+    if (!state.truths) state.truths = [];
+    renderTruths();
+    document.getElementById("iOverlay").classList.add("open");
+  };
+  document.getElementById("iClose").onclick = function () {
+    iCollidePair = null;
+    document.getElementById("iOverlay").classList.remove("open");
   };
 
   load();
