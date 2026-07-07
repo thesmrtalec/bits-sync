@@ -121,6 +121,10 @@
   /* ——— bit cards ——— */
   .day-header { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--faint); text-transform: uppercase; padding: 18px 0 8px; font-family: var(--mono); }
   .day-header::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  .day-fold { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: transparent; border: none; font-size: 11px; font-weight: 700; letter-spacing: .1em; color: var(--faint); text-transform: uppercase; padding: 18px 0 8px; font-family: var(--mono); cursor: pointer; }
+  .day-fold::before { content: "▸"; font-size: 9px; }
+  .day-fold.open::before { content: "▾"; }
+  .day-fold::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
   .bit { padding: 13px 15px; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; margin-bottom: 9px; box-shadow: var(--cardshadow); }
   .bit-text { margin: 0 0 9px; font-size: 16px; line-height: 1.6; white-space: pre-wrap; cursor: pointer; }
   .edit-area { width: 100%; border: 1px solid var(--accent); border-radius: 7px; padding: 9px 10px; font-size: 16px; font-family: var(--serif); line-height: 1.6; margin: 0 0 9px; background: var(--card); color: var(--ink); min-height: 64px; resize: vertical; }
@@ -271,49 +275,25 @@
 
   <div class="strip">
     <div class="srow">
-      <span class="slabel">bits written this week</span>
+      <span class="slabel">bits this week</span>
       <span class="lab"><strong id="weekCount">0</strong>/<strong id="quotaShow">10</strong></span>
       <input type="number" min="1" id="quotaInput" class="quota-input" aria-label="weekly bit quota" />
     </div>
     <div class="bar-track"><div class="bar-fill" id="barFill"></div></div>
-    <div class="srow">
-      <label class="riff-check"><span class="slabel">riffed out loud today</span>
-        <input type="checkbox" id="riffCheck" />
-        <span class="stamp"><span class="off">not yet</span><span class="on">✓ done</span></span>
-      </label>
-      <span class="riff-week" id="riffWeek"></span>
-    </div>
-    <div class="srow">
-      <span class="slabel">mics</span>
-      <span class="lab"><strong id="micCount">0</strong><span class="last-mic" id="lastMic"></span></span>
-      <button class="mic-btn" id="micBtn">+ mic</button>
-      <button class="undo-btn" id="undoBtn">undo</button>
-      <button class="mic-btn" id="planBtn">+ plan a mic</button>
-    </div>
-    <div id="planForm" class="plan-form" style="display:none">
-      <input type="datetime-local" id="planWhen" />
-      <input type="text" id="planNote" placeholder="venue (optional)" />
-      <button id="planSave" class="mic-btn">Save</button>
-    </div>
-    <div id="planned"></div>
   </div>
 
-  <div class="cap-toggle" id="capToggle">
-    <button class="cap-opt" data-stage="confession">confession</button>
-    <button class="cap-opt active" data-stage="observation">observation</button>
-  </div>
   <div class="capture">
     <textarea id="draft" rows="3"></textarea>
     <button class="add-btn" id="addBtn">Add</button>
   </div>
 
   <div class="filters" id="filters"></div>
-  <div class="tag-filters" id="tagFilters"></div>
   <div id="list"></div>
   <p class="empty" id="empty" style="display:none"></p>
 
   <div class="backup">
     <button class="notes-tab" id="notesOpen">🗒 notes</button>
+    <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">🗓️</button>
     <button class="notes-tab bone-key" id="shuffleBtn" aria-label="shuffle: deal a stale line" title="Shuffle — deal a stale line">🎲</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🗝️</button>
     <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
@@ -327,8 +307,7 @@
       <button id="signOut" class="util-signout">Sign out</button>
     </div>
     <div class="util-menu" id="shuffleMenu" style="display:none">
-      <button data-pool="confession">deal a confession</button>
-      <button data-pool="observation">deal an observation</button>
+      <button data-pool="pool">deal some stuff</button>
       <button data-pool="bit">deal a bit</button>
     </div>
   </div>
@@ -349,7 +328,7 @@
       <h2>Just the Bits</h2>
       <p class="wsub">all your bits, synced across your devices</p>
       <div class="welcome-row"><span class="wnum">1</span><p><b>Make an account</b> — email and password, just to sync your devices.</p></div>
-      <div class="welcome-row"><span class="wnum">2</span><p><b>Capture truths</b> — confessions and observations — and work them into bits.</p></div>
+      <div class="welcome-row"><span class="wnum">2</span><p><b>Capture stuff</b> — anything true enough to write down — and work it into bits.</p></div>
       <div class="welcome-row"><span class="wnum">3</span><p><b>Add to Home Screen</b> for the full-screen app. (iPhone: Share → Add to Home Screen.)</p></div>
       <button class="welcome-go" id="welcomeGo">Get started</button>
     </div>
@@ -372,12 +351,12 @@
   <div class="tour-gate" id="tourGate">
     <div class="tour-box">
       <h2>The pipeline</h2>
-      <p class="tsub">raw truth in, bits out</p>
-      <div class="tour-stage"><span class="tour-dot">confession</span><p>Something's funny in here. First person, present tense. Confessions never leave — mine them for bits forever.</p></div>
-      <div class="tour-stage"><span class="tour-dot">observation</span><p>Something's funny out there. You saw it. You can't prove it yet.</p></div>
+      <p class="tsub">stuff in, sets out</p>
+      <div class="tour-stage"><span class="tour-dot">stuff</span><p>Confessions, observations, half-thoughts. Anything true enough to write down. Lines never leave.</p></div>
       <div class="tour-stage"><span class="tour-dot">bit</span><p>Find the funny and put it in words. Bits get timed, reacted, and strung into sets.</p></div>
+      <div class="tour-stage"><span class="tour-dot">set</span><p>String bits in order against a clock. This is the thing you say on stage.</p></div>
       <div class="tour-rule"></div>
-      <div class="tour-stage"><span class="tour-dot alt">capture</span><p>Write it down. You won’t remember it in 30 seconds. <b>WRITE IT DOWN.</b> The confession / observation toggle says which drawer we toss it in.</p></div>
+      <div class="tour-stage"><span class="tour-dot alt">capture</span><p>Write it down. You won’t remember it in 30 seconds. <b>WRITE IT DOWN.</b> The tab you’re on says which drawer it lands in — stuff or bits.</p></div>
       <div class="tour-stage"><span class="tour-dot alt">tags</span><p>Casually organize your mess. Buzzwords of your choice — topic, voice, theme, intended audience. Tap one to filter; the ones you use most rise to the top.</p></div>
       <div class="tour-stage"><span class="tour-dot alt">workbench</span><p>Tap a bit to open its workbench — the line up top, a scratch pad below for rewrites and angles. Each bit keeps its own.</p></div>
       <div class="tour-stage"><span class="tour-dot alt">notes</span><p>Endless blank space to fuel your existential crisis. Exercises, brain-dumps, half-thoughts — the stuff that isn’t a bit.</p></div>
@@ -394,6 +373,36 @@
       <button id="authSignin">Sign in</button>
       <button id="authSignup" style="background:transparent;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;margin-top:6px">First time here? Create account</button>
       <div class="auth-msg" id="magicMsg"></div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="schedOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Schedule</h2>
+        <button class="notes-close" id="schedClose">done</button>
+      </div>
+      <div class="strip" style="border-bottom:none;margin-bottom:0">
+        <div class="srow">
+          <label class="riff-check"><span class="slabel">riffed out loud today</span>
+            <input type="checkbox" id="riffCheck" />
+            <span class="stamp"><span class="off">not yet</span><span class="on">✓ done</span></span>
+          </label>
+          <span class="riff-week" id="riffWeek"></span>
+        </div>
+        <div class="srow">
+          <span class="slabel">mics</span>
+          <span class="lab"><strong id="micCount">0</strong><span class="last-mic" id="lastMic"></span></span>
+          <button class="mic-btn" id="micBtn">+ mic</button>
+          <button class="undo-btn" id="undoBtn">undo</button>
+          <button class="mic-btn" id="planBtn">+ plan a mic</button>
+        </div>
+        <div id="planForm" class="plan-form" style="display:none">
+          <input type="datetime-local" id="planWhen" />
+          <input type="text" id="planNote" placeholder="venue (optional)" />
+          <button id="planSave" class="mic-btn">Save</button>
+        </div>
+        <div id="planned"></div>
+      </div>
     </div>
   </div>
   <div class="notes-overlay" id="workbenchOverlay">
@@ -437,12 +446,7 @@
   var sb = null, sbUser = null, syncChan = null, pushTimer = null;
   var DAY = 86400000;
   var STALE_DAYS = 14;
-  var NEXT = { observation: "bit", bit: "observation" };
-  var STAGE = {
-    observation: { label: "observation", color: "#8b97a3" },
-    bit: { label: "bit", color: "#5a7d9a" }
-  };
-  var STAGES = ["observation", "bit"];
+
   var PLACEHOLDERS = [
     "Write it ugly.",
     "The funny version comes later. Write the bad one.",
@@ -462,22 +466,23 @@
   ];
 
   var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [] };
-  var stageFilter = "observation";
-  var tagFilter = null;
-  var tagsExpanded = false;
+  var stageFilter = "pool";
   var tagEditing = null;
   var textEditing = null;
 
   function hydrate(data) {
-    state.bits = (data.bits || []).map(function (b) {
-      if (b.status === "raw" || b.status === "concept") b.status = "observation";
-      if (b.status === "working" || b.status === "ready" || b.status === "proven") b.status = "bit";
-      if (!b.status) b.status = "observation";
+    var toPool = [];
+    state.bits = (data.bits || []).filter(function (b) {
       if (!b.tags) b.tags = [];
-      return b;
+      var s = b.status;
+      if (s === "bit" || s === "working" || s === "ready" || s === "proven") {
+        delete b.status;
+        return true;
+      }
+      if (s === undefined && data.poolMigrated) return true;
+      toPool.push(b);
+      return false;
     });
-    var confessed = state.bits.filter(function (b) { return b.status === "confession"; });
-    state.bits = state.bits.filter(function (b) { return b.status !== "confession"; });
     state.quota = data.quota || 10;
     state.mics = data.mics || [];
     state.riffs = data.riffs || [];
@@ -485,9 +490,10 @@
     state.notes = data.notes || [];
     state.buried = data.buried || [];
     state.truths = data.truths || [];
-    confessed.forEach(function (b) {
+    toPool.forEach(function (b) {
       state.truths.push({ id: b.id, text: b.text, created: b.created, workshop: b.workshop, mined: b.mined, tags: b.tags });
     });
+    state.poolMigrated = true;
     state.sets = data.sets || [];
     state.updatedAt = data.updatedAt || 0;
   }
@@ -517,7 +523,6 @@
   }
 
   function staleDays(b) {
-    if (b.status !== "bit") return 0;
     var days = Math.floor((Date.now() - (b.statusAt || b.created)) / DAY);
     return days >= STALE_DAYS ? days : 0;
   }
@@ -531,7 +536,7 @@
 
   function render() {
     // strip
-    var weekCount = state.bits.filter(function (b) { return b.status === "bit" && (b.statusAt || b.created) >= startOfWeek(); }).length;
+    var weekCount = state.bits.filter(function (b) { return (b.statusAt || b.created) >= startOfWeek(); }).length;
     document.getElementById("weekCount").textContent = weekCount;
     document.getElementById("quotaShow").textContent = state.quota;
     document.getElementById("quotaInput").value = state.quota;
@@ -590,84 +595,33 @@
       btn.onclick = function () { stageFilter = key; setOpen = null; render(); };
       filters.appendChild(btn);
     }
-    function stageCount(st) {
-      return state.bits.filter(function (b) { return b.status === st; }).length;
-    }
-    tabBtn("confession", "confessions", (state.truths || []).length);
-    tabBtn("observation", "observations", stageCount("observation"));
-    tabBtn("bit", "bits", stageCount("bit"));
+    tabBtn("pool", "stuff", (state.truths || []).length);
+    tabBtn("bit", "bits", state.bits.length);
     tabBtn("sets", "sets", (state.sets || []).length);
+    tabBtn("tags", "🏷️", allTagCounts().length);
 
-    var capT = document.getElementById("capToggle");
     var capWrap = document.querySelector(".capture");
-    var tagT = document.getElementById("tagToggle");
-    if (stageFilter === "confession" || stageFilter === "sets") {
+    if (stageFilter === "pool" || stageFilter === "sets" || stageFilter === "tags") {
       document.getElementById("empty").style.display = "none";
       document.getElementById("list").innerHTML = "";
-      capT.style.display = "none";
-      if (stageFilter === "confession") {
-        buildTagChips(state.truths || []);
+      if (stageFilter === "pool") {
         capWrap.style.display = "";
-        draft.placeholder = "I…";
         renderTruths();
+      } else if (stageFilter === "tags") {
+        capWrap.style.display = "none";
+        renderTags();
       } else {
-        document.getElementById("tagFilters").innerHTML = "";
-        if (tagT) tagT.style.display = "none";
         capWrap.style.display = "none";
         renderSets();
       }
       return;
     }
-    capT.style.display = "";
     capWrap.style.display = "";
-    if (tagT) tagT.style.display = "";
-    if (draft.placeholder === "I…") draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
-
-    // tag filters
-    buildTagChips(state.bits);
-    function buildTagChips(items) {
-    var tagCounts = {};
-    items.forEach(function (b) {
-      (b.tags || []).forEach(function (t) { tagCounts[t] = (tagCounts[t] || 0) + 1; });
-    });
-    var allTags = Object.keys(tagCounts);
-    allTags.sort(function (a, b) {
-      if (tagCounts[b] !== tagCounts[a]) return tagCounts[b] - tagCounts[a]; // heavy-used first
-      return a.localeCompare(b);
-    });
-    var tf = document.getElementById("tagFilters");
-    tf.innerHTML = "";
-    if (!tagsExpanded) tf.classList.add("clamped"); else tf.classList.remove("clamped");
-    allTags.forEach(function (t) {
-      var chip = el("button", "tag-chip" + (tagFilter === t ? " active" : ""), t);
-      chip.onclick = function () { tagFilter = tagFilter === t ? null : t; render(); };
-      tf.appendChild(chip);
-    });
-    var toggle = document.getElementById("tagToggle");
-    if (!toggle) {
-      toggle = el("button", "tag-toggle");
-      toggle.id = "tagToggle";
-      tf.parentNode.insertBefore(toggle, tf.nextSibling);
-      toggle.onclick = function () { tagsExpanded = !tagsExpanded; render(); };
-    }
-    // show the toggle only when the chips actually overflow 2 rows
-    requestAnimationFrame(function () {
-      var overflowing = tf.scrollHeight - tf.clientHeight > 4;
-      if (tagsExpanded || overflowing) {
-        toggle.style.display = "inline-block";
-        toggle.textContent = tagsExpanded ? "show fewer" : "show all tags (" + allTags.length + ")";
-      } else {
-        toggle.style.display = "none";
-      }
-    });
-    }
 
     // list
     var list = document.getElementById("list");
     list.innerHTML = "";
-    var visible = state.bits.filter(function (b) {
-      return b.status === stageFilter && (!tagFilter || b.tags.indexOf(tagFilter) !== -1);
-    });
+    var visible = state.bits.slice();
     visible.sort(function (a, b2) { return b2.created - a.created; });
 
     var lastDayKey = null;
@@ -720,28 +674,17 @@
 
       var meta = el("div", "bit-meta");
 
-      var stageBtn = el("button", "stage-btn st-" + b.status, STAGE[b.status].label + " →");
-      stageBtn.title = "Tap to move to next stage";
-      stageBtn.onclick = function () {
-        b.status = NEXT[b.status];
-        b.statusAt = Date.now();
+      var toPoolBtn = el("button", "stage-btn", "→ stuff");
+      toPoolBtn.title = "Send this back to stuff";
+      toPoolBtn.onclick = function () {
+        state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
+        if (!state.truths) state.truths = [];
+        state.truths.unshift({ id: b.id, text: b.text, created: b.created, workshop: b.workshop, mined: b.mined, tags: b.tags });
         save(); render();
       };
-      meta.appendChild(stageBtn);
+      meta.appendChild(toPoolBtn);
 
-      if (b.status === "observation") {
-        var toConf = el("button", "stage-btn", "→ confession");
-        toConf.title = "Move this line into the confessions fountain";
-        toConf.onclick = function () {
-          state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
-          if (!state.truths) state.truths = [];
-          state.truths.unshift({ id: b.id, text: b.text, created: b.created, workshop: b.workshop, mined: b.mined, tags: b.tags });
-          save(); render();
-        };
-        meta.appendChild(toConf);
-      }
-
-      if (b.status === "bit") {
+      {
         var REACTS = ["", "😒", "😆", "😂"];
         var rBtn = el("button", "react-btn" + (b.react ? " has-react" : ""), b.react || "😶");
         rBtn.title = "How'd it land? Tap to cycle";
@@ -831,20 +774,10 @@
   var draft = document.getElementById("draft");
   draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
-  var captureStage = "observation";
-  (function () {
-    var opts = document.querySelectorAll("#capToggle .cap-opt");
-    opts.forEach(function (o) {
-      o.onclick = function () {
-        captureStage = o.getAttribute("data-stage");
-        opts.forEach(function (x) { x.classList.toggle("active", x === o); });
-      };
-    });
-  })();
   function addBit() {
     var text = draft.value.trim();
     if (!text) return;
-    if (stageFilter === "confession" || captureStage === "confession") {
+    if (stageFilter === "pool") {
       if (!state.truths) state.truths = [];
       var n = Date.now();
       var added = [];
@@ -861,7 +794,6 @@
     state.bits.unshift({
       id: Date.now().toString(36),
       text: text,
-      status: captureStage,
       tags: [],
       created: Date.now(),
       statusAt: Date.now()
@@ -1092,7 +1024,7 @@
     document.getElementById("wbPad").value = b.workshop || "";
     var m = document.getElementById("wbMeta");
     if (workbenchKind === "truth") {
-      m.textContent = b.workshop ? "" : "Riff on it. When a line shakes out, send this to bits from the confessions tab.";
+      m.textContent = b.workshop ? "" : "Riff on it. When a line shakes out, send this to bits from the stuff tab.";
     } else {
       m.textContent = b.workshop ? "" : "This bit’s working notes live here — separate from the line itself.";
     }
@@ -1181,17 +1113,17 @@
     list.innerHTML = "";
     var buried = (state.buried || []).slice().sort(function (a, b) { return (b.buriedAt || 0) - (a.buriedAt || 0); });
     if (buried.length === 0) {
-      note.textContent = "The boneyard is empty. Buried bits rest here — dig one up to bring it back as an observation.";
+      note.textContent = "The boneyard is empty. Buried bits rest here — dig one up to bring it back.";
       return;
     }
-    note.textContent = "Buried bits rest here. Dig one up to restore it as an observation, or lay it to rest for good.";
+    note.textContent = "Buried bits rest here. Dig one up to restore it, or lay it to rest for good.";
     buried.forEach(function (b) {
       var card = el("div", "bone-card");
       card.appendChild(el("p", null, b.text));
       var actions = el("div", "bone-actions");
       var dig = el("button", "bone-digup", "⛏ dig up");
       dig.onclick = function () {
-        b.status = "observation";
+        delete b.status;
         b.statusAt = Date.now();
         delete b.buriedAt;
         state.buried = state.buried.filter(function (x) { return x.id !== b.id; });
@@ -1222,26 +1154,68 @@
   document.getElementById("boneClose").onclick = function () {
     document.getElementById("boneOverlay").classList.remove("open");
   };
+  document.getElementById("schedOpen").onclick = function () {
+    document.getElementById("schedOverlay").classList.add("open");
+  };
+  document.getElementById("schedClose").onclick = function () {
+    document.getElementById("schedOverlay").classList.remove("open");
+  };
 
-  // ——— the I… list ———
+  // ——— stuff ———
+  var expandedTruth = null;
+  var openDays = {};
+  function truthDayKey(ts) {
+    var d = new Date(ts || 0);
+    return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+  }
+  function truthDayLabel(ts) {
+    var d = new Date(ts || 0);
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    var that = new Date(d); that.setHours(0, 0, 0, 0);
+    var diff = Math.round((today - that) / DAY);
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Yesterday";
+    return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  }
   function renderTruths() {
     var list = document.getElementById("list");
     list.innerHTML = "";
-    list.appendChild(el("p", "bone-note", "Things that are true, first person. One per line — paste a whole list if you have one. These never leave; mine them for bits forever."));
-    var truths = (state.truths || []).filter(function (t) {
-      return !tagFilter || (t.tags || []).indexOf(tagFilter) !== -1;
-    });
+    var truths = state.truths || [];
     if (truths.length === 0) {
-      list.appendChild(el("p", "empty", tagFilter ? "No confessions with that tag." : "Nothing true yet. Suspicious."));
+      list.appendChild(el("p", "empty", "Nothing true yet. Suspicious."));
       return;
     }
+    truths = truths.slice().sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
+    var todayKey = truthDayKey(Date.now());
+    var groups = [];
     truths.forEach(function (t) {
+      var k = truthDayKey(t.created);
+      if (!groups.length || groups[groups.length - 1].key !== k) {
+        groups.push({ key: k, at: t.created || 0, items: [] });
+      }
+      groups[groups.length - 1].items.push(t);
+    });
+    groups.forEach(function (g) {
+      var isOpen = (g.key in openDays) ? openDays[g.key] : g.key === todayKey;
+      var hdr = el("button", "day-fold" + (isOpen ? " open" : ""), truthDayLabel(g.at) + " · " + g.items.length);
+      hdr.onclick = function () { openDays[g.key] = !isOpen; render(); };
+      list.appendChild(hdr);
+      if (!isOpen) return;
+      g.items.forEach(function (t) { renderTruthCard(t, list); });
+    });
+  }
+  function renderTruthCard(t, list) {
       var card = el("div", "bone-card");
       var p = el("p", null, t.text);
       p.style.cursor = "pointer";
-      p.onclick = function () { openWorkbench(t.id, "truth"); };
+      p.onclick = function () { expandedTruth = expandedTruth === t.id ? null : t.id; render(); };
       card.appendChild(p);
+      if (expandedTruth !== t.id) { list.appendChild(card); return; }
       var actions = el("div", "bone-actions");
+      var riff = el("button", "add-tag-btn", t.workshop && t.workshop.trim() ? "✎ riff·" : "✎ riff");
+      riff.title = "Open the workbench on this line";
+      riff.onclick = function (e) { e.stopPropagation(); openWorkbench(t.id, "truth"); };
+      actions.appendChild(riff);
       var promote = el("button", "bone-digup", "→ bit");
       promote.title = "Copy this line into bits";
       promote.onclick = function (e) {
@@ -1249,7 +1223,6 @@
         state.bits.unshift({
           id: Date.now().toString(36),
           text: t.text,
-          status: "bit",
           tags: (t.tags || []).slice(),
           created: Date.now(),
           statusAt: Date.now()
@@ -1259,11 +1232,6 @@
       };
       actions.appendChild(promote);
       if (t.mined) actions.appendChild(el("span", "i-mined", "mined ×" + t.mined));
-      if (t.workshop && t.workshop.trim()) {
-        var mark = el("span", "i-mined", "✎");
-        mark.title = "Has workbench notes";
-        actions.appendChild(mark);
-      }
       (t.tags || []).forEach(function (tg) {
         var tag = el("button", "bit-tag", tg + " ✕");
         tag.title = "Tap to remove tag";
@@ -1303,18 +1271,98 @@
       actions.appendChild(del);
       card.appendChild(actions);
       list.appendChild(card);
+  }
+
+  // ——— tags: everything you've ever written about X ———
+  var tagView = null;
+  var tagGhostsOpen = false;
+  function allTagCounts() {
+    var counts = {};
+    function tally(arr) {
+      (arr || []).forEach(function (x) {
+        (x.tags || []).forEach(function (t) { counts[t] = (counts[t] || 0) + 1; });
+      });
+    }
+    tally(state.truths);
+    tally(state.bits);
+    tally(state.buried);
+    var names = Object.keys(counts);
+    names.sort(function (a, b) {
+      if (counts[b] !== counts[a]) return counts[b] - counts[a];
+      return a.localeCompare(b);
     });
+    return names.map(function (t) { return { tag: t, count: counts[t] }; });
+  }
+  function renderTags() {
+    var list = document.getElementById("list");
+    list.innerHTML = "";
+    var tags = allTagCounts();
+    if (tagView && !tags.some(function (x) { return x.tag === tagView; })) tagView = null;
+    if (!tagView) {
+      if (tags.length === 0) {
+        list.appendChild(el("p", "empty", "No tags yet. Add them on any line — stuff or bits."));
+        return;
+      }
+      tags.forEach(function (x) {
+        var row = el("div", "bone-card set-addable");
+        row.appendChild(el("p", null, x.tag));
+        row.appendChild(el("span", "i-mined", "×" + x.count));
+        row.onclick = function () { tagView = x.tag; tagGhostsOpen = false; render(); };
+        list.appendChild(row);
+      });
+      return;
+    }
+    var back = el("button", "set-back", "‹ all tags");
+    back.onclick = function () { tagView = null; tagGhostsOpen = false; render(); };
+    list.appendChild(back);
+    list.appendChild(el("div", "set-add-head", "everything tagged “" + tagView + "”"));
+    var rows = [], ghosts = [];
+    (state.truths || []).forEach(function (t) {
+      if ((t.tags || []).indexOf(tagView) !== -1) rows.push({ item: t, kind: "truth", label: "stuff", at: t.created || 0 });
+    });
+    state.bits.forEach(function (b) {
+      if ((b.tags || []).indexOf(tagView) !== -1) rows.push({ item: b, kind: "bit", label: "bit", at: b.created || 0 });
+    });
+    (state.buried || []).forEach(function (b) {
+      if ((b.tags || []).indexOf(tagView) !== -1) ghosts.push(b);
+    });
+    rows.sort(function (a, b) { return b.at - a.at; });
+    rows.forEach(function (r) {
+      var card = el("div", "bone-card");
+      var p = el("p", null, r.item.text);
+      p.style.cursor = "pointer";
+      p.onclick = function () { openWorkbench(r.item.id, r.kind); };
+      card.appendChild(p);
+      var actions = el("div", "bone-actions");
+      actions.appendChild(el("span", "i-mined", r.label));
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+    if (ghosts.length) {
+      var fold = el("button", "day-fold" + (tagGhostsOpen ? " open" : ""), "in the boneyard · " + ghosts.length);
+      fold.onclick = function () { tagGhostsOpen = !tagGhostsOpen; render(); };
+      list.appendChild(fold);
+      if (tagGhostsOpen) {
+        ghosts.sort(function (a, b) { return (b.buriedAt || 0) - (a.buriedAt || 0); });
+        ghosts.forEach(function (b) {
+          var card = el("div", "bone-card");
+          var p = el("p", null, b.text);
+          p.style.opacity = ".45";
+          card.appendChild(p);
+          list.appendChild(card);
+        });
+      }
+    }
   }
 
   // ——— shuffle: pick a pool, get an age-weighted deal ———
-  function dealShuffle(status) {
+  function dealShuffle(which) {
     var pool, kind;
-    if (status === "confession") {
+    if (which === "pool") {
       pool = (state.truths || []).map(function (t) { return { id: t.id, at: t.created }; });
       kind = "truth";
     } else {
-      pool = state.bits.filter(function (b) { return b.status === status; })
-        .map(function (b) { return { id: b.id, at: b.statusAt || b.created }; });
+      pool = state.bits.map(function (b) { return { id: b.id, at: b.statusAt || b.created }; });
       kind = "bit";
     }
     if (pool.length === 0) return;
@@ -1447,7 +1495,7 @@
       });
       if (s.bitIds.length === 0) body.appendChild(el("p", "empty", "Empty set — tap any bit below and it joins the lineup."));
       body.appendChild(el("div", "set-add-head", "your bits — tap to add"));
-      var avail = state.bits.filter(function (b) { return b.status === "bit" && s.bitIds.indexOf(b.id) === -1; });
+      var avail = state.bits.filter(function (b) { return s.bitIds.indexOf(b.id) === -1; });
       if (avail.length === 0) body.appendChild(el("p", "empty", "No bits left to add — work something up in the bits tab."));
       avail.forEach(function (b) {
         var row = el("div", "set-row set-addable");
