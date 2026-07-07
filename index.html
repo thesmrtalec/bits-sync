@@ -155,6 +155,7 @@
   .truth-corner { position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 5px; }
   .truth-noted { font-size: 11px; color: var(--faint); line-height: 1; }
   .truth-more { background: transparent; border: none; color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 5px; cursor: pointer; }
+  .tag-cloud { display: flex; flex-wrap: wrap; gap: 9px; padding-top: 6px; }
   .bone-digup { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 4px 12px; font-family: var(--mono); font-size: 11px; }
   .bone-when { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
   .bone-del { margin-left: auto; background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 11px; padding: 2px 4px; }
@@ -682,8 +683,8 @@
 
       var meta = el("div", "bit-meta");
 
-      var toPoolBtn = el("button", "stage-btn", "→ stuff");
-      toPoolBtn.title = "Send this back to stuff";
+      var toPoolBtn = el("button", "stage-btn", "back to stuff");
+      toPoolBtn.title = "Not a bit after all — move it back to the stuff pool";
       toPoolBtn.onclick = function () {
         state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
         if (!state.truths) state.truths = [];
@@ -1317,13 +1318,14 @@
         list.appendChild(el("p", "empty", "No tags yet. Add them on any line — stuff or bits."));
         return;
       }
+      tags.sort(function (a, b) { return a.tag.localeCompare(b.tag); });
+      var cloud = el("div", "tag-cloud");
       tags.forEach(function (x) {
-        var row = el("div", "bone-card set-addable");
-        row.appendChild(el("p", null, x.tag));
-        row.appendChild(el("span", "i-mined", "×" + x.count));
-        row.onclick = function () { tagView = x.tag; tagGhostsOpen = false; render(); };
-        list.appendChild(row);
+        var chip = el("button", "tag-chip", x.tag + " · " + x.count);
+        chip.onclick = function () { tagView = x.tag; tagGhostsOpen = false; render(); };
+        cloud.appendChild(chip);
       });
+      list.appendChild(cloud);
       return;
     }
     var back = el("button", "set-back", "‹ all tags");
