@@ -287,6 +287,13 @@
   }
   .bone-card p, .bit-text, .set-row p { line-height: 1.35; }
 
+  .axe-face { padding: 18px 16px; }
+  .axe-face p { font-size: 23px; }
+  .axe-verdicts { display: flex; gap: 12px; margin-top: 16px; }
+  .axe-verdicts button { flex: 1; border-radius: 12px; padding: 14px 0; font-family: var(--mono); font-size: 14px; cursor: pointer; }
+  .axe-kill { background: transparent; border: 1.5px solid var(--accent2, #b13228); color: var(--accent2, #b13228); }
+  .axe-keep { background: var(--accent); border: 1.5px solid var(--accent); color: #fff; }
+
   /* ruled paper */
   #draft, .notes-canvas {
     line-height: 26px;
@@ -342,6 +349,7 @@
   <div class="backup">
     <button class="notes-tab" id="notesOpen">🗒 notes</button>
     <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">🗓️</button>
+    <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
     <button class="notes-tab bone-key" id="shuffleBtn" aria-label="shuffle: deal a stale line" title="Shuffle — deal a stale line">🎲</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🗝️</button>
     <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
@@ -456,6 +464,20 @@
           <button id="planSave" class="mic-btn">Save</button>
         </div>
         <div id="planned"></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="axeOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Axe mode</h2>
+        <button class="notes-close" id="axeClose">done</button>
+      </div>
+      <p class="bone-note" id="axeProgress"></p>
+      <div id="axeCard"></div>
+      <div class="axe-verdicts">
+        <button id="axeKill" class="axe-kill">🪓 axe</button>
+        <button id="axeKeep" class="axe-keep">keep</button>
       </div>
     </div>
   </div>
@@ -772,6 +794,7 @@
           var ri = REACTS.indexOf(b.react || "");
           var next = REACTS[(ri + 1) % REACTS.length];
           if (next) b.react = next; else delete b.react;
+          b.touched = Date.now();
           save(); render();
         };
         meta.appendChild(rBtn);
@@ -1109,8 +1132,10 @@
     var b = benchFind();
     if (!b) return;
     var v = document.getElementById("wbBit").value.trim();
+    var pad = document.getElementById("wbPad").value;
+    if ((v && v !== b.text) || pad !== (b.workshop || "")) b.touched = Date.now();
     if (v) b.text = v;
-    b.workshop = document.getElementById("wbPad").value;
+    b.workshop = pad;
     save();
   }
   document.getElementById("wbBit").oninput = saveWorkbench;
@@ -1196,11 +1221,18 @@
       var actions = el("div", "bone-actions");
       var dig = el("button", "bone-digup", "⛏ dig up");
       dig.onclick = function () {
+        var wasStuff = b.from === "stuff";
         delete b.status;
-        b.statusAt = Date.now();
         delete b.buriedAt;
+        delete b.from;
         state.buried = state.buried.filter(function (x) { return x.id !== b.id; });
-        state.bits.unshift(b);
+        if (wasStuff) {
+          if (!state.truths) state.truths = [];
+          state.truths.unshift(b);
+        } else {
+          b.statusAt = Date.now();
+          state.bits.unshift(b);
+        }
         save(); renderBoneyard(); render();
       };
       actions.appendChild(dig);
@@ -1308,6 +1340,7 @@
           statusAt: Date.now()
         });
         t.mined = (t.mined || 0) + 1;
+        t.touched = Date.now();
         save(); render();
       };
       actions.appendChild(promote);
@@ -1547,6 +1580,66 @@
   }
   document.getElementById("wisdom").onclick = dealWisdom;
   dealWisdom();
+
+  // ——— axe mode: forced visibility, two verdicts ———
+  var axeQueue = [], axeIdx = 0;
+  function touchedAt(x) { return x.touched || x.statusAt || x.created || 0; }
+  function renderAxe() {
+    var card = document.getElementById("axeCard");
+    var prog = document.getElementById("axeProgress");
+    var verdicts = document.querySelector(".axe-verdicts");
+    card.innerHTML = "";
+    if (axeIdx >= axeQueue.length) {
+      prog.textContent = "";
+      card.appendChild(el("p", "empty", axeQueue.length ? "That's everything. The basement thanks you." : "Nothing to judge."));
+      verdicts.style.display = "none";
+      return;
+    }
+    verdicts.style.display = "";
+    var cur = axeQueue[axeIdx];
+    prog.textContent = (axeIdx + 1) + " of " + axeQueue.length + " — oldest first";
+    var c = el("div", "bone-card axe-face");
+    c.appendChild(el("p", null, cur.item.text));
+    var ts = touchedAt(cur.item);
+    var age = ts ? "untouched " + Math.max(0, Math.floor((Date.now() - ts) / DAY)) + "d" : "no timestamp";
+    var actions = el("div", "bone-actions");
+    actions.appendChild(el("span", "i-mined", cur.kind + " · " + age));
+    c.appendChild(actions);
+    card.appendChild(c);
+  }
+  document.getElementById("axeBtn").onclick = function () {
+    axeQueue = [];
+    (state.truths || []).forEach(function (t) { axeQueue.push({ item: t, kind: "stuff" }); });
+    state.bits.forEach(function (b) { axeQueue.push({ item: b, kind: "bit" }); });
+    axeQueue.sort(function (a, b) { return touchedAt(a.item) - touchedAt(b.item); });
+    axeIdx = 0;
+    renderAxe();
+    document.getElementById("axeOverlay").classList.add("open");
+  };
+  document.getElementById("axeClose").onclick = function () {
+    document.getElementById("axeOverlay").classList.remove("open");
+    render();
+  };
+  document.getElementById("axeKeep").onclick = function () {
+    axeIdx++;
+    renderAxe();
+  };
+  document.getElementById("axeKill").onclick = function () {
+    var cur = axeQueue[axeIdx];
+    if (!cur) return;
+    if (!state.buried) state.buried = [];
+    cur.item.buriedAt = Date.now();
+    cur.item.from = cur.kind;
+    state.buried.unshift(cur.item);
+    if (cur.kind === "stuff") {
+      state.truths = state.truths.filter(function (x) { return x.id !== cur.item.id; });
+    } else {
+      state.bits = state.bits.filter(function (x) { return x.id !== cur.item.id; });
+    }
+    axeIdx++;
+    save();
+    renderAxe();
+  };
 
   // ——— search (home) ———
   var searchFocused = false;
