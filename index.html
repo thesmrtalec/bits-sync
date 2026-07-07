@@ -148,6 +148,13 @@
   .bone-card { background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--faint); border-radius: 9px; padding: 12px 14px; margin-bottom: 9px; box-shadow: var(--cardshadow); }
   .bone-card p { margin: 0 0 8px; font-size: 15px; line-height: 1.5; color: var(--ink); }
   .bone-actions { display: flex; align-items: center; gap: 6px; }
+  .truth-actions { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .truth-actions::-webkit-scrollbar { display: none; }
+  .truth-actions button, .truth-actions .bit-tag { white-space: nowrap; flex: 0 0 auto; }
+  .truth-card { position: relative; padding-right: 46px; }
+  .truth-corner { position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 5px; }
+  .truth-noted { font-size: 11px; color: var(--faint); line-height: 1; }
+  .truth-more { background: transparent; border: none; color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 5px; cursor: pointer; }
   .bone-digup { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 4px 12px; font-family: var(--mono); font-size: 11px; }
   .bone-when { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
   .bone-del { margin-left: auto; background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 11px; padding: 2px 4px; }
@@ -624,22 +631,23 @@
     var visible = state.bits.slice();
     visible.sort(function (a, b2) { return b2.created - a.created; });
 
-    var lastDayKey = null;
+    var todayK = truthDayKey(Date.now());
+    var bGroups = [];
     visible.forEach(function (b) {
-      var d = new Date(b.created);
-      var dayKey = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
-      if (dayKey !== lastDayKey) {
-        lastDayKey = dayKey;
-        var today = new Date(); today.setHours(0,0,0,0);
-        var thatDay = new Date(d); thatDay.setHours(0,0,0,0);
-        var diff = Math.round((today - thatDay) / DAY);
-        var label;
-        if (diff === 0) label = "Today";
-        else if (diff === 1) label = "Yesterday";
-        else label = d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-        list.appendChild(el("div", "day-header", label));
+      var k = truthDayKey(b.created);
+      if (!bGroups.length || bGroups[bGroups.length - 1].key !== k) {
+        bGroups.push({ key: k, at: b.created, items: [] });
       }
-      renderCard(b, list);
+      bGroups[bGroups.length - 1].items.push(b);
+    });
+    bGroups.forEach(function (g) {
+      var fk = "b:" + g.key;
+      var isOpen = (fk in openDays) ? openDays[fk] : g.key === todayK;
+      var hdr = el("button", "day-fold" + (isOpen ? " open" : ""), truthDayLabel(g.at) + " · " + g.items.length);
+      hdr.onclick = function () { openDays[fk] = !isOpen; render(); };
+      list.appendChild(hdr);
+      if (!isOpen) return;
+      g.items.forEach(function (b) { renderCard(b, list); });
     });
 
     function renderCard(b, list) {
@@ -1024,7 +1032,7 @@
     document.getElementById("wbPad").value = b.workshop || "";
     var m = document.getElementById("wbMeta");
     if (workbenchKind === "truth") {
-      m.textContent = b.workshop ? "" : "Riff on it. When a line shakes out, send this to bits from the stuff tab.";
+      m.textContent = b.mined ? "mined ×" + b.mined : "";
     } else {
       m.textContent = b.workshop ? "" : "This bit’s working notes live here — separate from the line itself.";
     }
@@ -1205,19 +1213,26 @@
     });
   }
   function renderTruthCard(t, list) {
-      var card = el("div", "bone-card");
+      var card = el("div", "bone-card truth-card");
       var p = el("p", null, t.text);
       p.style.cursor = "pointer";
-      p.onclick = function () { expandedTruth = expandedTruth === t.id ? null : t.id; render(); };
+      p.onclick = function () { openWorkbench(t.id, "truth"); };
       card.appendChild(p);
+      var corner = el("div", "truth-corner");
+      if (t.workshop && t.workshop.trim()) {
+        var noted = el("span", "truth-noted", "✎");
+        noted.title = "Has workbench notes";
+        corner.appendChild(noted);
+      }
+      var more = el("button", "truth-more", "⋯");
+      more.setAttribute("aria-label", "show actions");
+      more.onclick = function () { expandedTruth = expandedTruth === t.id ? null : t.id; render(); };
+      corner.appendChild(more);
+      card.appendChild(corner);
       if (expandedTruth !== t.id) { list.appendChild(card); return; }
-      var actions = el("div", "bone-actions");
-      var riff = el("button", "add-tag-btn", t.workshop && t.workshop.trim() ? "✎ riff·" : "✎ riff");
-      riff.title = "Open the workbench on this line";
-      riff.onclick = function (e) { e.stopPropagation(); openWorkbench(t.id, "truth"); };
-      actions.appendChild(riff);
-      var promote = el("button", "bone-digup", "→ bit");
-      promote.title = "Copy this line into bits";
+      var actions = el("div", "bone-actions truth-actions");
+      var promote = el("button", "bone-digup", "+ bit");
+      promote.title = "Copy this line into bits — it stays here too";
       promote.onclick = function (e) {
         e.stopPropagation();
         state.bits.unshift({
@@ -1231,7 +1246,6 @@
         save(); render();
       };
       actions.appendChild(promote);
-      if (t.mined) actions.appendChild(el("span", "i-mined", "mined ×" + t.mined));
       (t.tags || []).forEach(function (tg) {
         var tag = el("button", "bit-tag", tg + " ✕");
         tag.title = "Tap to remove tag";
