@@ -486,7 +486,7 @@
     state.buried = data.buried || [];
     state.truths = data.truths || [];
     confessed.forEach(function (b) {
-      state.truths.push({ id: b.id, text: b.text, created: b.created, workshop: b.workshop, mined: b.mined });
+      state.truths.push({ id: b.id, text: b.text, created: b.created, workshop: b.workshop, mined: b.mined, tags: b.tags });
     });
     state.sets = data.sets || [];
     state.updatedAt = data.updatedAt || 0;
@@ -602,16 +602,17 @@
     var capWrap = document.querySelector(".capture");
     var tagT = document.getElementById("tagToggle");
     if (stageFilter === "confession" || stageFilter === "sets") {
-      document.getElementById("tagFilters").innerHTML = "";
-      if (tagT) tagT.style.display = "none";
       document.getElementById("empty").style.display = "none";
       document.getElementById("list").innerHTML = "";
       capT.style.display = "none";
       if (stageFilter === "confession") {
+        buildTagChips(state.truths || []);
         capWrap.style.display = "";
         draft.placeholder = "I…";
         renderTruths();
       } else {
+        document.getElementById("tagFilters").innerHTML = "";
+        if (tagT) tagT.style.display = "none";
         capWrap.style.display = "none";
         renderSets();
       }
@@ -623,9 +624,11 @@
     if (draft.placeholder === "I…") draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
     // tag filters
+    buildTagChips(state.bits);
+    function buildTagChips(items) {
     var tagCounts = {};
-    state.bits.forEach(function (b) {
-      b.tags.forEach(function (t) { tagCounts[t] = (tagCounts[t] || 0) + 1; });
+    items.forEach(function (b) {
+      (b.tags || []).forEach(function (t) { tagCounts[t] = (tagCounts[t] || 0) + 1; });
     });
     var allTags = Object.keys(tagCounts);
     allTags.sort(function (a, b) {
@@ -657,6 +660,7 @@
         toggle.style.display = "none";
       }
     });
+    }
 
     // list
     var list = document.getElementById("list");
@@ -724,6 +728,18 @@
         save(); render();
       };
       meta.appendChild(stageBtn);
+
+      if (b.status === "observation") {
+        var toConf = el("button", "stage-btn", "→ confession");
+        toConf.title = "Move this line into the confessions fountain";
+        toConf.onclick = function () {
+          state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
+          if (!state.truths) state.truths = [];
+          state.truths.unshift({ id: b.id, text: b.text, created: b.created, workshop: b.workshop, mined: b.mined, tags: b.tags });
+          save(); render();
+        };
+        meta.appendChild(toConf);
+      }
 
       if (b.status === "bit") {
         var REACTS = ["", "😒", "😆", "😂"];
@@ -831,11 +847,13 @@
     if (stageFilter === "confession" || captureStage === "confession") {
       if (!state.truths) state.truths = [];
       var n = Date.now();
+      var added = [];
       text.split(/\r?\n/).forEach(function (line, i) {
         var v = line.trim();
         if (!v) return;
-        state.truths.push({ id: (n + i).toString(36), text: v, created: n });
+        added.push({ id: (n + i).toString(36), text: v, created: n });
       });
+      state.truths = added.concat(state.truths);
       draft.value = "";
       save(); render();
       return;
@@ -1210,9 +1228,11 @@
     var list = document.getElementById("list");
     list.innerHTML = "";
     list.appendChild(el("p", "bone-note", "Things that are true, first person. One per line — paste a whole list if you have one. These never leave; mine them for bits forever."));
-    var truths = state.truths || [];
+    var truths = (state.truths || []).filter(function (t) {
+      return !tagFilter || (t.tags || []).indexOf(tagFilter) !== -1;
+    });
     if (truths.length === 0) {
-      list.appendChild(el("p", "empty", "Nothing true yet. Suspicious."));
+      list.appendChild(el("p", "empty", tagFilter ? "No confessions with that tag." : "Nothing true yet. Suspicious."));
       return;
     }
     truths.forEach(function (t) {
@@ -1230,7 +1250,7 @@
           id: Date.now().toString(36),
           text: t.text,
           status: "bit",
-          tags: [],
+          tags: (t.tags || []).slice(),
           created: Date.now(),
           statusAt: Date.now()
         });
@@ -1243,6 +1263,35 @@
         var mark = el("span", "i-mined", "✎");
         mark.title = "Has workbench notes";
         actions.appendChild(mark);
+      }
+      (t.tags || []).forEach(function (tg) {
+        var tag = el("button", "bit-tag", tg + " ✕");
+        tag.title = "Tap to remove tag";
+        tag.onclick = function (e) {
+          e.stopPropagation();
+          t.tags = t.tags.filter(function (x) { return x !== tg; });
+          save(); render();
+        };
+        actions.appendChild(tag);
+      });
+      if (tagEditing === t.id) {
+        var tinput = el("input", "tag-input");
+        tinput.placeholder = "tag";
+        var commitT = function () {
+          var v = tinput.value.trim().toLowerCase();
+          if (!t.tags) t.tags = [];
+          if (v && t.tags.indexOf(v) === -1) t.tags.push(v);
+          tagEditing = null;
+          save(); render();
+        };
+        tinput.onkeydown = function (e) { if (e.key === "Enter") commitT(); };
+        tinput.onblur = commitT;
+        actions.appendChild(tinput);
+        setTimeout(function () { tinput.focus(); }, 0);
+      } else {
+        var addTag = el("button", "add-tag-btn", "+ tag");
+        addTag.onclick = function (e) { e.stopPropagation(); tagEditing = t.id; render(); };
+        actions.appendChild(addTag);
       }
       var del = el("button", "bone-del", "delete");
       del.onclick = function (e) {
