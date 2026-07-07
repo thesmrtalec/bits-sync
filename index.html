@@ -278,6 +278,19 @@
   .tour-rule { height: 1px; background: var(--rule); margin: 4px 0 16px; }
   .tour-dot.alt { background: var(--ink); }
   .tour-go { width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--accent); color: var(--onaccent); font-family: var(--mono); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; margin-top: 8px; }
+  /* ruled paper */
+  #draft, .notes-canvas {
+    line-height: 26px;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 25px,
+      color-mix(in srgb, var(--ink) 14%, transparent) 25px,
+      color-mix(in srgb, var(--ink) 14%, transparent) 26px
+    );
+    background-attachment: local;
+    background-position: 0 13px;
+  }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
