@@ -636,6 +636,10 @@
     }
   }
   function attachLongPressCopy(node, getText) {
+    // Block native text selection so long-press copies the WHOLE entry, not a partial grab.
+    node.style.webkitUserSelect = "none";
+    node.style.userSelect = "none";
+    node.style.webkitTouchCallout = "none";
     var timer = null, fired = false, startXY = null;
     function start(e) {
       fired = false;
@@ -846,8 +850,9 @@
 
       var meta = el("div", "bit-meta");
 
-      var wbBtn = el("button", "stage-btn wb-btn", "✎ workbench");
+      var wbBtn = el("button", "stage-btn wb-btn", "📝");
       wbBtn.title = "Open the workbench";
+      wbBtn.setAttribute("aria-label", "workbench");
       wbBtn.onclick = function () { openWorkbench(b.id); };
       meta.appendChild(wbBtn);
 
@@ -895,7 +900,9 @@
       if (tagEditing === b.id) {
         buildTagPicker(meta, b, function () { tagEditing = null; });
       } else {
-        var addTag = el("button", "add-tag-btn", "+ tag");
+        var addTag = el("button", "add-tag-btn", "🏷️");
+        addTag.title = "Add tags";
+        addTag.setAttribute("aria-label", "add tags");
         addTag.onclick = function () { tagEditing = b.id; render(); };
         meta.appendChild(addTag);
       }
@@ -1416,7 +1423,8 @@
         save(); render();
       };
       actions.appendChild(promote);
-      var twb = el("button", "bone-digup wb-btn", "✎ workbench");
+      var twb = el("button", "bone-digup wb-btn", "📝");
+      twb.setAttribute("aria-label", "workbench");
       twb.title = "Open the workbench";
       twb.onclick = function (e) { e.stopPropagation(); openWorkbench(t.id, "truth"); };
       actions.appendChild(twb);
@@ -1433,7 +1441,9 @@
       if (tagEditing === t.id) {
         buildTagPicker(actions, t, function () { tagEditing = null; });
       } else {
-        var addTag = el("button", "add-tag-btn", "+ tag");
+        var addTag = el("button", "add-tag-btn", "🏷️");
+        addTag.title = "Add tags";
+        addTag.setAttribute("aria-label", "add tags");
         addTag.onclick = function (e) { e.stopPropagation(); tagEditing = t.id; render(); };
         actions.appendChild(addTag);
       }
