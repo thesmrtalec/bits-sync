@@ -557,6 +557,7 @@
   var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [] };
   var stageFilter = "home";
   var tagEditing = null;
+  var pendingRemote = null;
   var textEditing = null;
 
   function hydrate(data) {
@@ -635,20 +636,34 @@
     }
   }
   function attachLongPressCopy(node, getText) {
-    var timer = null, fired = false;
-    function start() {
+    var timer = null, fired = false, startXY = null;
+    function start(e) {
       fired = false;
-      timer = setTimeout(function () { fired = true; copyText(getText()); }, 500);
+      if (e && e.touches && e.touches[0]) startXY = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      else if (e) startXY = { x: e.clientX, y: e.clientY };
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        fired = true;
+        copyText(getText());
+      }, 450);
+    }
+    function moved(e) {
+      if (!startXY) return;
+      var p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+      if (Math.abs(p.clientX - startXY.x) > 10 || Math.abs(p.clientY - startXY.y) > 10) cancel();
     }
     function cancel() { clearTimeout(timer); }
     node.addEventListener("touchstart", start, { passive: true });
     node.addEventListener("touchend", cancel);
-    node.addEventListener("touchmove", cancel);
+    node.addEventListener("touchmove", moved, { passive: true });
+    node.addEventListener("touchcancel", cancel);
     node.addEventListener("mousedown", start);
     node.addEventListener("mouseup", cancel);
     node.addEventListener("mouseleave", cancel);
-    // suppress the click that follows a long-press
-    node.addEventListener("click", function (e) { if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; } }, true);
+    // suppress the tap/click that would otherwise fire after a long-press
+    node.addEventListener("click", function (e) {
+      if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; }
+    }, true);
   }
   function el(tag, cls, text) {
     var e = document.createElement(tag);
@@ -658,6 +673,14 @@
   }
 
   function render() {
+    // apply any sync update that arrived while an edit was open
+    if (pendingRemote && tagEditing == null && workbenchId == null) {
+      var pr = pendingRemote; pendingRemote = null;
+      if ((pr.updatedAt || 0) > (state.updatedAt || 0)) {
+        hydrate(pr);
+        try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+      }
+    }
     // strip
     var weekCount = state.bits.filter(function (b) { return (b.statusAt || b.created) >= startOfWeek(); }).length;
     document.getElementById("weekCount").textContent = weekCount;
@@ -1082,6 +1105,11 @@
           if (payload.new && payload.new.data) {
             var remote = payload.new.data;
             if ((remote.updatedAt || 0) > (state.updatedAt || 0)) {
+              // Don't clobber an in-progress edit (tag picker open, workbench, etc.).
+              if (tagEditing != null || workbenchId != null) {
+                pendingRemote = remote;
+                return;
+              }
               hydrate(remote);
               try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
               render();
