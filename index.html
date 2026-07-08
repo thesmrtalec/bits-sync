@@ -191,6 +191,15 @@
   .tag-input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
   .tag-input-row .tag-input { flex: 1; }
   .tag-add-btn { flex: 0 0 auto; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 12px; cursor: pointer; }
+  .notes-lock { display: flex; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+  .lock-face { text-align: center; width: 100%; max-width: 280px; }
+  .lock-emoji { font-size: 34px; margin-bottom: 10px; }
+  .lock-msg { font-family: var(--mono); font-size: 13px; color: var(--muted); margin: 0 0 16px; letter-spacing: .04em; }
+  .lock-input { width: 100%; box-sizing: border-box; text-align: center; letter-spacing: .5em; font-size: 22px; font-family: var(--mono); padding: 12px; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); color: var(--ink); outline: none; }
+  .lock-input:focus { border-color: var(--accent); }
+  .lock-btns { margin-top: 14px; }
+  .lock-go { width: 100%; background: var(--accent); color: var(--onaccent); border: none; border-radius: 10px; padding: 12px; font-family: var(--mono); font-size: 14px; cursor: pointer; }
+  .lock-manage { margin-top: 18px; background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 11px; text-decoration: underline; cursor: pointer; }
   .theme-picker { display: flex; gap: 10px; align-items: center; padding: 6px 4px 10px; flex-wrap: wrap; }
   .theme-dot { width: 24px; height: 24px; border-radius: 999px; border: 2px solid transparent; cursor: pointer; padding: 0; }
   .theme-dot.on { border-color: var(--ink); }
@@ -384,6 +393,7 @@
     <span class="backup-note" id="authWho"></span>
     <div class="util-menu" id="utilMenu" style="display:none">
       <div class="theme-picker" id="themePicker"></div>
+      <button id="notesLockBtn">Notes lock</button>
       <button id="tourReplay">Replay tutorial</button>
       <button id="exportBtn">Export backup</button>
       <button id="importBtn">Import</button>
@@ -528,11 +538,24 @@
         <h2 id="notesTitle">Notes &amp; ideas</h2>
         <button class="notes-close" id="notesClose">done</button>
       </div>
-      <textarea class="notes-canvas" id="notesCanvas" placeholder="Free writing, workshop, set lists…"></textarea>
-      <button class="notes-save" id="notesSave">Save note</button>
-      <div class="notes-index">
-        <div class="notes-index-label">earlier notes</div>
-        <div id="notesList"></div>
+      <div id="notesLock" class="notes-lock" style="display:none">
+        <div class="lock-face">
+          <div class="lock-emoji">🔒</div>
+          <p class="lock-msg" id="lockMsg">Enter your PIN</p>
+          <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" id="lockInput" class="lock-input" autocomplete="off" />
+          <div class="lock-btns">
+            <button id="lockGo" class="lock-go">Open</button>
+          </div>
+          <button id="lockManage" class="lock-manage"></button>
+        </div>
+      </div>
+      <div id="notesBody">
+        <textarea class="notes-canvas" id="notesCanvas" placeholder="Free writing, workshop, set lists…"></textarea>
+        <button class="notes-save" id="notesSave">Save note</button>
+        <div class="notes-index">
+          <div class="notes-index-label">earlier notes</div>
+          <div id="notesList"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -569,7 +592,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [], theme: "ember" };
+  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [], theme: "ember", notesPin: null };
   var stageFilter = "home";
   var tagEditing = null;
   var pendingRemote = null;
@@ -594,6 +617,7 @@
     state.planned = data.planned || [];
     state.notes = data.notes || [];
     state.theme = data.theme || "ember";
+    state.notesPin = data.notesPin || null;
     state.buried = data.buried || [];
     state.truths = data.truths || [];
     toPool.forEach(function (b) {
@@ -1144,6 +1168,34 @@
   }
   renderThemePicker();
 
+  document.getElementById("notesLockBtn").onclick = function () {
+    if (state.notesPin) {
+      var choice = prompt("Notes lock is ON.\nType a NEW pin to change it, or type REMOVE to turn the lock off.\n(Cancel to keep it as-is.)");
+      if (choice === null) return;
+      choice = choice.trim();
+      if (choice.toUpperCase() === "REMOVE") {
+        var cur = prompt("Enter your current PIN to remove the lock:");
+        if (cur !== null && cur.trim() === state.notesPin) {
+          state.notesPin = null; notesUnlocked = false; save();
+          alert("Notes lock removed.");
+        } else if (cur !== null) {
+          alert("PIN didn't match. Lock unchanged.");
+        }
+        return;
+      }
+      if (choice.length < 3 || /\D/.test(choice)) { alert("PIN must be at least 3 digits, numbers only."); return; }
+      state.notesPin = choice; notesUnlocked = false; save();
+      alert("PIN updated.");
+    } else {
+      var np = prompt("Set a PIN for your notes drawer (at least 3 digits):");
+      if (np === null) return;
+      np = np.trim();
+      if (np.length < 3 || /\D/.test(np)) { alert("PIN must be at least 3 digits, numbers only."); return; }
+      state.notesPin = np; notesUnlocked = false; save();
+      alert("Notes are now locked with your PIN.");
+    }
+  };
+
   document.getElementById("exportBtn").onclick = function () {
     var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     var a = document.createElement("a");
@@ -1371,13 +1423,91 @@
     document.getElementById("notesCanvas").value = "";
     document.getElementById("notesSave").textContent = "Save note";
   }
-  document.getElementById("notesOpen").onclick = function () {
+  var notesUnlocked = false;
+  function showNotesBody() {
+    document.getElementById("notesLock").style.display = "none";
+    document.getElementById("notesBody").style.display = "";
     if (!state.notes) state.notes = [];
     resetNoteEditor(); renderNotes();
+  }
+  function showNotesLock(mode) {
+    // mode: "enter" (pin exists) or "set" (no pin yet, offer to set)
+    var lock = document.getElementById("notesLock");
+    var body = document.getElementById("notesBody");
+    var msg = document.getElementById("lockMsg");
+    var inp = document.getElementById("lockInput");
+    var go = document.getElementById("lockGo");
+    var manage = document.getElementById("lockManage");
+    body.style.display = "none";
+    lock.style.display = "flex";
+    inp.value = "";
+    inp.dataset.mode = mode;
+    inp.dataset.stage = "";
+    inp.dataset.first = "";
+    if (mode === "set") {
+      msg.textContent = "Set a PIN for your notes (or skip)";
+      go.textContent = "Set PIN";
+      manage.textContent = "skip — no lock";
+      manage.style.display = "";
+    } else {
+      msg.textContent = "Enter your PIN";
+      go.textContent = "Open";
+      manage.textContent = "";
+      manage.style.display = "none";
+    }
+    setTimeout(function () { inp.focus(); }, 60);
+  }
+  function lockSubmit() {
+    var inp = document.getElementById("lockInput");
+    var msg = document.getElementById("lockMsg");
+    var val = (inp.value || "").trim();
+    var mode = inp.dataset.mode;
+    if (mode === "set") {
+      if (inp.dataset.stage === "confirm") {
+        if (val === inp.dataset.first) {
+          state.notesPin = val; save();
+          notesUnlocked = true; showNotesBody();
+        } else {
+          msg.textContent = "Didn't match. Pick a PIN again.";
+          inp.dataset.stage = ""; inp.dataset.first = ""; inp.value = "";
+        }
+        return;
+      }
+      if (val.length < 3) { msg.textContent = "Use at least 3 digits."; return; }
+      inp.dataset.first = val; inp.dataset.stage = "confirm";
+      msg.textContent = "Enter it again to confirm";
+      inp.value = "";
+      return;
+    }
+    // enter mode
+    if (val === state.notesPin) {
+      notesUnlocked = true; showNotesBody();
+    } else {
+      msg.textContent = "Nope. Try again.";
+      inp.value = "";
+    }
+  }
+  document.getElementById("lockGo").onclick = lockSubmit;
+  document.getElementById("lockInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); lockSubmit(); }
+  });
+  document.getElementById("lockManage").onclick = function () {
+    // only shown in "set" mode = skip
+    notesUnlocked = true; showNotesBody();
+  };
+  document.getElementById("notesOpen").onclick = function () {
     document.getElementById("notesOverlay").classList.add("open");
+    if (state.notesPin) {
+      if (notesUnlocked) showNotesBody();
+      else showNotesLock("enter");
+    } else {
+      // first time / no pin: offer to set one, but let them skip straight in
+      showNotesLock("set");
+    }
   };
   document.getElementById("notesClose").onclick = function () {
     document.getElementById("notesOverlay").classList.remove("open");
+    if (state.notesPin) notesUnlocked = false; // re-lock on close
   };
   document.getElementById("notesSave").onclick = function () {
     var t = document.getElementById("notesCanvas").value.trim();
