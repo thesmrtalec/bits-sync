@@ -147,8 +147,8 @@
   .st-proven { color: var(--st-proven); border-color: var(--st-proven); }
   .stale { color: var(--accent2); font-size: 11.5px; font-weight: 700; font-style: italic; font-family: var(--mono); }
   .bit-tag { background: var(--tagbg); border: none; border-radius: 999px; padding: 3px 10px; font-size: 11.5px; color: var(--tagink); font-family: var(--mono); }
-  .add-tag-btn { background: transparent; border: 1px dashed var(--faint); border-radius: 999px; padding: 2px 10px; font-size: 11.5px; color: var(--faint); font-family: var(--mono); }
-  .add-tag-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .add-tag-btn { background: transparent; border: none; border-radius: 999px; padding: 2px 6px; font-size: 15px; color: var(--faint); font-family: var(--mono); opacity: .8; cursor: pointer; }
+  .add-tag-btn:hover { opacity: 1; }
   .tag-picker { display: block; width: 100%; margin-top: 8px; }
   .tag-picker .tag-input { width: 100%; box-sizing: border-box; margin-bottom: 7px; }
   .tag-suggest { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
@@ -191,10 +191,15 @@
   .tag-input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
   .tag-input-row .tag-input { flex: 1; }
   .tag-add-btn { flex: 0 0 auto; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 12px; cursor: pointer; }
+  .theme-picker { display: flex; gap: 10px; align-items: center; padding: 6px 4px 10px; flex-wrap: wrap; }
+  .theme-dot { width: 24px; height: 24px; border-radius: 999px; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .theme-dot.on { border-color: var(--ink); }
   .copy-toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(10px); background: var(--ink); color: var(--page); font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; padding: 8px 16px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 60; }
   .copy-toast.show { opacity: .95; transform: translateX(-50%) translateY(0); }
   .bone-card p, .bit-text, .set-row p { white-space: pre-wrap; }
-  .bone-digup { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 4px 12px; font-family: var(--mono); font-size: 11px; }
+  .bone-digup { background: transparent; color: var(--muted); border: 1px solid var(--rule); border-radius: 7px; padding: 4px 12px; font-family: var(--mono); font-size: 11px; cursor: pointer; }
+  .bone-digup:hover { color: var(--accent); border-color: var(--accent); }
+  .bone-digup.wb-btn { font-size: 14px; padding: 3px 10px; }
   .bone-when { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
   .bone-del { margin-left: auto; background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 11px; padding: 2px 4px; }
   .bone-del:hover { color: var(--accent2); }
@@ -378,6 +383,7 @@
     <span class="sync-chip" id="syncStatus"></span>
     <span class="backup-note" id="authWho"></span>
     <div class="util-menu" id="utilMenu" style="display:none">
+      <div class="theme-picker" id="themePicker"></div>
       <button id="tourReplay">Replay tutorial</button>
       <button id="exportBtn">Export backup</button>
       <button id="importBtn">Import</button>
@@ -563,7 +569,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [] };
+  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [], theme: "ember" };
   var stageFilter = "home";
   var tagEditing = null;
   var pendingRemote = null;
@@ -587,6 +593,7 @@
     state.riffs = data.riffs || [];
     state.planned = data.planned || [];
     state.notes = data.notes || [];
+    state.theme = data.theme || "ember";
     state.buried = data.buried || [];
     state.truths = data.truths || [];
     toPool.forEach(function (b) {
@@ -703,6 +710,49 @@
     if (text != null) e.textContent = text;
     return e;
   }
+  // ——— themes: accent only; each has a dark + light variant ———
+  var THEMES = {
+    ember:  { label: "Ember",  dot: "#d0563f",
+              dark:  { a: "#d0563f", a2: "#e0724f", on: "#1a1512" },
+              light: { a: "#b1402c", a2: "#8e2f1f", on: "#f3e9d4" } },
+    brass:  { label: "Brass",  dot: "#c9a24e",
+              dark:  { a: "#c9a24e", a2: "#e0bd6b", on: "#1a1206" },
+              light: { a: "#9a7420", a2: "#7c5c14", on: "#fbf6ea" } },
+    clay:   { label: "Clay",   dot: "#c67b4e",
+              dark:  { a: "#c67b4e", a2: "#dd9468", on: "#1a1206" },
+              light: { a: "#a85c30", a2: "#864620", on: "#f6ede0" } },
+    rust:   { label: "Rust",   dot: "#b0603a",
+              dark:  { a: "#b0603a", a2: "#c87747", on: "#f3e7d4" },
+              light: { a: "#93482a", a2: "#75371f", on: "#f6ede0" } },
+    sage:   { label: "Sage",   dot: "#8a9a6b",
+              dark:  { a: "#8a9a6b", a2: "#a3b283", on: "#14180d" },
+              light: { a: "#5f7043", a2: "#4a5834", on: "#f4f1e6" } },
+    slate:  { label: "Slate",  dot: "#6f8ca0",
+              dark:  { a: "#6f8ca0", a2: "#8aa6b8", on: "#101619" },
+              light: { a: "#4f6f84", a2: "#3d5768", on: "#eef2f4" } }
+  };
+  function applyTheme() {
+    var t = THEMES[state.theme] || THEMES.ember;
+    var dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var v = dark ? t.dark : t.light;
+    var r = document.documentElement.style;
+    r.setProperty("--accent", v.a);
+    r.setProperty("--accent2", v.a2);
+    r.setProperty("--onaccent", v.on);
+    r.setProperty("--glow", "0 0 10px " + hexA(v.a, .4));
+    r.setProperty("--st-bit", v.a);
+    r.setProperty("--st-ready", v.a2);
+  }
+  function hexA(hex, a) {
+    var h = hex.replace("#", "");
+    var n = parseInt(h, 16);
+    return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")";
+  }
+  // re-apply when the OS flips light/dark
+  if (window.matchMedia) {
+    try { window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme); }
+    catch (e) { try { window.matchMedia("(prefers-color-scheme: dark)").addListener(applyTheme); } catch (e2) {} }
+  }
   // small copy button (bottom-right) — copies the whole entry, shows toast
   function copyCorner(getText) {
     var b = el("button", "copy-corner", "⧉");
@@ -741,6 +791,7 @@
         try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
       }
     }
+    applyTheme();
     // strip
     var weekCount = state.bits.filter(function (b) { return (b.statusAt || b.created) >= startOfWeek(); }).length;
     document.getElementById("weekCount").textContent = weekCount;
@@ -1072,6 +1123,27 @@
   };
 
   // backup
+  function renderThemePicker() {
+    var host = document.getElementById("themePicker");
+    if (!host) return;
+    host.innerHTML = "";
+    Object.keys(THEMES).forEach(function (key) {
+      var t = THEMES[key];
+      var dot = el("button", "theme-dot" + (state.theme === key ? " on" : ""));
+      dot.style.background = t.dot;
+      dot.title = t.label;
+      dot.setAttribute("aria-label", "theme: " + t.label);
+      dot.onclick = function () {
+        state.theme = key;
+        save();
+        applyTheme();
+        renderThemePicker();
+      };
+      host.appendChild(dot);
+    });
+  }
+  renderThemePicker();
+
   document.getElementById("exportBtn").onclick = function () {
     var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     var a = document.createElement("a");
@@ -2069,6 +2141,7 @@
   }
 
   load();
+  applyTheme();
   render();
   initSupabase();
 
