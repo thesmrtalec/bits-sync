@@ -141,6 +141,12 @@
   .bit-tag { background: var(--tagbg); border: none; border-radius: 999px; padding: 3px 10px; font-size: 11.5px; color: var(--tagink); font-family: var(--mono); }
   .add-tag-btn { background: transparent; border: 1px dashed var(--faint); border-radius: 999px; padding: 2px 10px; font-size: 11.5px; color: var(--faint); font-family: var(--mono); }
   .add-tag-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .tag-picker { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 4px; }
+  .tag-pick { background: var(--card); border: 1px solid var(--rule); border-radius: 999px; padding: 3px 11px; font-family: var(--mono); font-size: 11.5px; color: var(--ink); cursor: pointer; }
+  .tag-pick:hover { border-color: var(--accent); color: var(--accent); }
+  .tag-pick-new { border-style: dashed; color: var(--muted); }
+  .tag-pick-done { background: transparent; border: none; color: var(--faint); }
+  .wb-btn { font-weight: 600; }
   .tag-input { width: 90px; border: 1px solid var(--rule); border-radius: 5px; padding: 3px 7px; font-size: 13px; font-family: var(--mono); background: var(--card); color: var(--ink); }
   .delete-btn { background: transparent; border: none; color: var(--faint); font-size: 13px; margin-left: auto; padding: 2px 6px; opacity: .7; }
   .delete-btn:hover { color: var(--accent2); opacity: 1; }
@@ -172,6 +178,8 @@
   .wisdom { text-align: center; padding: 34px 26px 8px; cursor: pointer; -webkit-user-select: none; user-select: none; transform: rotate(-1.4deg); }
   .wisdom-q { margin: 0; font-family: 'Caveat', 'Bradley Hand', 'Comic Sans MS', cursive; font-weight: 500; font-size: 21px; line-height: 1.4; color: var(--faint); opacity: .85; }
   .wisdom-by { margin: 5px 0 0; font-family: 'Caveat', 'Bradley Hand', cursive; font-weight: 600; font-size: 15.5px; color: var(--faint); opacity: .6; }
+  .copy-toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(10px); background: var(--ink); color: var(--page); font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; padding: 8px 16px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 60; }
+  .copy-toast.show { opacity: .95; transform: translateX(-50%) translateY(0); }
   .bone-card p, .bit-text, .set-row p { white-space: pre-wrap; }
   .bone-digup { background: var(--accent); color: #fff; border: none; border-radius: 7px; padding: 4px 12px; font-family: var(--mono); font-size: 11px; }
   .bone-when { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
@@ -342,6 +350,7 @@
   </div>
 
   <div class="wisdom" id="wisdom" style="display:none"></div>
+  <div id="copyToast" class="copy-toast">copied</div>
 
   <div id="list"></div>
   <p class="empty" id="empty" style="display:none"></p>
@@ -603,6 +612,40 @@
     return days >= STALE_DAYS ? days : 0;
   }
 
+  function flashCopied() {
+    var t = document.getElementById("copyToast");
+    if (!t) return;
+    t.classList.add("show");
+    clearTimeout(flashCopied._t);
+    flashCopied._t = setTimeout(function () { t.classList.remove("show"); }, 1100);
+  }
+  function copyText(str) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(str).then(flashCopied, function () {});
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = str; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); flashCopied(); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+  }
+  function attachLongPressCopy(node, getText) {
+    var timer = null, fired = false;
+    function start() {
+      fired = false;
+      timer = setTimeout(function () { fired = true; copyText(getText()); }, 500);
+    }
+    function cancel() { clearTimeout(timer); }
+    node.addEventListener("touchstart", start, { passive: true });
+    node.addEventListener("touchend", cancel);
+    node.addEventListener("touchmove", cancel);
+    node.addEventListener("mousedown", start);
+    node.addEventListener("mouseup", cancel);
+    node.addEventListener("mouseleave", cancel);
+    // suppress the click that follows a long-press
+    node.addEventListener("click", function (e) { if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; } }, true);
+  }
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -769,12 +812,17 @@
         }, 0);
       } else {
         var p = el("p", "bit-text", b.text);
-        p.title = "Tap to open workbench";
-        p.onclick = function () { openWorkbench(b.id); };
+        p.title = "Long-press to copy";
+        attachLongPressCopy(p, function () { return b.text; });
         card.appendChild(p);
       }
 
       var meta = el("div", "bit-meta");
+
+      var wbBtn = el("button", "stage-btn wb-btn", "✎ workbench");
+      wbBtn.title = "Open the workbench";
+      wbBtn.onclick = function () { openWorkbench(b.id); };
+      meta.appendChild(wbBtn);
 
       var toPoolBtn = el("button", "stage-btn", "back to stuff");
       toPoolBtn.title = "Not a bit after all — move it back to the stuff pool";
@@ -818,18 +866,7 @@
       });
 
       if (tagEditing === b.id) {
-        var input = el("input", "tag-input");
-        input.placeholder = "tag";
-        function commit() {
-          var v = input.value.trim().toLowerCase();
-          if (v && b.tags.indexOf(v) === -1) b.tags.push(v);
-          tagEditing = null;
-          save(); render();
-        }
-        input.onkeydown = function (e) { if (e.key === "Enter") commit(); };
-        input.onblur = commit;
-        meta.appendChild(input);
-        setTimeout(function () { input.focus(); }, 0);
+        buildTagPicker(meta, b, function () { tagEditing = null; });
       } else {
         var addTag = el("button", "add-tag-btn", "+ tag");
         addTag.onclick = function () { tagEditing = b.id; render(); };
@@ -1313,7 +1350,9 @@
       var card = el("div", "bone-card truth-card");
       var p = el("p", null, t.text);
       p.style.cursor = "pointer";
-      p.onclick = function () { openWorkbench(t.id, "truth"); };
+      p.title = "Tap to expand · long-press to copy";
+      p.onclick = function () { expandedTruth = expandedTruth === t.id ? null : t.id; render(); };
+      attachLongPressCopy(p, function () { return t.text; });
       card.appendChild(p);
       var corner = el("div", "truth-corner");
       if (t.workshop && t.workshop.trim()) {
@@ -1336,6 +1375,7 @@
           id: Date.now().toString(36),
           text: t.text,
           tags: (t.tags || []).slice(),
+          workshop: t.workshop || "",
           created: Date.now(),
           statusAt: Date.now()
         });
@@ -1344,6 +1384,10 @@
         save(); render();
       };
       actions.appendChild(promote);
+      var twb = el("button", "bone-digup wb-btn", "✎ workbench");
+      twb.title = "Open the workbench";
+      twb.onclick = function (e) { e.stopPropagation(); openWorkbench(t.id, "truth"); };
+      actions.appendChild(twb);
       (t.tags || []).forEach(function (tg) {
         var tag = el("button", "bit-tag", tg + " ✕");
         tag.title = "Tap to remove tag";
@@ -1355,19 +1399,7 @@
         actions.appendChild(tag);
       });
       if (tagEditing === t.id) {
-        var tinput = el("input", "tag-input");
-        tinput.placeholder = "tag";
-        var commitT = function () {
-          var v = tinput.value.trim().toLowerCase();
-          if (!t.tags) t.tags = [];
-          if (v && t.tags.indexOf(v) === -1) t.tags.push(v);
-          tagEditing = null;
-          save(); render();
-        };
-        tinput.onkeydown = function (e) { if (e.key === "Enter") commitT(); };
-        tinput.onblur = commitT;
-        actions.appendChild(tinput);
-        setTimeout(function () { tinput.focus(); }, 0);
+        buildTagPicker(actions, t, function () { tagEditing = null; });
       } else {
         var addTag = el("button", "add-tag-btn", "+ tag");
         addTag.onclick = function (e) { e.stopPropagation(); tagEditing = t.id; render(); };
@@ -1383,6 +1415,43 @@
       actions.appendChild(del);
       card.appendChild(actions);
       list.appendChild(card);
+  }
+
+  // ——— tag picker: existing tags most-used first, plus new ———
+  function buildTagPicker(container, entry, onDone) {
+    if (!entry.tags) entry.tags = [];
+    var wrap = el("div", "tag-picker");
+    var all = allTagCounts(); // [{tag,count}] sorted desc by count
+    all.forEach(function (x) {
+      if (entry.tags.indexOf(x.tag) !== -1) return; // already on entry
+      var chip = el("button", "tag-pick", x.tag);
+      chip.onclick = function (e) {
+        e.stopPropagation();
+        entry.tags.push(x.tag);
+        save(); render();
+      };
+      wrap.appendChild(chip);
+    });
+    var addNew = el("button", "tag-pick tag-pick-new", "+ new");
+    addNew.onclick = function (e) {
+      e.stopPropagation();
+      var inp = el("input", "tag-input");
+      inp.placeholder = "new tag";
+      var commit = function () {
+        var v = inp.value.trim().toLowerCase();
+        if (v && entry.tags.indexOf(v) === -1) entry.tags.push(v);
+        onDone(); save(); render();
+      };
+      inp.onkeydown = function (ev) { if (ev.key === "Enter") commit(); if (ev.key === "Escape") { onDone(); render(); } };
+      inp.onblur = commit;
+      wrap.replaceChild(inp, addNew);
+      setTimeout(function () { inp.focus(); }, 0);
+    };
+    wrap.appendChild(addNew);
+    var done = el("button", "tag-pick tag-pick-done", "done");
+    done.onclick = function (e) { e.stopPropagation(); onDone(); render(); };
+    wrap.appendChild(done);
+    container.appendChild(wrap);
   }
 
   // ——— tags: everything you've ever written about X ———
@@ -1599,7 +1668,15 @@
     var cur = axeQueue[axeIdx];
     prog.textContent = (axeIdx + 1) + " of " + axeQueue.length + " — oldest first";
     var c = el("div", "bone-card axe-face");
-    c.appendChild(el("p", null, cur.item.text));
+    var ap = el("p", null, cur.item.text);
+    ap.style.cursor = "pointer";
+    ap.title = "Tap to open workbench · long-press to copy";
+    ap.onclick = function () {
+      document.getElementById("axeOverlay").classList.remove("open");
+      openWorkbench(cur.item.id, cur.kind === "stuff" ? "truth" : "bit");
+    };
+    attachLongPressCopy(ap, function () { return cur.item.text; });
+    c.appendChild(ap);
     var ts = touchedAt(cur.item);
     var age = ts ? "untouched " + Math.max(0, Math.floor((Date.now() - ts) / DAY)) + "d" : "no timestamp";
     var actions = el("div", "bone-actions");
