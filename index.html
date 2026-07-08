@@ -624,15 +624,34 @@
     clearTimeout(flashCopied._t);
     flashCopied._t = setTimeout(function () { t.classList.remove("show"); }, 1100);
   }
+  function buzz() {
+    try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
+  }
+  function legacyCopy(str) {
+    var ta = document.createElement("textarea");
+    ta.value = str;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "0";
+    ta.style.left = "0";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    // iOS needs a real range selection, not just .select()
+    ta.focus();
+    ta.setSelectionRange(0, str.length);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
   function copyText(str) {
+    if (!str) return;
+    // execCommand path works even from a delayed (long-press) callback on iOS.
+    var ok = legacyCopy(str);
+    if (ok) { flashCopied(); buzz(); return; }
+    // Fallback to async clipboard API (desktop, some Android).
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(str).then(flashCopied, function () {});
-    } else {
-      var ta = document.createElement("textarea");
-      ta.value = str; ta.style.position = "fixed"; ta.style.opacity = "0";
-      document.body.appendChild(ta); ta.select();
-      try { document.execCommand("copy"); flashCopied(); } catch (e) {}
-      document.body.removeChild(ta);
+      navigator.clipboard.writeText(str).then(function () { flashCopied(); buzz(); }, function () {});
     }
   }
   function attachLongPressCopy(node, getText) {
