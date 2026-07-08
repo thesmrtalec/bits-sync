@@ -131,6 +131,12 @@
   .day-fold.open::before { content: "▾"; }
   .day-fold::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
   .bit { padding: 13px 15px; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; margin-bottom: 9px; box-shadow: var(--cardshadow); }
+  .bit.has-corners { position: relative; padding-right: 44px; padding-bottom: 34px; }
+  .copy-corner { position: absolute; right: 8px; bottom: 8px; background: transparent; border: none; color: var(--faint); font-size: 16px; line-height: 1; padding: 4px 6px; cursor: pointer; opacity: .65; }
+  .copy-corner:hover, .copy-corner:active { opacity: 1; color: var(--accent); }
+  .axe-corner { background: transparent; border: none; font-size: 15px; line-height: 1; padding: 2px 4px; cursor: pointer; opacity: .6; }
+  .axe-corner:hover, .axe-corner:active { opacity: 1; }
+  .axe-corner.armed { opacity: 1; }
   .bit-text { margin: 0 0 9px; font-size: 16px; line-height: 1.6; white-space: pre-wrap; cursor: pointer; }
   .edit-area { width: 100%; border: 1px solid var(--accent); border-radius: 7px; padding: 9px 10px; font-size: 16px; font-family: var(--serif); line-height: 1.6; margin: 0 0 9px; background: var(--card); color: var(--ink); min-height: 64px; resize: vertical; }
   .bit-meta { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
@@ -164,7 +170,7 @@
   .truth-actions { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .truth-actions::-webkit-scrollbar { display: none; }
   .truth-actions button, .truth-actions .bit-tag { white-space: nowrap; flex: 0 0 auto; }
-  .truth-card { position: relative; padding-right: 46px; }
+  .truth-card { position: relative; padding-right: 46px; padding-bottom: 34px; }
   .truth-corner { position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 5px; }
   .truth-noted { font-size: 11px; color: var(--faint); line-height: 1; }
   .truth-more { background: transparent; border: none; color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 5px; cursor: pointer; }
@@ -182,6 +188,9 @@
   .wisdom { text-align: center; padding: 34px 26px 8px; cursor: pointer; -webkit-user-select: none; user-select: none; transform: rotate(-1.4deg); }
   .wisdom-q { margin: 0; font-family: 'Caveat', 'Bradley Hand', 'Comic Sans MS', cursive; font-weight: 500; font-size: 21px; line-height: 1.4; color: var(--faint); opacity: .85; }
   .wisdom-by { margin: 5px 0 0; font-family: 'Caveat', 'Bradley Hand', cursive; font-weight: 600; font-size: 15.5px; color: var(--faint); opacity: .6; }
+  .tag-input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+  .tag-input-row .tag-input { flex: 1; }
+  .tag-add-btn { flex: 0 0 auto; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-family: var(--mono); font-size: 12px; cursor: pointer; }
   .copy-toast { position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(10px); background: var(--ink); color: var(--page); font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; padding: 8px 16px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity .18s, transform .18s; z-index: 60; }
   .copy-toast.show { opacity: .95; transform: translateX(-50%) translateY(0); }
   .bone-card p, .bit-text, .set-row p { white-space: pre-wrap; }
@@ -694,6 +703,34 @@
     if (text != null) e.textContent = text;
     return e;
   }
+  // small copy button (bottom-right) — copies the whole entry, shows toast
+  function copyCorner(getText) {
+    var b = el("button", "copy-corner", "⧉");
+    b.title = "Copy";
+    b.setAttribute("aria-label", "copy entry");
+    b.onclick = function (e) {
+      e.stopPropagation();
+      copyText(getText());
+    };
+    return b;
+  }
+  // axe button (top-right) — two-tap confirm, runs onKill()
+  function axeCorner(onKill) {
+    var b = el("button", "axe-corner", "🪓");
+    b.title = "Remove";
+    b.setAttribute("aria-label", "remove entry");
+    b.onclick = function (e) {
+      e.stopPropagation();
+      if (b.dataset.armed === "1") { onKill(); return; }
+      b.dataset.armed = "1";
+      b.textContent = "🪓?";
+      b.classList.add("armed");
+      setTimeout(function () {
+        if (b) { b.dataset.armed = "0"; b.textContent = "🪓"; b.classList.remove("armed"); }
+      }, 2500);
+    };
+    return b;
+  }
 
   function render() {
     // apply any sync update that arrived while an edit was open
@@ -931,23 +968,6 @@
         notesMark.title = "Has workbench notes";
         meta.appendChild(notesMark);
       }
-
-      var del = el("button", "delete-btn", "✕");
-      del.setAttribute("aria-label", "bury entry");
-      del.title = "Bury to the boneyard";
-      del.onclick = function () {
-        b.buriedAt = Date.now();
-        state.buried.unshift(b);
-        state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
-        save(); render();
-        try {
-          if (!localStorage.getItem("bits-buried-once")) {
-            localStorage.setItem("bits-buried-once", "1");
-            document.getElementById("buryPop").classList.add("open");
-          }
-        } catch (e) {}
-      };
-      meta.appendChild(del);
 
       card.appendChild(meta);
       list.appendChild(card);
@@ -1418,11 +1438,12 @@
         noted.title = "Has workbench notes";
         corner.appendChild(noted);
       }
-      var more = el("button", "truth-more", "⋯");
-      more.setAttribute("aria-label", "show actions");
-      more.onclick = function () { expandedTruth = expandedTruth === t.id ? null : t.id; render(); };
-      corner.appendChild(more);
+      corner.appendChild(axeCorner(function () {
+        state.truths = state.truths.filter(function (x) { return x.id !== t.id; });
+        save(); render();
+      }));
       card.appendChild(corner);
+      card.appendChild(copyCorner(function () { return t.text; }));
       if (expandedTruth !== t.id) { list.appendChild(card); return; }
       var actions = el("div", "bone-actions truth-actions");
       var promote = el("button", "bone-digup", "+ bit");
@@ -1466,14 +1487,6 @@
         addTag.onclick = function (e) { e.stopPropagation(); tagEditing = t.id; render(); };
         actions.appendChild(addTag);
       }
-      var del = el("button", "bone-del", "delete");
-      del.onclick = function (e) {
-        e.stopPropagation();
-        if (del.textContent === "delete") { del.textContent = "sure?"; setTimeout(function () { if (del) del.textContent = "delete"; }, 2500); return; }
-        state.truths = state.truths.filter(function (x) { return x.id !== t.id; });
-        save(); render();
-      };
-      actions.appendChild(del);
       card.appendChild(actions);
       list.appendChild(card);
   }
@@ -1490,16 +1503,29 @@
       var v = (raw || "").trim().toLowerCase();
       if (v && entry.tags.indexOf(v) === -1) { entry.tags.push(v); save(); }
     };
+    function commit() {
+      var val = inp.value;
+      // allow multiple comma/space separated tags at once
+      val.split(/[,\n]/).forEach(function (piece) { addVal(piece); });
+      inp.value = "";
+      refreshChips();
+      inp.focus();
+    }
     inp.onkeydown = function (ev) {
       if (ev.key === "Enter" || ev.key === ",") {
         ev.preventDefault();
-        addVal(inp.value); inp.value = ""; refreshChips();
+        commit();
       } else if (ev.key === "Escape") { onDone(); render(); }
       else if (ev.key === "Backspace" && !inp.value && entry.tags.length) {
         entry.tags.pop(); save(); refreshChips();
       }
     };
-    wrap.appendChild(inp);
+    var inputRow = el("div", "tag-input-row");
+    inputRow.appendChild(inp);
+    var addBtn = el("button", "tag-add-btn", "+ add");
+    addBtn.onclick = function (e) { e.stopPropagation(); commit(); };
+    inputRow.appendChild(addBtn);
+    wrap.appendChild(inputRow);
 
     var chipRow = el("div", "tag-suggest");
     wrap.appendChild(chipRow);
