@@ -130,10 +130,9 @@
   .day-fold::before { content: "▸"; font-size: 9px; }
   .day-fold.open::before { content: "▾"; }
   .day-fold::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
-  .bit { padding: 13px 15px; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; margin-bottom: 9px; box-shadow: var(--cardshadow); position: relative; }
-  /* Collapsed: snug to the text. Long ones cap and fade; short ones stay short.
-     No reserved corner space, no dead air — everything waits for a tap. */
-  .bit:not(.open) { padding: 10px 12px; }
+  .bit { padding: 10px 12px; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; margin-bottom: 9px; box-shadow: var(--cardshadow); position: relative; }
+  /* Snug to the text, open or closed. Long ones cap and fade when collapsed;
+     short ones stay short. No reserved corner space, no dead air. */
   .bit:not(.open) .bit-text { max-height: 4.2em; overflow: hidden; margin-bottom: 0; line-height: 1.35; }
   /* the fade only appears when the text is ACTUALLY cut off — a line that fits
      shouldn't be ghosted for no reason (set at render time) */
@@ -141,8 +140,6 @@
     -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 72%, transparent 100%); }
   .bit-flags { position: absolute; right: 10px; bottom: 6px; font-size: 10px; opacity: .35; letter-spacing: 2px; }
-  .bit.has-corners { position: relative; padding-right: 44px; padding-bottom: 34px; }
-  .bit:not(.open).has-corners { padding-right: 12px; padding-bottom: 10px; }
   .copy-corner { position: absolute; right: 8px; bottom: 8px; background: transparent; border: none; color: var(--faint); font-size: 16px; line-height: 1; padding: 4px 6px; cursor: pointer; opacity: .65; }
   .copy-corner:hover, .copy-corner:active { opacity: 1; color: var(--accent); }
   .axe-corner { background: transparent; border: none; font-size: 15px; line-height: 1; padding: 2px 4px; cursor: pointer; opacity: .6; }
@@ -184,7 +181,9 @@
   .truth-actions { justify-content: space-between; gap: 10px; }
   .truth-actions button, .truth-actions .bit-tag { white-space: nowrap; flex: 0 0 auto; }
   .truth-card { position: relative; }
-  .truth-card.open { padding-right: 46px; padding-bottom: 34px; }
+  /* the axe/copy corners moved to the swipe, so the card no longer reserves
+     space for them — open cards are snug too. */
+  .truth-card.open { padding: 10px 12px; }
   /* collapsed: snug to the text. no reserved corner space, no dead air. */
   .truth-card:not(.open) { padding: 10px 12px; }
   .truth-card:not(.open) p { max-height: 4.2em; overflow: hidden; margin: 0; line-height: 1.35; }
@@ -703,7 +702,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.53";
+  var APP_VERSION = "v1.1.54";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
