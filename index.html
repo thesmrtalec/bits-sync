@@ -262,6 +262,12 @@
 
   /* ——— workbench ——— */
   .wb-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 7px; }
+  .wb-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 16px; min-height: 26px; }
+  .wb-foot { display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
+  .wb-move { background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 999px;
+    padding: 7px 14px; font-family: var(--mono); font-size: 12px; cursor: pointer; white-space: nowrap; }
+  .wb-move:active { border-color: var(--accent); color: var(--accent); }
+  .wb-foot .wb-meta { flex: 1; margin: 0; text-align: right; }
   .wb-bit { min-height: 4.6em; flex: 0 0 auto; font-weight: 600; margin-bottom: 20px; }
   .wb-pad { flex: 1 1 auto; min-height: 200px; }
   .wb-meta { font-family: var(--mono); font-size: 10.5px; color: var(--faint); margin: 14px 0 0; }
@@ -578,14 +584,19 @@
   <div class="notes-overlay" id="workbenchOverlay">
     <div class="notes-inner">
       <div class="notes-head">
-        <h2>Workbench</h2>
+        <h2 id="wbTitle">Workbench</h2>
         <button class="notes-close" id="wbClose">done</button>
       </div>
-      <div class="wb-label">the bit</div>
+      <div class="wb-label" id="wbBitLabel">the bit</div>
       <textarea class="notes-canvas wb-bit" id="wbBit" placeholder="the line as it stands…"></textarea>
       <div class="wb-label">working it out</div>
       <textarea class="notes-canvas wb-pad" id="wbPad" placeholder="alternate tags, rewrites, what it’s really about…"></textarea>
-      <div class="wb-meta" id="wbMeta"></div>
+      <div class="wb-label">tags</div>
+      <div class="wb-tags" id="wbTags"></div>
+      <div class="wb-foot">
+        <button class="wb-move" id="wbMove"></button>
+        <div class="wb-meta" id="wbMeta"></div>
+      </div>
     </div>
   </div>
   <div class="notes-overlay" id="notesOverlay">
@@ -1411,16 +1422,87 @@
     workbenchId = id;
     var b = benchFind();
     if (!b) { workbenchId = null; workbenchKind = "bit"; return; }
+    var isTruth = workbenchKind === "truth";
+    document.getElementById("wbTitle").textContent = "Workbench";
+    document.getElementById("wbBitLabel").textContent = isTruth ? "the stuff" : "the bit";
     document.getElementById("wbBit").value = b.text;
     document.getElementById("wbPad").value = b.workshop || "";
     var m = document.getElementById("wbMeta");
-    if (workbenchKind === "truth") {
-      m.textContent = b.mined ? "mined ×" + b.mined : "";
+    if (isTruth) {
+      m.textContent = b.mined ? "mined \u00d7" + b.mined : "";
     } else {
-      m.textContent = b.workshop ? "" : "This bit’s working notes live here — separate from the line itself.";
+      m.textContent = b.workshop ? "" : "Working notes live here \u2014 separate from the line.";
     }
+    renderWbTags();
+    // move it across: stuff that's become a bit, or a bit that isn't one yet
+    var mv = document.getElementById("wbMove");
+    mv.textContent = isTruth ? "\u2192 make it a bit" : "\u2190 back to stuff";
+    mv.title = isTruth
+      ? "This is a bit now \u2014 move it to bits"
+      : "Not a bit after all \u2014 move it back to the stuff pool";
+    mv.onclick = wbMoveAcross;
     document.getElementById("workbenchOverlay").classList.add("open");
     setTimeout(function () { document.getElementById("wbBit").focus(); }, 0);
+  }
+
+  // Tag editing lives right in the workbench — this is where you're actually
+  // thinking about what the thing IS, so it's where tagging belongs.
+  var wbTagEditing = false;
+  function renderWbTags() {
+    var host = document.getElementById("wbTags");
+    var b = benchFind();
+    host.innerHTML = "";
+    if (!b) return;
+    if (!b.tags) b.tags = [];
+    b.tags.forEach(function (t) {
+      var tag = el("button", "bit-tag", t + " \u2715");
+      tag.title = "Tap to remove tag";
+      tag.onclick = function () {
+        b.tags = b.tags.filter(function (x) { return x !== t; });
+        save(); renderWbTags();
+      };
+      host.appendChild(tag);
+    });
+    if (wbTagEditing) {
+      buildTagPicker(host, b, function () { wbTagEditing = false; renderWbTags(); });
+    } else {
+      var add = el("button", "add-tag-btn", "\uD83C\uDFF7\uFE0F");
+      add.title = "Add tags";
+      add.onclick = function () { wbTagEditing = true; renderWbTags(); };
+      host.appendChild(add);
+    }
+  }
+
+  // Move the open item between the stuff pool and bits, carrying everything
+  // with it (text, workshop notes, tags, history). The workbench stays open on
+  // the same item — you just changed what kind of thing it is.
+  function wbMoveAcross() {
+    var b = benchFind();
+    if (!b) return;
+    saveWorkbench();
+    var isTruth = workbenchKind === "truth";
+    var carried = {
+      id: b.id, text: b.text, created: b.created,
+      workshop: b.workshop, mined: b.mined,
+      tags: (b.tags || []).slice(),
+      touched: Date.now()
+    };
+    if (isTruth) {
+      // stuff -> bit
+      state.truths = (state.truths || []).filter(function (x) { return x.id !== b.id; });
+      carried.react = b.react;
+      carried.est = b.est;
+      state.bits.unshift(carried);
+      workbenchKind = "bit";
+    } else {
+      // bit -> stuff
+      state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
+      if (!state.truths) state.truths = [];
+      state.truths.unshift(carried);
+      workbenchKind = "truth";
+    }
+    save();
+    openWorkbench(carried.id, workbenchKind);
   }
   function saveWorkbench() {
     if (!workbenchId) return;
@@ -1439,6 +1521,7 @@
     saveWorkbench();
     workbenchId = null;
     workbenchKind = "bit";
+    wbTagEditing = false;
     document.getElementById("workbenchOverlay").classList.remove("open");
     render();
   };
