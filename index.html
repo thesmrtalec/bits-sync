@@ -130,7 +130,13 @@
   .day-fold::before { content: "▸"; font-size: 9px; }
   .day-fold.open::before { content: "▾"; }
   .day-fold::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
-  .bit { padding: 13px 15px; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; margin-bottom: 9px; box-shadow: var(--cardshadow); }
+  .bit { padding: 13px 15px; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; margin-bottom: 9px; box-shadow: var(--cardshadow); position: relative; }
+  /* Collapsed cards cap at a uniform height so a scroll reads as a clean wall
+     of lines — no ragged edges, no clutter. Everything else waits for a tap. */
+  .bit:not(.open) .bit-text { max-height: 4.2em; overflow: hidden; margin-bottom: 0;
+    -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 68%, transparent 100%); }
+  .bit-flags { position: absolute; right: 12px; bottom: 8px; font-size: 10px; opacity: .38; letter-spacing: 2px; }
   .bit.has-corners { position: relative; padding-right: 44px; padding-bottom: 34px; }
   .copy-corner { position: absolute; right: 8px; bottom: 8px; background: transparent; border: none; color: var(--faint); font-size: 16px; line-height: 1; padding: 4px 6px; cursor: pointer; opacity: .65; }
   .copy-corner:hover, .copy-corner:active { opacity: 1; color: var(--accent); }
@@ -172,7 +178,11 @@
   .bone-actions { display: flex; align-items: center; gap: 6px; }
   .truth-actions { justify-content: space-between; gap: 10px; }
   .truth-actions button, .truth-actions .bit-tag { white-space: nowrap; flex: 0 0 auto; }
-  .truth-card { position: relative; padding-right: 46px; padding-bottom: 34px; }
+  .truth-card { position: relative; }
+  .truth-card.open { padding-right: 46px; padding-bottom: 34px; }
+  .truth-card:not(.open) p { max-height: 4.2em; overflow: hidden; margin: 0;
+    -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 68%, transparent 100%); }
   .truth-corner { position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 5px; }
   .truth-noted { font-size: 11px; color: var(--faint); line-height: 1; }
   .truth-more { background: transparent; border: none; color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 5px; cursor: pointer; }
@@ -662,7 +672,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.49";
+  var APP_VERSION = "v1.1.50";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -672,6 +682,7 @@
   var tagEditing = null;
   var pendingRemote = null;
   var textEditing = null;
+  var expandedBit = null;
 
   function hydrate(data) {
     var toPool = [];
@@ -1025,7 +1036,8 @@
     });
 
     function renderCard(b, list) {
-      var card = el("div", "bit");
+      var isOpen = expandedBit === b.id;
+      var card = el("div", "bit" + (isOpen ? " open" : ""));
 
       if (textEditing === b.id) {
         var editArea = document.createElement("textarea");
@@ -1047,13 +1059,39 @@
           editArea.focus();
           editArea.setSelectionRange(editArea.value.length, editArea.value.length);
         }, 0);
-      } else {
-        var p = el("p", "bit-text", b.text);
-        p.title = "Long-press to copy";
-        attachLongPressCopy(p, function () { return b.text; });
-        card.appendChild(p);
+        card.appendChild(buildBitMeta(b));
+        list.appendChild(card);
+        return;
       }
 
+      // Collapsed: uniform height, just the line. Tags and actions are for when
+      // you're WORKING a bit, not when you're scrolling past it.
+      var p = el("p", "bit-text", b.text);
+      p.title = isOpen ? "Tap to collapse \u00b7 long-press to copy" : "Tap to open \u00b7 long-press to copy";
+      p.onclick = function () { expandedBit = isOpen ? null : b.id; render(); };
+      attachLongPressCopy(p, function () { return b.text; });
+      card.appendChild(p);
+
+      if (!isOpen) {
+        // one whisper of a marker if there's anything under the hood
+        var flags = [];
+        if ((b.tags || []).length) flags.push("\uD83C\uDFF7");
+        if (b.workshop && b.workshop.trim()) flags.push("\u270E");
+        if (b.react) flags.push(b.react);
+        if (flags.length) {
+          var dot = el("div", "bit-flags", flags.join(" "));
+          card.appendChild(dot);
+        }
+        list.appendChild(card);
+        return;
+      }
+
+      card.appendChild(buildBitMeta(b));
+      list.appendChild(card);
+    }
+
+    // the full meta row — only built when a bit is open
+    function buildBitMeta(b) {
       var meta = el("div", "bit-meta");
 
       // LEFT: what the bit *is* — tags, plus quiet state markers
@@ -1116,8 +1154,7 @@
       metaR.appendChild(wbBtn);
       meta.appendChild(metaR);
 
-      card.appendChild(meta);
-      list.appendChild(card);
+      return meta;
     }
 
     var empty = document.getElementById("empty");
@@ -1771,26 +1808,34 @@
     });
   }
   function renderTruthCard(t, list) {
-      var card = el("div", "bone-card truth-card");
+      var isOpen = expandedTruth === t.id;
+      var card = el("div", "bone-card truth-card" + (isOpen ? " open" : ""));
       var p = el("p", null, t.text);
       p.style.cursor = "pointer";
-      p.title = "Tap to expand · long-press to copy";
-      p.onclick = function () { expandedTruth = expandedTruth === t.id ? null : t.id; render(); };
+      p.title = isOpen ? "Tap to collapse \u00b7 long-press to copy" : "Tap to open \u00b7 long-press to copy";
+      p.onclick = function () { expandedTruth = isOpen ? null : t.id; render(); };
       attachLongPressCopy(p, function () { return t.text; });
       card.appendChild(p);
-      var corner = el("div", "truth-corner");
-      if (t.workshop && t.workshop.trim()) {
-        var noted = el("span", "truth-noted", "✎");
-        noted.title = "Has workbench notes";
-        corner.appendChild(noted);
+
+      if (!isOpen) {
+        // collapsed: uniform height, one whisper if there's anything under it
+        var flags = [];
+        if ((t.tags || []).length) flags.push("\uD83C\uDFF7");
+        if (t.workshop && t.workshop.trim()) flags.push("\u270E");
+        if (t.mined) flags.push("\u26cf");
+        if (flags.length) card.appendChild(el("div", "bit-flags", flags.join(" ")));
+        list.appendChild(card);
+        return;
       }
+
+      // open: the corners (axe / copy) and the full action row
+      var corner = el("div", "truth-corner");
       corner.appendChild(axeCorner(function () {
         state.truths = state.truths.filter(function (x) { return x.id !== t.id; });
         save(); render();
       }));
       card.appendChild(corner);
       card.appendChild(copyCorner(function () { return t.text; }));
-      if (expandedTruth !== t.id) { list.appendChild(card); return; }
       var actions = el("div", "bone-actions truth-actions");
 
       // LEFT: tags (what it is)
