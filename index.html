@@ -143,6 +143,9 @@
     -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 72%, transparent 100%); }
   .bit-flags { position: absolute; right: 9px; top: 7px; font-size: 10px; opacity: .35; letter-spacing: 2px; }
+  .foot-mark.stale { color: var(--accent2); }
+  .foot-btn.react-btn { filter: grayscale(1); opacity: .55; border-style: dashed; }
+  .foot-btn.react-btn.has-react { filter: none; opacity: 1; border-style: solid; }
   .copy-corner { position: absolute; right: 8px; bottom: 8px; background: transparent; border: none; color: var(--faint); font-size: 16px; line-height: 1; padding: 4px 6px; cursor: pointer; opacity: .65; }
   .copy-corner:hover, .copy-corner:active { opacity: 1; color: var(--accent); }
   .axe-corner { background: transparent; border: none; font-size: 15px; line-height: 1; padding: 2px 4px; cursor: pointer; opacity: .6; }
@@ -289,6 +292,9 @@
   .notes-tab { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 11.5px; padding: 4px 6px; }
   .notes-tab:hover { color: var(--accent); }
   .notes-overlay { position: fixed; inset: 0; background: var(--page); z-index: 50; display: none; flex-direction: column; }
+  /* the workbench must sit ABOVE the run overlay so you can edit mid-rehearsal */
+  #workbenchOverlay { z-index: 400; }
+  .run-overlay.dimmed { filter: brightness(.55); }
   .notes-overlay.open { display: flex; }
   .notes-inner { max-width: 620px; width: 100%; margin: 0 auto; padding: 20px 18px 40px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
   .notes-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -409,6 +415,15 @@
   .sum-tot span:first-child { flex: 1; color: var(--muted); }
   .run-again { display: block; width: 100%; margin-top: 22px; background: var(--accent); color: var(--onaccent);
     border: none; border-radius: 9px; padding: 13px; font-size: 15px; font-weight: 600; }
+  .set-search { width: 100%; box-sizing: border-box; font-family: var(--mono); font-size: 13px;
+    border: 1px solid var(--rule); border-radius: 8px; padding: 9px 11px; margin-bottom: 10px;
+    background: var(--card); color: var(--ink); -webkit-appearance: none; }
+  .set-search:focus { outline: none; border-color: var(--accent); }
+  .set-actions { display: flex; gap: 8px; margin: 4px 0 14px; }
+  .set-actions .run-again { flex: 1; margin: 0; }
+  .set-pdf { flex: 0 0 auto; background: transparent; border: 1px solid var(--rule); color: var(--muted);
+    border-radius: 9px; padding: 13px 16px; font-family: var(--mono); font-size: 13px; cursor: pointer; }
+  .set-pdf:active { border-color: var(--accent); color: var(--accent); }
 
   /* axe mode — same full-screen treatment as the runner, but it keeps its
      verdict buttons: this one's a decision, not a pass-through. */
@@ -440,6 +455,7 @@
   }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
   <script>
     /* Offline shell: register the service worker. Scoped to this folder so it
        works under GitHub Pages' /bits-sync/ path. Failures are non-fatal. */
@@ -705,7 +721,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.55";
+  var APP_VERSION = "v1.1.57";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1153,7 +1169,30 @@
 
     function renderCard(b, list) {
       var isOpen = expandedBit === b.id;
-      var card = el("div", "bit" + (isOpen ? " open" : ""));
+
+      // swipe shell: kill left, workbench right (matches the stuff cards)
+      var shell = el("div", "swipe-shell");
+      var actL = el("button", "swipe-act swipe-kill", "\uD83D\uDD2B");
+      actL.title = "Kill it \u2014 to the boneyard";
+      actL.onclick = function (e) {
+        e.stopPropagation();
+        if (!state.buried) state.buried = [];
+        b.buriedAt = Date.now(); b.from = "bit";
+        state.buried.unshift(b);
+        state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
+        closeSwipe(); save(); render();
+      };
+      var actR = el("button", "swipe-act swipe-promote", "\uD83D\uDCDD");
+      actR.title = "Open the workbench";
+      actR.onclick = function (e) {
+        e.stopPropagation();
+        closeSwipe();
+        openWorkbench(b.id);
+      };
+      shell.appendChild(actR);
+      shell.appendChild(actL);
+
+      var card = el("div", "bit swipe-face" + (isOpen ? " open" : ""));
 
       if (textEditing === b.id) {
         var editArea = document.createElement("textarea");
@@ -1176,102 +1215,80 @@
           editArea.setSelectionRange(editArea.value.length, editArea.value.length);
         }, 0);
         card.appendChild(buildBitMeta(b));
-        list.appendChild(card);
+        shell.appendChild(card);
+        list.appendChild(shell);
         return;
       }
 
-      // Collapsed: uniform height, just the line. Tags and actions are for when
-      // you're WORKING a bit, not when you're scrolling past it.
       var p = el("p", "bit-text", b.text);
       p.title = isOpen ? "Tap to collapse \u00b7 long-press to copy" : "Tap to open \u00b7 long-press to copy";
-      p.onclick = function () { expandedBit = isOpen ? null : b.id; render(); };
+      p.onclick = function () {
+        if (swipeOpenCard === card) { closeSwipe(); return; }
+        expandedBit = isOpen ? null : b.id; render();
+      };
       attachLongPressCopy(p, function () { return b.text; });
       card.appendChild(p);
 
       if (!isOpen) {
         markIfClipped(p);
-        // one whisper of a marker if there's anything under the hood
         var flags = [];
         if ((b.tags || []).length) flags.push("\uD83C\uDFF7");
         if (b.workshop && b.workshop.trim()) flags.push("\u270E");
         if (b.react) flags.push(b.react);
-        if (flags.length) {
-          var dot = el("div", "bit-flags", flags.join(" "));
-          card.appendChild(dot);
-        }
-        list.appendChild(card);
+        if (staleDays(b) > 0) flags.push("\u23F3");
+        if (flags.length) card.appendChild(el("div", "bit-flags", flags.join(" ")));
+        shell.appendChild(card);
+        attachSwipe(shell, card);
+        list.appendChild(shell);
         return;
       }
 
       card.appendChild(buildBitMeta(b));
-      list.appendChild(card);
+      shell.appendChild(card);
+      attachSwipe(shell, card);
+      list.appendChild(shell);
     }
 
-    // the full meta row — only built when a bit is open
+    // Open-card footer: tags as a light line, react + stale on the right.
+    // (kill and workbench moved to the swipe, so they're off the card.)
     function buildBitMeta(b) {
-      var meta = el("div", "bit-meta");
-
-      // LEFT: what the bit *is* — tags, plus quiet state markers
-      var metaL = el("div", "meta-left");
-
-      b.tags.forEach(function (t) {
-        var tag = el("button", "bit-tag", t + " \u00d7");
-        tag.title = "Tap to remove tag";
-        tag.onclick = function () {
-          b.tags = b.tags.filter(function (x) { return x !== t; });
-          save(); render();
-        };
-        metaL.appendChild(tag);
-      });
+      var foot = el("div", "card-foot");
 
       if (tagEditing === b.id) {
-        buildTagPicker(metaL, b, function () { tagEditing = null; });
+        var tp = el("div", "tag-line-edit");
+        buildTagPicker(tp, b, function () { tagEditing = null; render(); });
+        foot.appendChild(tp);
       } else {
-        var addTag = el("button", "add-tag-btn", "\uD83C\uDFF7\uFE0F");
-        addTag.title = "Add tags";
-        addTag.setAttribute("aria-label", "add tags");
-        addTag.onclick = function () { tagEditing = b.id; render(); };
-        metaL.appendChild(addTag);
+        var tagLine = el("button", "tag-line");
+        tagLine.textContent = (b.tags && b.tags.length) ? b.tags.join("  \u00b7  ") : "+ tag";
+        if (!(b.tags && b.tags.length)) tagLine.classList.add("empty");
+        tagLine.title = "Tap to edit tags";
+        tagLine.onclick = function (e) { e.stopPropagation(); tagEditing = b.id; render(); };
+        foot.appendChild(tagLine);
       }
 
+      var footR = el("div", "foot-right");
       var sd = staleDays(b);
       if (sd > 0) {
-        var st = el("span", "stale", "\u23F3 " + sd + "d");
+        var st = el("span", "foot-mark stale", "\u23F3 " + sd + "d");
         st.title = "Stale \u2014 advance it or kill it";
-        metaL.appendChild(st);
+        footR.appendChild(st);
       }
-      if (b.workshop && b.workshop.trim()) {
-        var notesMark = el("span", "has-notes", "\u270E");
-        notesMark.title = "Has workbench notes";
-        metaL.appendChild(notesMark);
-      }
-      meta.appendChild(metaL);
+      var REACTS = ["", "\uD83D\uDE12", "\uD83D\uDE06", "\uD83D\uDE02"];
+      var rBtn = el("button", "foot-btn react-btn" + (b.react ? " has-react" : ""), b.react || "\uD83D\uDE36");
+      rBtn.title = "How'd it land? Tap to cycle";
+      rBtn.onclick = function (e) {
+        e.stopPropagation();
+        var ri = REACTS.indexOf(b.react || "");
+        var next = REACTS[(ri + 1) % REACTS.length];
+        if (next) b.react = next; else delete b.react;
+        b.touched = Date.now();
+        save(); render();
+      };
+      footR.appendChild(rBtn);
+      foot.appendChild(footR);
 
-      // RIGHT: what you can *do* — react, open the bench.
-      // ("back to stuff" now lives in the workbench, where you're actually
-      //  deciding what the thing is — it doesn't need to sit on every card.)
-      var metaR = el("div", "meta-right");
-      {
-        var REACTS = ["", "\uD83D\uDE12", "\uD83D\uDE06", "\uD83D\uDE02"];
-        var rBtn = el("button", "react-btn" + (b.react ? " has-react" : ""), b.react || "\uD83D\uDE36");
-        rBtn.title = "How'd it land? Tap to cycle";
-        rBtn.onclick = function () {
-          var ri = REACTS.indexOf(b.react || "");
-          var next = REACTS[(ri + 1) % REACTS.length];
-          if (next) b.react = next; else delete b.react;
-          b.touched = Date.now();
-          save(); render();
-        };
-        metaR.appendChild(rBtn);
-      }
-      var wbBtn = el("button", "stage-btn wb-btn", "\uD83D\uDCDD");
-      wbBtn.title = "Open the workbench";
-      wbBtn.setAttribute("aria-label", "workbench");
-      wbBtn.onclick = function () { openWorkbench(b.id); };
-      metaR.appendChild(wbBtn);
-      meta.appendChild(metaR);
-
-      return meta;
+      return foot;
     }
 
     var empty = document.getElementById("empty");
@@ -1682,6 +1699,7 @@
     workbenchKind = "bit";
     wbTagEditing = false;
     document.getElementById("workbenchOverlay").classList.remove("open");
+    if (runPaused) { runResumeFromBench(); return; }   // came from a rehearsal
     render();
   };
 
@@ -2457,6 +2475,7 @@
 
   // ——— sets ———
   var setOpen = null;
+  var setFilter = "";
   var timeEditing = null;
   function fmtSec(s) {
     var m = Math.floor(s / 60), r = s % 60;
@@ -2501,6 +2520,31 @@
   function closeRun() {
     if (runState.tick) { clearInterval(runState.tick); runState.tick = null; }
     document.getElementById("runOverlay").classList.remove("open");
+  }
+
+  // Editing mid-run: pause both clocks, open the bench, resume where we left off
+  // when it closes. The time spent rewriting isn't time spent performing.
+  var runPaused = null;
+  function runPauseForBench(bitId) {
+    if (runState.done) return;
+    runPaused = { at: Date.now() };
+    if (runState.tick) { clearInterval(runState.tick); runState.tick = null; }
+    document.getElementById("runOverlay").classList.add("dimmed");
+    openWorkbench(bitId);
+  }
+  function runResumeFromBench() {
+    if (!runPaused) return;
+    var gap = Date.now() - runPaused.at;
+    runState.startedAt += gap;      // shift the clocks forward by the pause
+    runState.setStartedAt += gap;
+    runPaused = null;
+    document.getElementById("runOverlay").classList.remove("dimmed");
+    // pick up the edited text
+    var f = findBitAnywhere(runState.bits[runState.i].id);
+    if (f) runState.bits[runState.i] = f.bit;
+    if (!runState.tick) runState.tick = setInterval(runTick, 250);
+    renderRun();
+    runTick();
   }
   function runTick() {
     if (runState.done) return;
@@ -2567,7 +2611,12 @@
 
     var b = runState.bits[runState.i];
     var card2 = el("div", "run-card");
-    card2.appendChild(el("div", "run-bit", b.text));
+    var bitEl = el("div", "run-bit", b.text);
+    // Tap the bit to work it — the clock pauses while you're in the bench, so a
+    // rewrite mid-rehearsal doesn't poison the timing you're measuring.
+    bitEl.title = "Tap to open the workbench (pauses the clock)";
+    bitEl.onclick = function () { runPauseForBench(b.id); };
+    card2.appendChild(bitEl);
     if (b.est) card2.appendChild(el("div", "run-est", "you called it " + fmtSec(b.est)));
     stage.appendChild(card2);
     runState.bits.forEach(function (_, idx) {
@@ -2585,6 +2634,99 @@
     else if (e.key === "ArrowLeft") runAdvance(-1);
     else if (e.key === "Escape") closeRun();
   });
+
+  // ——— share the set as a PDF ———
+  // For when the venue bags your phone. Page 1 is the setlist (scannable —
+  // opening line of each bit, in order). The full text follows, so if you blank
+  // you can read the actual wording in the green room. Real text, not a
+  // screenshot: legible under bad light, prints clean, tiny file.
+  function firstSentence(text, max) {
+    var t = (text || "").replace(/\s+/g, " ").trim();
+    var m = t.match(/^[^.!?]*[.!?]/);
+    var s = m ? m[0] : t;
+    if (s.length > max) s = s.slice(0, max - 1).replace(/\s+\S*$/, "") + "\u2026";
+    return s;
+  }
+  async function exportSetPdf(s) {
+    if (!window.jspdf) { alert("PDF tools still loading \u2014 try again in a second."); return; }
+    var bits = s.bitIds.map(findBitAnywhere).filter(Boolean).map(function (f) { return f.bit; });
+    if (!bits.length) { alert("Nothing to share \u2014 add some bits first."); return; }
+
+    var jsPDF = window.jspdf.jsPDF;
+    var pdf = new jsPDF({ unit: "pt", format: "letter" });
+    var W = pdf.internal.pageSize.getWidth();
+    var H = pdf.internal.pageSize.getHeight();
+    var M = 56;                 // margin
+    var CW = W - M * 2;         // content width
+    var INK = "#1a1a1a", MUTED = "#777";
+
+    // ---- page 1: the setlist ----
+    var y = M + 8;
+    pdf.setTextColor(INK);
+    pdf.setFont("helvetica", "bold"); pdf.setFontSize(22);
+    pdf.text(s.name || "Set", M, y);
+    y += 18;
+    pdf.setFont("helvetica", "normal"); pdf.setFontSize(10);
+    pdf.setTextColor(MUTED);
+    pdf.text(bits.length + (bits.length === 1 ? " bit" : " bits"), M, y);
+    y += 14;
+    pdf.setDrawColor(200); pdf.setLineWidth(1);
+    pdf.line(M, y, W - M, y);
+    y += 26;
+
+    bits.forEach(function (b, i) {
+      if (y > H - M - 30) { pdf.addPage(); y = M + 10; }
+      var n = String(i + 1);
+      pdf.setTextColor(MUTED);
+      pdf.setFont("helvetica", "bold"); pdf.setFontSize(11);
+      pdf.text(n + ".", M, y);
+      pdf.setTextColor(INK);
+      pdf.setFont("helvetica", "normal"); pdf.setFontSize(13);
+      var cue = firstSentence(b.text, 300);
+      var lines = pdf.splitTextToSize(cue, CW - 26);
+      pdf.text(lines, M + 24, y);
+      y += lines.length * 17 + 12;
+    });
+
+    // ---- the bits, in full ----
+    pdf.addPage();
+    y = M + 8;
+    pdf.setTextColor(MUTED);
+    pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
+    pdf.text("THE BITS", M, y, { charSpace: 1.4 });
+    y += 12;
+    pdf.setDrawColor(200);
+    pdf.line(M, y, W - M, y);
+    y += 24;
+
+    bits.forEach(function (b, i) {
+      var body = pdf.splitTextToSize((b.text || "").trim(), CW);
+      var need = 18 + body.length * 16 + 22;
+      if (y + need > H - M) { pdf.addPage(); y = M + 10; }
+      pdf.setTextColor(MUTED);
+      pdf.setFont("helvetica", "bold"); pdf.setFontSize(10);
+      pdf.text(String(i + 1), M, y);
+      pdf.setTextColor(INK);
+      pdf.setFont("helvetica", "normal"); pdf.setFontSize(12);
+      pdf.text(body, M + 20, y);
+      y += body.length * 16 + 26;
+    });
+
+    var name = ((s.name || "Set") + " setlist").replace(/[^\w \-]/g, "").replace(/\s+/g, "_") + ".pdf";
+    var blob = pdf.output("blob");
+    var file = new File([blob], name, { type: "application/pdf" });
+    var isIPad = /iPad/.test(navigator.userAgent) ||
+                 (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && !isIPad) {
+      try { await navigator.share({ files: [file], title: s.name || "Set" }); } catch (e) {}
+    } else {
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    }
+  }
 
   function renderSets() {
     var body = document.getElementById("list");
@@ -2613,10 +2755,16 @@
       body.appendChild(el("div", "set-total",
         s.bitIds.length + (s.bitIds.length === 1 ? " bit" : " bits") + " · runs " + fmtSec(total) + (untimed ? " · " + untimed + " untimed" : "")));
       if (s.bitIds.length) {
+        var row = el("div", "set-actions");
         var runBtn = el("button", "run-again", "\u25B6 run it \u2014 practice");
-        runBtn.style.margin = "4px 0 14px";
+        runBtn.style.margin = "0";
         runBtn.onclick = function () { openRun(s); };
-        body.appendChild(runBtn);
+        row.appendChild(runBtn);
+        var pdfBtn = el("button", "set-pdf", "\u2b07 PDF");
+        pdfBtn.title = "One-pager for the phone bag";
+        pdfBtn.onclick = function () { exportSetPdf(s); };
+        row.appendChild(pdfBtn);
+        body.appendChild(row);
       }
       s.bitIds.forEach(function (id, idx) {
         var f = findBitAnywhere(id);
@@ -2673,19 +2821,50 @@
       });
       if (s.bitIds.length === 0) body.appendChild(el("p", "empty", "Empty set — tap any bit below and it joins the lineup."));
       body.appendChild(el("div", "set-add-head", "your bits — tap to add"));
-      var avail = state.bits.filter(function (b) { return s.bitIds.indexOf(b.id) === -1; });
-      if (avail.length === 0) body.appendChild(el("p", "empty", "No bits left to add — work something up in the bits tab."));
-      avail.forEach(function (b) {
-        var row = el("div", "set-row set-addable");
-        row.appendChild(el("p", null, b.text));
-        if (b.react) row.appendChild(el("span", null, b.react));
-        if (b.est) row.appendChild(el("span", "time-chip", fmtSec(b.est)));
-        row.onclick = function () {
-          s.bitIds.push(b.id);
-          s.updated = Date.now(); save(); render();
-        };
-        body.appendChild(row);
-      });
+
+      // filter: with a real pile of bits, scrolling to find one is the mess.
+      var q = el("input", "set-search");
+      q.type = "text";
+      q.placeholder = "filter your bits\u2026";
+      q.value = setFilter;
+      q.setAttribute("autocomplete", "off");
+      q.oninput = function () {
+        setFilter = q.value;
+        renderAvail();
+      };
+      body.appendChild(q);
+
+      var availWrap = el("div");
+      body.appendChild(availWrap);
+
+      function renderAvail() {
+        availWrap.innerHTML = "";
+        var needle = setFilter.trim().toLowerCase();
+        var avail = state.bits.filter(function (b) {
+          if (s.bitIds.indexOf(b.id) !== -1) return false;
+          if (!needle) return true;
+          var hay = (b.text || "") + " " + (b.tags || []).join(" ");
+          return hay.toLowerCase().indexOf(needle) !== -1;
+        });
+        if (avail.length === 0) {
+          availWrap.appendChild(el("p", "empty", needle
+            ? "Nothing matches \u201c" + setFilter.trim() + "\u201d."
+            : "No bits left to add \u2014 work something up in the bits tab."));
+          return;
+        }
+        avail.forEach(function (b) {
+          var row = el("div", "set-row set-addable");
+          row.appendChild(el("p", null, b.text));
+          if (b.react) row.appendChild(el("span", null, b.react));
+          if (b.est) row.appendChild(el("span", "time-chip", fmtSec(b.est)));
+          row.onclick = function () {
+            s.bitIds.push(b.id);
+            s.updated = Date.now(); save(); render();
+          };
+          availWrap.appendChild(row);
+        });
+      }
+      renderAvail();
     } else {
       var nw = el("button", "bone-digup", "+ new set");
       nw.style.marginBottom = "14px";
