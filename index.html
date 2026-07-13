@@ -389,8 +389,12 @@
   .run-dots i { width: 5px; height: 5px; border-radius: 9px; background: var(--rule); transition: .2s; }
   .run-dots i.on { background: var(--accent); width: 15px; }
   .run-total { font-family: var(--mono); font-size: 12px; color: var(--faint); min-width: 46px; text-align: right; }
-  .run-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 26px 20px; overflow-y: auto; position: relative; z-index: 1; }
+  .run-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 26px 20px; overflow-y: auto; position: relative; z-index: 3; pointer-events: none; }
   .run-card { width: 100%; max-width: 640px; }
+  /* The bit itself must be tappable (opens the bench), so it sits ABOVE the
+     advance zones and re-enables pointer events. Everything else in the stage
+     stays transparent to clicks so the outer thirds still advance the deck. */
+  .run-bit, .run-sum, .run-again { pointer-events: auto; }
   .run-bit { font-family: 'Caveat', 'Bradley Hand', cursive; font-weight: 500;
     font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink); white-space: pre-wrap; }
   .run-est { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
@@ -721,7 +725,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.57";
+  var APP_VERSION = "v1.1.58";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
