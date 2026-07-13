@@ -134,7 +134,10 @@
   /* Collapsed: snug to the text. Long ones cap and fade; short ones stay short.
      No reserved corner space, no dead air — everything waits for a tap. */
   .bit:not(.open) { padding: 10px 12px; }
-  .bit:not(.open) .bit-text { max-height: 4.2em; overflow: hidden; margin-bottom: 0; line-height: 1.35;
+  .bit:not(.open) .bit-text { max-height: 4.2em; overflow: hidden; margin-bottom: 0; line-height: 1.35; }
+  /* the fade only appears when the text is ACTUALLY cut off — a line that fits
+     shouldn't be ghosted for no reason (set at render time) */
+  .bit:not(.open) .bit-text.clipped {
     -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 72%, transparent 100%); }
   .bit-flags { position: absolute; right: 10px; bottom: 6px; font-size: 10px; opacity: .35; letter-spacing: 2px; }
@@ -184,7 +187,8 @@
   .truth-card.open { padding-right: 46px; padding-bottom: 34px; }
   /* collapsed: snug to the text. no reserved corner space, no dead air. */
   .truth-card:not(.open) { padding: 10px 12px; }
-  .truth-card:not(.open) p { max-height: 4.2em; overflow: hidden; margin: 0; line-height: 1.35;
+  .truth-card:not(.open) p { max-height: 4.2em; overflow: hidden; margin: 0; line-height: 1.35; }
+  .truth-card:not(.open) p.clipped {
     -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 72%, transparent 100%); }
   .truth-corner { position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 5px; }
@@ -676,7 +680,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.51";
+  var APP_VERSION = "v1.1.52";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -687,6 +691,16 @@
   var pendingRemote = null;
   var textEditing = null;
   var expandedBit = null;
+
+  // A collapsed card only gets the fade if its text is genuinely cut off.
+  // Measured after the node is in the DOM — CSS can't know this on its own.
+  function markIfClipped(node) {
+    requestAnimationFrame(function () {
+      if (!node.isConnected) return;
+      if (node.scrollHeight > node.clientHeight + 1) node.classList.add("clipped");
+      else node.classList.remove("clipped");
+    });
+  }
 
   function hydrate(data) {
     var toPool = [];
@@ -1077,6 +1091,7 @@
       card.appendChild(p);
 
       if (!isOpen) {
+        markIfClipped(p);
         // one whisper of a marker if there's anything under the hood
         var flags = [];
         if ((b.tags || []).length) flags.push("\uD83C\uDFF7");
@@ -1822,6 +1837,7 @@
       card.appendChild(p);
 
       if (!isOpen) {
+        markIfClipped(p);
         // collapsed: uniform height, one whisper if there's anything under it
         var flags = [];
         if ((t.tags || []).length) flags.push("\uD83C\uDFF7");
