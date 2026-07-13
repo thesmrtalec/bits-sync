@@ -192,6 +192,29 @@
     -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 100%);
     mask-image: linear-gradient(180deg, #000 72%, transparent 100%); }
   .truth-corner { position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 5px; }
+
+  /* ——— swipe to reveal ——— */
+  .swipe-shell { position: relative; margin-bottom: 9px; border-radius: 9px; overflow: hidden; }
+  .swipe-act { position: absolute; top: 0; bottom: 0; width: 56px; border: none; display: flex;
+    align-items: center; justify-content: center; font-size: 17px; font-family: var(--mono);
+    cursor: pointer; padding: 0; }
+  .swipe-kill { right: 0; background: var(--accent2); color: #fff; }
+  .swipe-promote { left: 0; background: var(--accent); color: var(--onaccent); font-size: 12px; }
+  .swipe-face { position: relative; z-index: 1; margin-bottom: 0 !important;
+    transition: transform .18s cubic-bezier(.2,.8,.3,1); touch-action: pan-y; }
+
+  /* ——— expanded card footer: tags as a light line, not chips ——— */
+  .card-foot { display: flex; align-items: center; gap: 12px; margin-top: 10px;
+    padding-top: 9px; border-top: 1px solid var(--rule); }
+  .tag-line { flex: 1; min-width: 0; text-align: left; background: transparent; border: none;
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: .04em; color: var(--muted);
+    padding: 3px 0; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tag-line.empty { color: var(--faint); opacity: .7; }
+  .tag-line-edit { flex: 1; min-width: 0; }
+  .foot-right { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+  .foot-mark { font-family: var(--mono); font-size: 11px; color: var(--faint); }
+  .foot-btn { background: transparent; border: 1px solid var(--rule); border-radius: 7px;
+    padding: 3px 8px; font-size: 13px; line-height: 1.4; cursor: pointer; }
   .truth-noted { font-size: 11px; color: var(--faint); line-height: 1; }
   .truth-more { background: transparent; border: none; color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 5px; cursor: pointer; }
   .tag-cloud { display: flex; flex-wrap: wrap; gap: 9px; padding-top: 6px; }
@@ -680,7 +703,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.52";
+  var APP_VERSION = "v1.1.53";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -701,6 +724,79 @@
       else node.classList.remove("clipped");
     });
   }
+
+  // Swipe-to-reveal. Horizontal drag slides the card aside to expose an action
+  // underneath; you then TAP it. Nothing destructive fires from the swipe alone
+  // — a mis-swipe while scrolling costs you nothing but a nudge back.
+  var swipeOpenCard = null;   // only one card sits open at a time
+  function closeSwipe() {
+    if (swipeOpenCard) {
+      swipeOpenCard.style.transform = "";
+      swipeOpenCard.classList.remove("swiped-l", "swiped-r");
+      swipeOpenCard = null;
+    }
+  }
+  function attachSwipe(shell, face) {
+    var x0 = 0, y0 = 0, dx = 0, dragging = false, decided = false, horizontal = false;
+    var THRESH = 56;   // how far to open
+    var DECIDE = 10;   // px before we commit to h vs v
+
+    function onStart(e) {
+      var t = e.touches ? e.touches[0] : e;
+      x0 = t.clientX; y0 = t.clientY;
+      dx = 0; dragging = true; decided = false; horizontal = false;
+      face.style.transition = "none";
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      var t = e.touches ? e.touches[0] : e;
+      var ddx = t.clientX - x0, ddy = t.clientY - y0;
+      if (!decided) {
+        if (Math.abs(ddx) < DECIDE && Math.abs(ddy) < DECIDE) return;
+        decided = true;
+        // if the gesture is mostly vertical it's a SCROLL — let it go
+        horizontal = Math.abs(ddx) > Math.abs(ddy) * 1.3;
+        if (!horizontal) { dragging = false; face.style.transition = ""; return; }
+        if (swipeOpenCard && swipeOpenCard !== face) closeSwipe();
+      }
+      if (!horizontal) return;
+      e.preventDefault();
+      dx = Math.max(-90, Math.min(90, ddx));
+      face.style.transform = "translateX(" + dx + "px)";
+    }
+    function onEnd() {
+      if (!dragging) { return; }
+      dragging = false;
+      face.style.transition = "";
+      if (!horizontal) return;
+      if (dx <= -THRESH) {
+        face.style.transform = "translateX(-" + THRESH + "px)";
+        face.classList.add("swiped-l"); face.classList.remove("swiped-r");
+        swipeOpenCard = face;
+      } else if (dx >= THRESH) {
+        face.style.transform = "translateX(" + THRESH + "px)";
+        face.classList.add("swiped-r"); face.classList.remove("swiped-l");
+        swipeOpenCard = face;
+      } else {
+        face.style.transform = "";
+        face.classList.remove("swiped-l", "swiped-r");
+        if (swipeOpenCard === face) swipeOpenCard = null;
+      }
+    }
+    face.addEventListener("touchstart", onStart, { passive: true });
+    face.addEventListener("touchmove", onMove, { passive: false });
+    face.addEventListener("touchend", onEnd);
+    face.addEventListener("touchcancel", onEnd);
+    // mouse, so it's testable on desktop
+    face.addEventListener("mousedown", function (e) { onStart(e); });
+    window.addEventListener("mousemove", function (e) { if (dragging) onMove(e); });
+    window.addEventListener("mouseup", function () { if (dragging) onEnd(); });
+  }
+  // tapping anywhere else closes an open swipe
+  document.addEventListener("click", function (e) {
+    if (swipeOpenCard && !swipeOpenCard.parentNode.contains(e.target)) closeSwipe();
+  }, true);
+
 
   function hydrate(data) {
     var toPool = [];
@@ -1828,69 +1924,22 @@
   }
   function renderTruthCard(t, list) {
       var isOpen = expandedTruth === t.id;
-      var card = el("div", "bone-card truth-card" + (isOpen ? " open" : ""));
-      var p = el("p", null, t.text);
-      p.style.cursor = "pointer";
-      p.title = isOpen ? "Tap to collapse \u00b7 long-press to copy" : "Tap to open \u00b7 long-press to copy";
-      p.onclick = function () { expandedTruth = isOpen ? null : t.id; render(); };
-      attachLongPressCopy(p, function () { return t.text; });
-      card.appendChild(p);
 
-      if (!isOpen) {
-        markIfClipped(p);
-        // collapsed: uniform height, one whisper if there's anything under it
-        var flags = [];
-        if ((t.tags || []).length) flags.push("\uD83C\uDFF7");
-        if (t.workshop && t.workshop.trim()) flags.push("\u270E");
-        if (t.mined) flags.push("\u26cf");
-        if (flags.length) card.appendChild(el("div", "bit-flags", flags.join(" ")));
-        list.appendChild(card);
-        return;
-      }
-
-      // open: the corners (axe / copy) and the full action row
-      var corner = el("div", "truth-corner");
-      corner.appendChild(axeCorner(function () {
+      // shell holds the swipe actions; face is what slides
+      var shell = el("div", "swipe-shell");
+      var actL = el("button", "swipe-act swipe-kill", "\uD83D\uDD2B");
+      actL.title = "Kill it \u2014 to the boneyard";
+      actL.onclick = function (e) {
+        e.stopPropagation();
+        if (!state.buried) state.buried = [];
+        t.buriedAt = Date.now(); t.from = "stuff";
+        state.buried.unshift(t);
         state.truths = state.truths.filter(function (x) { return x.id !== t.id; });
-        save(); render();
-      }));
-      card.appendChild(corner);
-      card.appendChild(copyCorner(function () { return t.text; }));
-      var actions = el("div", "bone-actions truth-actions");
-
-      // LEFT: tags (what it is)
-      var tL = el("div", "meta-left");
-      (t.tags || []).forEach(function (tg) {
-        var tag = el("button", "bit-tag", tg + " \u00d7");
-        tag.title = "Tap to remove tag";
-        tag.onclick = function (e) {
-          e.stopPropagation();
-          t.tags = t.tags.filter(function (x) { return x !== tg; });
-          save(); render();
-        };
-        tL.appendChild(tag);
-      });
-      if (tagEditing === t.id) {
-        buildTagPicker(tL, t, function () { tagEditing = null; });
-      } else {
-        var addTag = el("button", "add-tag-btn", "\uD83C\uDFF7\uFE0F");
-        addTag.title = "Add tags";
-        addTag.setAttribute("aria-label", "add tags");
-        addTag.onclick = function (e) { e.stopPropagation(); tagEditing = t.id; render(); };
-        tL.appendChild(addTag);
-      }
-      if (t.mined) {
-        var mined = el("span", "has-notes", "\u26cf " + t.mined);
-        mined.title = "Mined into bits " + t.mined + "\u00d7";
-        tL.appendChild(mined);
-      }
-      actions.appendChild(tL);
-
-      // RIGHT: what you can do
-      var tR = el("div", "meta-right");
-      var promote = el("button", "bone-digup", "+ bit");
-      promote.title = "Copy this line into bits \u2014 it stays here too";
-      promote.onclick = function (e) {
+        closeSwipe(); save(); render();
+      };
+      var actR = el("button", "swipe-act swipe-promote", "+ bit");
+      actR.title = "Promote into bits \u2014 it stays here too";
+      actR.onclick = function (e) {
         e.stopPropagation();
         state.bits.unshift({
           id: Date.now().toString(36),
@@ -1902,18 +1951,71 @@
         });
         t.mined = (t.mined || 0) + 1;
         t.touched = Date.now();
-        save(); render();
+        closeSwipe(); save(); render();
       };
-      tR.appendChild(promote);
-      var twb = el("button", "bone-digup wb-btn", "\uD83D\uDCDD");
+      shell.appendChild(actR);   // revealed on swipe RIGHT (sits left)
+      shell.appendChild(actL);   // revealed on swipe LEFT  (sits right)
+
+      var card = el("div", "bone-card truth-card swipe-face" + (isOpen ? " open" : ""));
+      var p = el("p", null, t.text);
+      p.style.cursor = "pointer";
+      p.title = isOpen ? "Tap to collapse \u00b7 long-press to copy" : "Tap to open \u00b7 long-press to copy";
+      p.onclick = function () {
+        if (swipeOpenCard === card) { closeSwipe(); return; }
+        expandedTruth = isOpen ? null : t.id; render();
+      };
+      attachLongPressCopy(p, function () { return t.text; });
+      card.appendChild(p);
+
+      if (!isOpen) {
+        markIfClipped(p);
+        var flags = [];
+        if ((t.tags || []).length) flags.push("\uD83C\uDFF7");
+        if (t.workshop && t.workshop.trim()) flags.push("\u270E");
+        if (t.mined) flags.push("\u26cf");
+        if (flags.length) card.appendChild(el("div", "bit-flags", flags.join(" ")));
+        shell.appendChild(card);
+        attachSwipe(shell, card);
+        list.appendChild(shell);
+        return;
+      }
+
+      // OPEN: one quiet footer — tags as a light line, bench on the right.
+      // (kill + promote now live on the swipe, so they're off the card.)
+      var foot = el("div", "card-foot");
+
+      var tagLine = el("button", "tag-line");
+      if (tagEditing === t.id) {
+        var tp = el("div", "tag-line-edit");
+        buildTagPicker(tp, t, function () { tagEditing = null; render(); });
+        foot.appendChild(tp);
+      } else {
+        tagLine.textContent = (t.tags && t.tags.length)
+          ? t.tags.join("  \u00b7  ")
+          : "+ tag";
+        if (!(t.tags && t.tags.length)) tagLine.classList.add("empty");
+        tagLine.title = "Tap to edit tags";
+        tagLine.onclick = function (e) { e.stopPropagation(); tagEditing = t.id; render(); };
+        foot.appendChild(tagLine);
+      }
+
+      var footR = el("div", "foot-right");
+      if (t.mined) {
+        var mined = el("span", "foot-mark", "\u26cf " + t.mined);
+        mined.title = "Mined into bits " + t.mined + "\u00d7";
+        footR.appendChild(mined);
+      }
+      var twb = el("button", "foot-btn", "\uD83D\uDCDD");
       twb.setAttribute("aria-label", "workbench");
       twb.title = "Open the workbench";
       twb.onclick = function (e) { e.stopPropagation(); openWorkbench(t.id, "truth"); };
-      tR.appendChild(twb);
-      actions.appendChild(tR);
+      footR.appendChild(twb);
+      foot.appendChild(footR);
 
-      card.appendChild(actions);
-      list.appendChild(card);
+      card.appendChild(foot);
+      shell.appendChild(card);
+      attachSwipe(shell, card);
+      list.appendChild(shell);
   }
 
   // ——— tag picker: existing tags most-used first, plus new ———
