@@ -322,6 +322,43 @@
   }
   .bone-card p, .bit-text, .set-row p { line-height: 1.35; }
 
+  /* ——— set practice runner ——— */
+  .run-overlay { position: fixed; inset: 0; background: var(--page); z-index: 300; display: none; flex-direction: column;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  .run-overlay.open { display: flex; }
+  .run-top { display: flex; align-items: center; gap: 12px; padding: 14px 18px 4px; position: relative; z-index: 3; }
+  .run-x { background: transparent; border: none; color: var(--faint); font-size: 26px; line-height: 1; padding: 4px 8px; }
+  .run-dots { flex: 1; display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+  .run-dots i { width: 5px; height: 5px; border-radius: 9px; background: var(--rule); transition: .2s; }
+  .run-dots i.on { background: var(--accent); width: 15px; }
+  .run-total { font-family: var(--mono); font-size: 12px; color: var(--faint); min-width: 46px; text-align: right; }
+  .run-stage { flex: 1; display: flex; align-items: center; justify-content: center; padding: 10px 26px 20px; overflow-y: auto; position: relative; z-index: 1; }
+  .run-card { width: 100%; max-width: 640px; }
+  .run-bit { font-family: 'Caveat', 'Bradley Hand', cursive; font-weight: 500;
+    font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink); white-space: pre-wrap; }
+  .run-est { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--faint); margin-top: 22px; }
+  .run-tap { position: absolute; top: 56px; bottom: 64px; width: 38%; z-index: 2; }
+  .run-tap-l { left: 0; } .run-tap-r { right: 0; }
+  .run-bottom { text-align: center; padding: 0 0 18px; position: relative; z-index: 3; }
+  .run-clock { font-family: var(--mono); font-size: 30px; font-weight: 600; color: var(--accent); letter-spacing: .04em; }
+  .run-clock.over { color: var(--accent2); }
+  /* end-of-run scorecard */
+  .run-card.run-sum { max-width: 560px; }
+  .run-sum h3 { font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 16px; font-weight: 600; }
+  .sum-row { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--rule); }
+  .sum-txt { flex: 1; font-family: 'Caveat', cursive; font-size: 19px; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sum-est, .sum-act { font-family: var(--mono); font-size: 13px; min-width: 44px; text-align: right; }
+  .sum-est { color: var(--faint); }
+  .sum-act { color: var(--ink); font-weight: 600; }
+  .sum-act.slow { color: var(--accent); }
+  .sum-tot { display: flex; gap: 10px; padding: 14px 0 0; font-family: var(--mono); font-size: 14px; }
+  .sum-tot span:first-child { flex: 1; color: var(--muted); }
+  .run-again { display: block; width: 100%; margin-top: 22px; background: var(--accent); color: var(--onaccent);
+    border: none; border-radius: 9px; padding: 13px; font-size: 15px; font-weight: 600; }
+
   .axe-face { padding: 18px 16px; }
   .axe-face p { font-size: 23px; }
   .axe-verdicts { display: flex; gap: 12px; margin-top: 16px; }
@@ -517,6 +554,19 @@
         <button id="axeKill" class="axe-kill">🪓 axe</button>
         <button id="axeKeep" class="axe-keep">keep</button>
       </div>
+    </div>
+  </div>
+  <div class="run-overlay" id="runOverlay">
+    <div class="run-top">
+      <button class="run-x" id="runClose">&times;</button>
+      <div class="run-dots" id="runDots"></div>
+      <div class="run-total" id="runTotal"></div>
+    </div>
+    <div class="run-stage" id="runStage"></div>
+    <div class="run-tap run-tap-l" id="runTapL"></div>
+    <div class="run-tap run-tap-r" id="runTapR"></div>
+    <div class="run-bottom">
+      <div class="run-clock" id="runClock">0:00</div>
     </div>
   </div>
   <div class="notes-overlay" id="workbenchOverlay">
@@ -2134,6 +2184,116 @@
     if (b) return { bit: b, buried: true };
     return null;
   }
+  // ——— set practice runner ———
+  // Rehearsal, not performance: full bit on the card, a clock counting up from
+  // zero on each bit (resets the moment you advance), and a scorecard at the end
+  // showing what you ACTUALLY took vs. what you'd estimated. Nothing is saved
+  // and no estimate is changed — it just tells you the truth.
+  var runState = { set: null, bits: [], i: 0, actual: [], startedAt: 0, setStartedAt: 0, tick: null, done: false };
+
+  function openRun(s) {
+    var bits = s.bitIds.map(findBitAnywhere).filter(Boolean).map(function (f) { return f.bit; });
+    if (!bits.length) { alert("Nothing to run — add some bits to this set first."); return; }
+    runState.set = s;
+    runState.bits = bits;
+    runState.i = 0;
+    runState.actual = [];
+    runState.done = false;
+    runState.setStartedAt = Date.now();
+    runState.startedAt = Date.now();
+    if (runState.tick) clearInterval(runState.tick);
+    runState.tick = setInterval(runTick, 250);
+    renderRun();
+    document.getElementById("runOverlay").classList.add("open");
+  }
+  function closeRun() {
+    if (runState.tick) { clearInterval(runState.tick); runState.tick = null; }
+    document.getElementById("runOverlay").classList.remove("open");
+  }
+  function runTick() {
+    if (runState.done) return;
+    var clk = document.getElementById("runClock");
+    var spent = Math.floor((Date.now() - runState.startedAt) / 1000);
+    clk.textContent = fmtSec(spent);
+    var b = runState.bits[runState.i];
+    clk.className = "run-clock" + (b && b.est && spent > b.est ? " over" : "");
+    var tot = Math.floor((Date.now() - runState.setStartedAt) / 1000);
+    document.getElementById("runTotal").textContent = fmtSec(tot);
+  }
+  // advancing banks the time you actually spent, then resets the clock
+  function runAdvance(dir) {
+    if (runState.done) return;
+    if (dir > 0) {
+      runState.actual[runState.i] = Math.floor((Date.now() - runState.startedAt) / 1000);
+      if (runState.i >= runState.bits.length - 1) { runFinish(); return; }
+      runState.i++;
+    } else {
+      if (runState.i === 0) return;
+      runState.i--;
+    }
+    runState.startedAt = Date.now();
+    renderRun();
+    runTick();
+  }
+  function runFinish() {
+    runState.done = true;
+    if (runState.tick) { clearInterval(runState.tick); runState.tick = null; }
+    renderRun();
+  }
+  function renderRun() {
+    var stage = document.getElementById("runStage");
+    var dots = document.getElementById("runDots");
+    stage.innerHTML = ""; dots.innerHTML = "";
+
+    if (runState.done) {
+      document.getElementById("runClock").textContent = "";
+      var card = el("div", "run-card run-sum");
+      card.appendChild(el("h3", null, "how it actually went"));
+      var estTot = 0, actTot = 0;
+      runState.bits.forEach(function (b, i) {
+        var act = runState.actual[i] || 0;
+        var est = b.est || 0;
+        estTot += est; actTot += act;
+        var row = el("div", "sum-row");
+        row.appendChild(el("div", "sum-txt", b.text));
+        row.appendChild(el("div", "sum-est", est ? fmtSec(est) : "?"));
+        var a = el("div", "sum-act" + (est && act > est ? " slow" : ""), fmtSec(act));
+        row.appendChild(a);
+        card.appendChild(row);
+      });
+      var tot = el("div", "sum-tot");
+      tot.appendChild(el("span", null, "total"));
+      tot.appendChild(el("span", "sum-est", estTot ? fmtSec(estTot) : "?"));
+      tot.appendChild(el("span", "sum-act" + (estTot && actTot > estTot ? " slow" : ""), fmtSec(actTot)));
+      card.appendChild(tot);
+      var again = el("button", "run-again", "run it again");
+      again.onclick = function () { openRun(runState.set); };
+      card.appendChild(again);
+      stage.appendChild(card);
+      return;
+    }
+
+    var b = runState.bits[runState.i];
+    var card2 = el("div", "run-card");
+    card2.appendChild(el("div", "run-bit", b.text));
+    if (b.est) card2.appendChild(el("div", "run-est", "you called it " + fmtSec(b.est)));
+    stage.appendChild(card2);
+    runState.bits.forEach(function (_, idx) {
+      var d = document.createElement("i");
+      if (idx === runState.i) d.className = "on";
+      dots.appendChild(d);
+    });
+  }
+  document.getElementById("runClose").onclick = closeRun;
+  document.getElementById("runTapR").onclick = function () { runAdvance(1); };
+  document.getElementById("runTapL").onclick = function () { runAdvance(-1); };
+  document.addEventListener("keydown", function (e) {
+    if (!document.getElementById("runOverlay").classList.contains("open")) return;
+    if (e.key === "ArrowRight" || e.key === " ") { e.preventDefault(); runAdvance(1); }
+    else if (e.key === "ArrowLeft") runAdvance(-1);
+    else if (e.key === "Escape") closeRun();
+  });
+
   function renderSets() {
     var body = document.getElementById("list");
     body.innerHTML = "";
@@ -2160,6 +2320,12 @@
       });
       body.appendChild(el("div", "set-total",
         s.bitIds.length + (s.bitIds.length === 1 ? " bit" : " bits") + " · runs " + fmtSec(total) + (untimed ? " · " + untimed + " untimed" : "")));
+      if (s.bitIds.length) {
+        var runBtn = el("button", "run-again", "\u25B6 run it \u2014 practice");
+        runBtn.style.margin = "4px 0 14px";
+        runBtn.onclick = function () { openRun(s); };
+        body.appendChild(runBtn);
+      }
       s.bitIds.forEach(function (id, idx) {
         var f = findBitAnywhere(id);
         var row = el("div", "set-row");
