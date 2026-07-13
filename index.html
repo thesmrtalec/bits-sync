@@ -268,8 +268,16 @@
   .set-total { font-family: var(--mono); font-size: 12px; color: var(--muted); margin: 0 0 12px; }
   .set-row { display: flex; align-items: flex-start; gap: 8px; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; padding: 10px 12px; margin-bottom: 8px; box-shadow: var(--cardshadow); }
   .set-row p { flex: 1; margin: 0; font-size: 14.5px; line-height: 1.45; color: var(--ink); }
-  .set-move { display: flex; flex-direction: column; gap: 3px; }
-  .set-move button { background: transparent; border: 1px solid var(--rule); border-radius: 6px; padding: 0 6px; font-size: 10px; color: var(--muted); line-height: 1.7; }
+  /* ——— drag to reorder ——— */
+  .set-lineup { position: relative; }
+  .set-drag-row { transition: transform .16s cubic-bezier(.2,.8,.3,1); touch-action: pan-y; }
+  .set-drag-row.dragging { transition: none; z-index: 5; position: relative;
+    box-shadow: 0 6px 18px rgba(80,40,20,.22); border-color: var(--accent);
+    transform-origin: center; opacity: .96; }
+  .set-grip { flex: 0 0 auto; width: 22px; text-align: center; color: var(--faint);
+    font-size: 16px; line-height: 1.3; cursor: grab; user-select: none;
+    -webkit-user-select: none; align-self: center; }
+  .set-drag-row.dragging .set-grip { color: var(--accent); cursor: grabbing; }
   .set-move button:disabled { opacity: .25; }
   .time-chip { background: transparent; border: 1px dashed var(--rule); border-radius: 7px; font-family: var(--mono); font-size: 10.5px; color: var(--muted); padding: 2px 7px; white-space: nowrap; }
   .set-add-head { font-family: var(--mono); font-size: 11px; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; margin: 20px 0 8px; }
@@ -725,7 +733,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.58";
+  var APP_VERSION = "v1.1.59";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2732,6 +2740,94 @@
     }
   }
 
+  // ——— drag to reorder (set lineup) ———
+  // Long-press to lift (so a normal scroll never grabs a row), then drag. The
+  // other rows slide to show where it'll land. Release to drop.
+  function attachRowDrag(row, container, s) {
+    var HOLD = 220;       // ms before it lifts
+    var timer = null, lifted = false;
+    var startY = 0, curY = 0, fromIdx = 0, toIdx = 0;
+    var rows = [], rowH = 0, ghostTop = 0;
+
+    function measure() {
+      rows = Array.prototype.slice.call(container.querySelectorAll(".set-drag-row"));
+      var r = row.getBoundingClientRect();
+      rowH = r.height + 8;   // + margin
+      ghostTop = r.top;
+      fromIdx = rows.indexOf(row);
+      toIdx = fromIdx;
+    }
+    function lift() {
+      lifted = true;
+      measure();
+      row.classList.add("dragging");
+      if (navigator.vibrate) navigator.vibrate(8);
+      document.body.style.userSelect = "none";
+    }
+    function shiftOthers() {
+      rows.forEach(function (r, i) {
+        if (r === row) return;
+        var shift = 0;
+        if (fromIdx < toIdx && i > fromIdx && i <= toIdx) shift = -rowH;
+        else if (fromIdx > toIdx && i >= toIdx && i < fromIdx) shift = rowH;
+        r.style.transform = shift ? "translateY(" + shift + "px)" : "";
+      });
+    }
+    function onStart(e) {
+      var t = e.touches ? e.touches[0] : e;
+      startY = t.clientY; curY = 0;
+      lifted = false;
+      timer = setTimeout(lift, HOLD);
+    }
+    function onMove(e) {
+      var t = e.touches ? e.touches[0] : e;
+      var dy = t.clientY - startY;
+      if (!lifted) {
+        // moved before the hold completed -> it's a scroll, not a drag
+        if (Math.abs(dy) > 8) { clearTimeout(timer); timer = null; }
+        return;
+      }
+      e.preventDefault();
+      curY = dy;
+      row.style.transform = "translateY(" + curY + "px)";
+      var moved = Math.round(curY / rowH);
+      var next = Math.max(0, Math.min(rows.length - 1, fromIdx + moved));
+      if (next !== toIdx) { toIdx = next; shiftOthers(); }
+    }
+    function onEnd() {
+      if (timer) { clearTimeout(timer); timer = null; }
+      document.body.style.userSelect = "";
+      if (!lifted) return;
+      lifted = false;
+      rows.forEach(function (r) { r.style.transform = ""; });
+      row.classList.remove("dragging");
+      if (toIdx !== fromIdx) {
+        s.bitIds.splice(toIdx, 0, s.bitIds.splice(fromIdx, 1)[0]);
+        s.updated = Date.now();
+        save();
+      }
+      render();
+    }
+
+    row.addEventListener("touchstart", onStart, { passive: true });
+    row.addEventListener("touchmove", onMove, { passive: false });
+    row.addEventListener("touchend", onEnd);
+    row.addEventListener("touchcancel", onEnd);
+    row.addEventListener("mousedown", function (e) {
+      // don't start a drag from the buttons
+      if (e.target.closest("button")) return;
+      onStart(e);
+      var mm = function (ev) { onMove(ev); };
+      var mu = function () {
+        onEnd();
+        window.removeEventListener("mousemove", mm);
+        window.removeEventListener("mouseup", mu);
+      };
+      window.addEventListener("mousemove", mm);
+      window.addEventListener("mouseup", mu);
+    });
+  }
+
   function renderSets() {
     var body = document.getElementById("list");
     body.innerHTML = "";
@@ -2770,31 +2866,21 @@
         row.appendChild(pdfBtn);
         body.appendChild(row);
       }
+      var lineup = el("div", "set-lineup");
       s.bitIds.forEach(function (id, idx) {
         var f = findBitAnywhere(id);
-        var row = el("div", "set-row");
-        var mv = el("div", "set-move");
-        var up = el("button", null, "▲");
-        var dn = el("button", null, "▼");
-        up.disabled = idx === 0;
-        dn.disabled = idx === s.bitIds.length - 1;
-        up.onclick = function () {
-          s.bitIds.splice(idx - 1, 0, s.bitIds.splice(idx, 1)[0]);
-          s.updated = Date.now(); save(); render();
-        };
-        dn.onclick = function () {
-          s.bitIds.splice(idx + 1, 0, s.bitIds.splice(idx, 1)[0]);
-          s.updated = Date.now(); save(); render();
-        };
-        mv.appendChild(up); mv.appendChild(dn);
-        row.appendChild(mv);
+        var row = el("div", "set-row set-drag-row");
+        row.setAttribute("data-idx", idx);
+        var grip = el("div", "set-grip", "\u2261");
+        grip.title = "Hold and drag to reorder";
+        row.appendChild(grip);
         var p = el("p", null, f.bit.text);
         if (f.buried) { p.style.opacity = ".45"; p.textContent = f.bit.text + "  (buried)"; }
         row.appendChild(p);
         if (f.bit.react) row.appendChild(el("span", null, f.bit.react));
         if (timeEditing === f.bit.id) {
           var te = el("span", "time-edit");
-          var minus = el("button", "time-step", "−");
+          var minus = el("button", "time-step", "\u2212");
           minus.onclick = function () {
             var v = stepEst(f.bit.est, -1);
             if (v) f.bit.est = v; else delete f.bit.est;
@@ -2815,14 +2901,16 @@
           chip.onclick = function () { timeEditing = f.bit.id; render(); };
           row.appendChild(chip);
         }
-        var x = el("button", "bone-del", "✕");
+        var x = el("button", "bone-del", "\u2715");
         x.onclick = function () {
           s.bitIds.splice(idx, 1);
           s.updated = Date.now(); save(); render();
         };
         row.appendChild(x);
-        body.appendChild(row);
+        attachRowDrag(row, lineup, s);
+        lineup.appendChild(row);
       });
+      body.appendChild(lineup);
       if (s.bitIds.length === 0) body.appendChild(el("p", "empty", "Empty set — tap any bit below and it joins the lineup."));
       body.appendChild(el("div", "set-add-head", "your bits — tap to add"));
 
