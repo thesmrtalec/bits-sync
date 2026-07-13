@@ -359,12 +359,20 @@
   .run-again { display: block; width: 100%; margin-top: 22px; background: var(--accent); color: var(--onaccent);
     border: none; border-radius: 9px; padding: 13px; font-size: 15px; font-weight: 600; }
 
-  .axe-face { padding: 18px 16px; }
-  .axe-face p { font-size: 23px; }
-  .axe-verdicts { display: flex; gap: 12px; margin-top: 16px; }
-  .axe-verdicts button { flex: 1; border-radius: 12px; padding: 14px 0; font-family: var(--mono); font-size: 14px; cursor: pointer; }
-  .axe-kill { background: transparent; border: 1.5px solid var(--accent2, #b13228); color: var(--accent2, #b13228); }
-  .axe-keep { background: var(--accent); border: 1.5px solid var(--accent); color: #fff; }
+  /* axe mode — same full-screen treatment as the runner, but it keeps its
+     verdict buttons: this one's a decision, not a pass-through. */
+  .axe-overlay .run-stage { align-items: center; }
+  .axe-bit { font-family: 'Caveat', 'Bradley Hand', cursive; font-weight: 500;
+    font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink);
+    white-space: pre-wrap; cursor: pointer; }
+  .axe-meta { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--faint); margin-top: 22px; }
+  .axe-verdicts { display: flex; gap: 12px; padding: 0 26px 22px; position: relative; z-index: 3; }
+  .axe-verdicts button { flex: 1; border-radius: 12px; padding: 16px 0; font-family: var(--mono); font-size: 14px; cursor: pointer; }
+  .axe-kill { background: transparent; border: 1.5px solid var(--accent2); color: var(--accent2); }
+  .axe-keep { background: var(--accent); border: 1.5px solid var(--accent); color: var(--onaccent); }
+  .axe-done { text-align: center; }
+  .axe-done p { font-family: 'Caveat', cursive; font-size: 30px; color: var(--muted); }
 
   /* ruled paper */
   #draft, .notes-canvas {
@@ -542,18 +550,16 @@
       </div>
     </div>
   </div>
-  <div class="notes-overlay" id="axeOverlay">
-    <div class="notes-inner">
-      <div class="notes-head">
-        <h2>Axe mode</h2>
-        <button class="notes-close" id="axeClose">done</button>
-      </div>
-      <p class="bone-note" id="axeProgress"></p>
-      <div id="axeCard"></div>
-      <div class="axe-verdicts">
-        <button id="axeKill" class="axe-kill">🪓 axe</button>
-        <button id="axeKeep" class="axe-keep">keep</button>
-      </div>
+  <div class="run-overlay axe-overlay" id="axeOverlay">
+    <div class="run-top">
+      <button class="run-x" id="axeClose">&times;</button>
+      <div class="run-dots" id="axeDots"></div>
+      <div class="run-total" id="axeProgress"></div>
+    </div>
+    <div class="run-stage" id="axeCard"></div>
+    <div class="axe-verdicts" id="axeVerdicts">
+      <button id="axeKill" class="axe-kill">&#129683; axe</button>
+      <button id="axeKeep" class="axe-keep">keep</button>
     </div>
   </div>
   <div class="run-overlay" id="runOverlay">
@@ -2015,33 +2021,48 @@
   function renderAxe() {
     var card = document.getElementById("axeCard");
     var prog = document.getElementById("axeProgress");
-    var verdicts = document.querySelector(".axe-verdicts");
-    card.innerHTML = "";
+    var dots = document.getElementById("axeDots");
+    var verdicts = document.getElementById("axeVerdicts");
+    card.innerHTML = ""; dots.innerHTML = "";
+
     if (axeIdx >= axeQueue.length) {
       prog.textContent = "";
-      card.appendChild(el("p", "empty", axeQueue.length ? "That's everything. The basement thanks you." : "Nothing to judge."));
       verdicts.style.display = "none";
+      var done = el("div", "run-card axe-done");
+      done.appendChild(el("p", null, axeQueue.length
+        ? "That\u2019s everything. The basement thanks you."
+        : "Nothing to judge."));
+      card.appendChild(done);
       return;
     }
     verdicts.style.display = "";
     var cur = axeQueue[axeIdx];
-    prog.textContent = (axeIdx + 1) + " of " + axeQueue.length + " — oldest first";
-    var c = el("div", "bone-card axe-face");
-    var ap = el("p", null, cur.item.text);
-    ap.style.cursor = "pointer";
-    ap.title = "Tap to open workbench · long-press to copy";
+    prog.textContent = (axeIdx + 1) + "/" + axeQueue.length;
+
+    var wrap = el("div", "run-card");
+    var ap = el("div", "axe-bit", cur.item.text);
+    ap.title = "Tap to open workbench \u00b7 long-press to copy";
     ap.onclick = function () {
       document.getElementById("axeOverlay").classList.remove("open");
       openWorkbench(cur.item.id, cur.kind === "stuff" ? "truth" : "bit");
     };
     attachLongPressCopy(ap, function () { return cur.item.text; });
-    c.appendChild(ap);
+    wrap.appendChild(ap);
+
     var ts = touchedAt(cur.item);
     var age = ts ? "untouched " + Math.max(0, Math.floor((Date.now() - ts) / DAY)) + "d" : "no timestamp";
-    var actions = el("div", "bone-actions");
-    actions.appendChild(el("span", "i-mined", cur.kind + " · " + age));
-    c.appendChild(actions);
-    card.appendChild(c);
+    wrap.appendChild(el("div", "axe-meta", cur.kind + " \u00b7 " + age));
+    card.appendChild(wrap);
+
+    // progress dots (capped so a long queue doesn't wrap into a wall)
+    var max = 40;
+    var n = Math.min(axeQueue.length, max);
+    for (var i = 0; i < n; i++) {
+      var d = document.createElement("i");
+      var mapped = Math.round(i * (axeQueue.length - 1) / Math.max(1, n - 1));
+      if (mapped === axeIdx) d.className = "on";
+      dots.appendChild(d);
+    }
   }
   document.getElementById("axeBtn").onclick = function () {
     axeQueue = [];
