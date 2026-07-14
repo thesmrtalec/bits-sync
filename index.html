@@ -400,7 +400,9 @@
   /* The bit itself must be tappable (opens the bench), so it sits ABOVE the
      advance zones and re-enables pointer events. Everything else in the stage
      stays transparent to clicks so the outer thirds still advance the deck. */
-  .run-bit, .run-sum, .run-again { pointer-events: auto; }
+  .run-bit, .run-sum, .run-again, .axe-bit, .axe-done { pointer-events: auto; }
+  /* axe mode has no tap zones — its whole stage should take clicks */
+  .axe-overlay .run-stage { pointer-events: auto; }
   .run-bit { font-family: 'Caveat', 'Bradley Hand', cursive; font-weight: 500;
     font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink); white-space: pre-wrap; }
   .run-est { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
@@ -731,7 +733,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.61";
+  var APP_VERSION = "v1.1.62";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1710,6 +1712,13 @@
     wbTagEditing = false;
     document.getElementById("workbenchOverlay").classList.remove("open");
     if (runPaused) { runResumeFromBench(); return; }   // came from a rehearsal
+    if (axePaused) {                                   // came from axe mode
+      axePaused = false;
+      document.getElementById("axeOverlay").classList.remove("dimmed");
+      renderAxe();
+      render();
+      return;
+    }
     render();
   };
 
@@ -2316,6 +2325,7 @@
 
   // ——— axe mode: forced visibility, two verdicts ———
   var axeQueue = [], axeIdx = 0;
+  var axePaused = false;
   function touchedAt(x) { return x.touched || x.statusAt || x.created || 0; }
   function renderAxe() {
     var card = document.getElementById("axeCard");
@@ -2340,9 +2350,12 @@
 
     var wrap = el("div", "run-card");
     var ap = el("div", "axe-bit", cur.item.text);
-    ap.title = "Tap to open workbench \u00b7 long-press to copy";
+    ap.title = "Tap to open the workbench";
     ap.onclick = function () {
-      document.getElementById("axeOverlay").classList.remove("open");
+      // stay in the queue — the bench opens over axe mode, and closing it
+      // drops you right back where you were instead of losing your place
+      axePaused = true;
+      document.getElementById("axeOverlay").classList.add("dimmed");
       openWorkbench(cur.item.id, cur.kind === "stuff" ? "truth" : "bit");
     };
     attachLongPressCopy(ap, function () { return cur.item.text; });
@@ -2373,7 +2386,8 @@
     document.getElementById("axeOverlay").classList.add("open");
   };
   document.getElementById("axeClose").onclick = function () {
-    document.getElementById("axeOverlay").classList.remove("open");
+    axePaused = false;
+    document.getElementById("axeOverlay").classList.remove("open", "dimmed");
     render();
   };
   document.getElementById("axeKeep").onclick = function () {
