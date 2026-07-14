@@ -733,7 +733,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.62";
+  var APP_VERSION = "v1.1.64";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1194,12 +1194,20 @@
         state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
         closeSwipe(); save(); render();
       };
-      var actR = el("button", "swipe-act swipe-promote", "\uD83D\uDCDD");
-      actR.title = "Open the workbench";
+      // Swipe right = move it across. Consistent everywhere: on stuff it
+      // promotes to a bit, on a bit it sends it back to the stuff pool.
+      var actR = el("button", "swipe-act swipe-promote", "\u2190 stuff");
+      actR.title = "Not a bit after all \u2014 send it back to the stuff pool";
       actR.onclick = function (e) {
         e.stopPropagation();
-        closeSwipe();
-        openWorkbench(b.id);
+        state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
+        if (!state.truths) state.truths = [];
+        state.truths.unshift({
+          id: b.id, text: b.text, created: b.created,
+          workshop: b.workshop, mined: b.mined,
+          tags: (b.tags || []).slice(), touched: Date.now()
+        });
+        closeSwipe(); save(); render();
       };
       shell.appendChild(actR);
       shell.appendChild(actL);
@@ -1298,6 +1306,11 @@
         save(); render();
       };
       footR.appendChild(rBtn);
+      var wbBtn = el("button", "foot-btn", "\uD83D\uDCDD");
+      wbBtn.title = "Open the workbench";
+      wbBtn.setAttribute("aria-label", "workbench");
+      wbBtn.onclick = function (e) { e.stopPropagation(); openWorkbench(b.id); };
+      footR.appendChild(wbBtn);
       foot.appendChild(footR);
 
       return foot;
@@ -2440,39 +2453,115 @@
     }
     var results = [];
     (state.truths || []).forEach(function (t) {
-      if (hits(t)) results.push({ text: t.text, label: "stuff", open: function () { openWorkbench(t.id, "truth"); } });
+      if (hits(t)) results.push({ item: t, kind: "stuff" });
     });
     state.bits.forEach(function (b) {
-      if (hits(b)) results.push({ text: b.text, label: "bit", open: function () { openWorkbench(b.id, "bit"); } });
+      if (hits(b)) results.push({ item: b, kind: "bit" });
     });
     (state.sets || []).forEach(function (s) {
       if ((s.name || "").toLowerCase().indexOf(q) !== -1) {
-        results.push({ text: s.name || "untitled set", label: "set", open: function () { stageFilter = "sets"; setOpen = s.id; render(); } });
+        results.push({ item: s, kind: "set" });
       }
     });
     (state.notes || []).forEach(function (nt) {
       var txt = typeof nt === "string" ? nt : (nt.text || "");
       if (txt.toLowerCase().indexOf(q) !== -1) {
-        results.push({ text: txt.length > 140 ? txt.slice(0, 140) + "…" : txt, label: "note", open: null });
+        results.push({ item: { text: txt }, kind: "note" });
       }
     });
     (state.buried || []).forEach(function (b) {
-      if (hits(b)) results.push({ text: b.text, label: "buried", open: null, ghost: true });
+      if (hits(b)) results.push({ item: b, kind: "buried" });
     });
     if (!results.length) {
       out.appendChild(el("p", "empty", "Nothing matches."));
       return;
     }
+
     results.slice(0, 40).forEach(function (r) {
-      var card = el("div", "bone-card search-hit");
-      var p = el("p", null, r.text);
-      if (r.ghost) p.style.opacity = ".45";
-      if (r.open) { p.style.cursor = "pointer"; p.onclick = r.open; }
+      var it = r.item;
+
+      // Sets, notes and buried items have no swipe actions — they're not
+      // stuff/bits, so there's nothing to promote or send back.
+      if (r.kind === "set" || r.kind === "note" || r.kind === "buried") {
+        var plain = el("div", "bone-card search-hit");
+        var pp = el("p", null, r.kind === "set" ? (it.name || "untitled set") : it.text);
+        if (r.kind === "buried") pp.style.opacity = ".45";
+        if (r.kind === "set") {
+          pp.style.cursor = "pointer";
+          pp.onclick = function () { stageFilter = "sets"; setOpen = it.id; render(); };
+        }
+        plain.appendChild(pp);
+        var pa = el("div", "bone-actions");
+        pa.appendChild(el("span", "i-mined", r.kind));
+        plain.appendChild(pa);
+        out.appendChild(plain);
+        return;
+      }
+
+      // Stuff and bits get the full swipe treatment, same as the main lists.
+      var isStuff = r.kind === "stuff";
+      var shell = el("div", "swipe-shell");
+
+      var actL = el("button", "swipe-act swipe-kill", "\uD83D\uDD2B");
+      actL.title = "Kill it \u2014 to the boneyard";
+      actL.onclick = function (e) {
+        e.stopPropagation();
+        if (!state.buried) state.buried = [];
+        it.buriedAt = Date.now();
+        it.from = isStuff ? "stuff" : "bit";
+        state.buried.unshift(it);
+        if (isStuff) state.truths = state.truths.filter(function (x) { return x.id !== it.id; });
+        else state.bits = state.bits.filter(function (x) { return x.id !== it.id; });
+        closeSwipe(); save(); render(); renderSearch();
+      };
+
+      var actR = el("button", "swipe-act swipe-promote", isStuff ? "+ bit" : "\u2190 stuff");
+      actR.title = isStuff ? "Promote into bits" : "Send it back to the stuff pool";
+      actR.onclick = function (e) {
+        e.stopPropagation();
+        if (isStuff) {
+          state.bits.unshift({
+            id: Date.now().toString(36),
+            text: it.text,
+            tags: (it.tags || []).slice(),
+            workshop: it.workshop || "",
+            created: Date.now(),
+            statusAt: Date.now()
+          });
+          it.mined = (it.mined || 0) + 1;
+          it.touched = Date.now();
+        } else {
+          state.bits = state.bits.filter(function (x) { return x.id !== it.id; });
+          if (!state.truths) state.truths = [];
+          state.truths.unshift({
+            id: it.id, text: it.text, created: it.created,
+            workshop: it.workshop, mined: it.mined,
+            tags: (it.tags || []).slice(), touched: Date.now()
+          });
+        }
+        closeSwipe(); save(); render(); renderSearch();
+      };
+      shell.appendChild(actR);
+      shell.appendChild(actL);
+
+      var card = el("div", "bone-card search-hit swipe-face");
+      var p = el("p", null, it.text);
+      p.style.cursor = "pointer";
+      p.title = "Tap to open the workbench";
+      p.onclick = function () {
+        if (swipeOpenCard === card) { closeSwipe(); return; }
+        openWorkbench(it.id, isStuff ? "truth" : "bit");
+      };
+      attachLongPressCopy(p, function () { return it.text; });
       card.appendChild(p);
+
       var actions = el("div", "bone-actions");
-      actions.appendChild(el("span", "i-mined", r.label));
+      actions.appendChild(el("span", "i-mined", r.kind));
       card.appendChild(actions);
-      out.appendChild(card);
+
+      shell.appendChild(card);
+      attachSwipe(shell, card);
+      out.appendChild(shell);
     });
   }
   var searchBoxEl = document.getElementById("searchBox");
