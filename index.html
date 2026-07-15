@@ -407,6 +407,21 @@
     font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink); white-space: pre-wrap; }
   .run-est { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--faint); margin-top: 22px; }
+  /* inline edit on the run card — set-scoped, never touches the bit record */
+  .run-bit.editing { outline: none; caret-color: var(--accent);
+    border-bottom: 1px dashed color-mix(in srgb, var(--ink) 22%, transparent); }
+  .run-forked { display: flex; align-items: center; gap: 12px; margin-top: 20px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--faint); pointer-events: auto; }
+  .run-revert { background: transparent; border: none; color: var(--muted); font-family: var(--mono);
+    font-size: 11px; letter-spacing: .12em; text-transform: uppercase; text-decoration: underline;
+    padding: 0; cursor: pointer; pointer-events: auto; }
+  .run-edit { display: flex; gap: 10px; margin-top: 24px; pointer-events: auto; }
+  .run-edit button { font-family: var(--mono); font-size: 13px; letter-spacing: .04em;
+    border-radius: 9px; padding: 11px 16px; cursor: pointer; }
+  .run-edit-done { flex: 1; background: var(--accent); border: none; color: var(--onaccent); font-weight: 600; }
+  .run-edit-push { flex: 0 0 auto; background: transparent; border: 1px solid var(--rule); color: var(--muted); }
+  .run-edit-push:active { border-color: var(--accent); color: var(--accent); }
   .run-tap { position: absolute; top: 56px; bottom: 64px; width: 38%; z-index: 2; }
   .run-tap-l { left: 0; } .run-tap-r { right: 0; }
   .run-bottom { text-align: center; padding: 0 0 18px; position: relative; z-index: 3; }
@@ -2614,6 +2629,63 @@
   // showing what you ACTUALLY took vs. what you'd estimated. Nothing is saved
   // and no estimate is changed — it just tells you the truth.
   var runState = { set: null, bits: [], i: 0, actual: [], startedAt: 0, setStartedAt: 0, tick: null, done: false };
+  var runEditing = false, runEditPausedAt = 0;
+
+  // A set holds references to bits (s.bitIds). Edits made while rehearsing live
+  // in s.overrides[bitId] — a set-scoped copy — so the original bit is never
+  // touched unless you explicitly push. Empty/identical override == no fork.
+  function runSetText(bit) {
+    var ov = runState.set && runState.set.overrides && runState.set.overrides[bit.id];
+    return (ov != null && ov !== "") ? ov : bit.text;
+  }
+  function runIsForked(bit) {
+    var ov = runState.set && runState.set.overrides && runState.set.overrides[bit.id];
+    return ov != null && ov !== "" && ov !== bit.text;
+  }
+  function placeCaretEnd(node) {
+    try {
+      var r = document.createRange(); r.selectNodeContents(node); r.collapse(false);
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    } catch (e) {}
+  }
+  function runEnterEdit() {
+    if (runEditing || runState.done) return;
+    runEditing = true;
+    runEditPausedAt = Date.now();               // the clock waits while you rewrite
+    if (runState.tick) { clearInterval(runState.tick); runState.tick = null; }
+    renderRun();
+    var be = document.querySelector(".run-bit");
+    if (be) { be.focus(); placeCaretEnd(be); }
+  }
+  function runCommitEdit(pushToBit) {
+    if (!runEditing) return;
+    var be = document.querySelector(".run-bit");
+    var txt = be ? be.innerText.replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n").trim() : "";
+    var b = runState.bits[runState.i], set = runState.set;
+    if (!set.overrides) set.overrides = {};
+    if (pushToBit && txt && txt !== b.text) {
+      b.text = txt; b.updated = Date.now();     // graft the set wording onto the bit
+      delete set.overrides[b.id];               // identical now — fork dissolves
+    } else if (txt === "" || txt === b.text) {
+      delete set.overrides[b.id];               // back in sync — drop the fork
+    } else {
+      set.overrides[b.id] = txt;                // keep it set-only
+    }
+    set.updated = Date.now();
+    runEditing = false;
+    if (runEditPausedAt) {
+      var gap = Date.now() - runEditPausedAt;
+      runState.startedAt += gap; runState.setStartedAt += gap; runEditPausedAt = 0;
+    }
+    save();
+    if (!runState.tick) runState.tick = setInterval(runTick, 250);
+    renderRun(); runTick();
+  }
+  function runRevertFork() {
+    var b = runState.bits[runState.i], set = runState.set;
+    if (set.overrides) delete set.overrides[b.id];
+    set.updated = Date.now(); save(); renderRun();
+  }
 
   function openRun(s) {
     var bits = s.bitIds.map(findBitAnywhere).filter(Boolean).map(function (f) { return f.bit; });
@@ -2671,7 +2743,7 @@
   }
   // advancing banks the time you actually spent, then resets the clock
   function runAdvance(dir) {
-    if (runState.done) return;
+    if (runState.done || runEditing) return;
     if (dir > 0) {
       runState.actual[runState.i] = Math.floor((Date.now() - runState.startedAt) / 1000);
       if (runState.i >= runState.bits.length - 1) { runFinish(); return; }
@@ -2704,7 +2776,7 @@
         var est = b.est || 0;
         estTot += est; actTot += act;
         var row = el("div", "sum-row");
-        row.appendChild(el("div", "sum-txt", b.text));
+        row.appendChild(el("div", "sum-txt", runSetText(b)));
         row.appendChild(el("div", "sum-est", est ? fmtSec(est) : "?"));
         var a = el("div", "sum-act" + (est && act > est ? " slow" : ""), fmtSec(act));
         row.appendChild(a);
@@ -2724,13 +2796,37 @@
 
     var b = runState.bits[runState.i];
     var card2 = el("div", "run-card");
-    var bitEl = el("div", "run-bit", b.text);
-    // Tap the bit to work it — the clock pauses while you're in the bench, so a
-    // rewrite mid-rehearsal doesn't poison the timing you're measuring.
-    bitEl.title = "Tap to open the workbench (pauses the clock)";
-    bitEl.onclick = function () { runPauseForBench(b.id); };
+    var bitEl = el("div", "run-bit", runSetText(b));
     card2.appendChild(bitEl);
-    if (b.est) card2.appendChild(el("div", "run-est", "you called it " + fmtSec(b.est)));
+
+    if (runEditing) {
+      // Edit right here on the card — the clock's paused, and this writes to the
+      // set copy only. "push to bit" is the one door back to the real record.
+      bitEl.contentEditable = "true";
+      bitEl.classList.add("editing");
+      var bar = el("div", "run-edit");
+      var push = el("button", "run-edit-push", "push to bit \u25B8");
+      push.title = "Also rewrite the original bit with this wording";
+      push.onclick = function (e) { e.stopPropagation(); runCommitEdit(true); };
+      var done = el("button", "run-edit-done", "done");
+      done.onclick = function (e) { e.stopPropagation(); runCommitEdit(false); };
+      bar.appendChild(push); bar.appendChild(done);
+      card2.appendChild(bar);
+    } else {
+      // Tap the line to tweak it for this set. Doesn't touch the bit.
+      bitEl.title = "Tap to tweak — just for this set";
+      bitEl.onclick = function () { runEnterEdit(); };
+      if (runIsForked(b)) {
+        var tag = el("div", "run-forked");
+        tag.appendChild(el("span", null, "edited for this set"));
+        var rv = el("button", "run-revert", "revert");
+        rv.title = "Drop the set version, go back to the original bit";
+        rv.onclick = function (e) { e.stopPropagation(); runRevertFork(); };
+        tag.appendChild(rv);
+        card2.appendChild(tag);
+      }
+      if (b.est) card2.appendChild(el("div", "run-est", "you called it " + fmtSec(b.est)));
+    }
     stage.appendChild(card2);
     runState.bits.forEach(function (_, idx) {
       var d = document.createElement("i");
