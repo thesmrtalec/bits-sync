@@ -902,15 +902,27 @@
     return days >= STALE_DAYS ? days : 0;
   }
 
-  function flashCopied() {
+  function flashCopied(msg) {
     var t = document.getElementById("copyToast");
     if (!t) return;
+    t.textContent = msg || "copied";
     t.classList.add("show");
     clearTimeout(flashCopied._t);
-    flashCopied._t = setTimeout(function () { t.classList.remove("show"); }, 1100);
+    flashCopied._t = setTimeout(function () { t.classList.remove("show"); t.textContent = "copied"; }, 1100);
   }
-  function buzz() {
-    try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
+  function buzz(style) {
+    // Forward-compatible haptics. After the Capacitor wrap + @capacitor/haptics
+    // this fires REAL iOS haptics. In a plain browser it falls back to the
+    // Vibration API — which is a silent no-op on iOS Safari (Apple doesn't
+    // support it), so on-device haptics only truly arrive with the native shell.
+    try {
+      var cap = window.Capacitor;
+      if (cap && cap.Plugins && cap.Plugins.Haptics) {
+        cap.Plugins.Haptics.impact({ style: style || "LIGHT" });
+        return;
+      }
+    } catch (e) {}
+    try { if (navigator.vibrate) navigator.vibrate(style === "MEDIUM" ? 18 : 12); } catch (e) {}
   }
   function legacyCopy(str) {
     var ta = document.createElement("textarea");
@@ -939,8 +951,8 @@
       navigator.clipboard.writeText(str).then(function () { flashCopied(); buzz(); }, function () {});
     }
   }
-  function attachLongPressCopy(node, getText) {
-    // Block native text selection so long-press copies the WHOLE entry, not a partial grab.
+  function attachLongPress(node, onFire) {
+    // Block native text selection so the whole entry is the target, not a partial grab.
     node.style.webkitUserSelect = "none";
     node.style.userSelect = "none";
     node.style.webkitTouchCallout = "none";
@@ -952,7 +964,7 @@
       clearTimeout(timer);
       timer = setTimeout(function () {
         fired = true;
-        copyText(getText());
+        onFire();
       }, 450);
     }
     function moved(e) {
@@ -972,6 +984,9 @@
     node.addEventListener("click", function (e) {
       if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; }
     }, true);
+  }
+  function attachLongPressCopy(node, getText) {
+    attachLongPress(node, function () { copyText(getText()); });
   }
   function el(tag, cls, text) {
     var e = document.createElement(tag);
@@ -3031,6 +3046,27 @@
     });
   }
 
+  function duplicateSet(s) {
+    // A full, independent clone: same lineup, same set-scoped overrides, new id.
+    // Nothing points back at the original — editing one never touches the other.
+    var copy = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
+      name: (s.name ? s.name + " (copy)" : "untitled set (copy)"),
+      bitIds: s.bitIds.slice(),
+      created: Date.now(),
+      updated: Date.now()
+    };
+    if (s.overrides) {
+      copy.overrides = {};
+      Object.keys(s.overrides).forEach(function (k) { copy.overrides[k] = s.overrides[k]; });
+    }
+    var i = state.sets.findIndex(function (x) { return x.id === s.id; });
+    if (i < 0) state.sets.unshift(copy); else state.sets.splice(i + 1, 0, copy);
+    save();
+    buzz("MEDIUM");
+    flashCopied("set duplicated");
+    render();
+  }
   function renderSets() {
     var body = document.getElementById("list");
     body.innerHTML = "";
@@ -3187,6 +3223,9 @@
         });
         var actions = el("div", "bone-actions");
         actions.appendChild(el("span", "bone-when", n + (n === 1 ? " bit" : " bits") + " · " + fmtSec(total) + (untimed ? " +" + untimed + "?" : "")));
+        var dup = el("button", "bone-del", "copy");
+        dup.onclick = function (e) { e.stopPropagation(); duplicateSet(s); };
+        actions.appendChild(dup);
         var del = el("button", "bone-del", "delete");
         del.onclick = function (e) {
           e.stopPropagation();
@@ -3196,7 +3235,9 @@
         };
         actions.appendChild(del);
         card.appendChild(actions);
+        card.title = "Tap to open \u00b7 long-press to duplicate";
         card.onclick = function () { setOpen = s.id; render(); };
+        attachLongPress(card, function () { duplicateSet(s); });
         body.appendChild(card);
       });
     }
