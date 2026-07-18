@@ -452,9 +452,6 @@
     cursor: pointer; white-space: nowrap; }
   .form-chip:hover { border-color: var(--accent); color: var(--accent); }
   .form-chip.on { border-style: solid; border-color: var(--accent); color: var(--accent); }
-  .form-edit { background: transparent; border: none; color: var(--faint); font-family: var(--mono);
-    font-size: 13px; padding: 0 5px; cursor: pointer; line-height: 1; }
-  .form-edit:hover { color: var(--accent); }
   .foot-stack { display: block; }
   .notice-mirror { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px;
     font-family: var(--mono); font-size: 11px; color: var(--muted); margin: 0 0 10px; }
@@ -552,6 +549,7 @@
     <div class="util-menu" id="utilMenu" style="display:none">
       <div class="theme-picker" id="themePicker"></div>
       <button id="notesLockBtn">Notes lock</button>
+      <button id="formsEdit">Noticing tags</button>
       <button id="tourReplay">Replay tutorial</button>
       <button id="exportBtn">Export backup</button>
       <button id="importBtn">Import</button>
@@ -767,7 +765,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.66";
+  var APP_VERSION = "v1.1.67";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1032,19 +1030,6 @@
       };
       row.appendChild(b);
     });
-    var edit = el("button", "form-edit", "···");
-    edit.title = "Edit the list of forms";
-    edit.onclick = function (e) {
-      e.stopPropagation();
-      var cur = formList().join(", ");
-      var next = prompt("How you notice things, comma separated.\nKeep the list short — these are lenses on attention, not topics.", cur);
-      if (next === null) return;
-      var parsed = next.split(",").map(function (t) { return t.trim().toLowerCase(); })
-                       .filter(function (t) { return t.length > 0; });
-      state.forms = parsed.length ? parsed.slice(0, 6) : DEFAULT_FORMS.slice();
-      save(); render();
-    };
-    row.appendChild(edit);
     return row;
   }
 
@@ -1476,6 +1461,17 @@
   document.getElementById("utilBtn").onclick = function () {
     var m = document.getElementById("utilMenu");
     m.style.display = m.style.display === "none" ? "flex" : "none";
+  };
+  document.getElementById("formsEdit").onclick = function () {
+    document.getElementById("utilMenu").style.display = "none";
+    var cur = formList().join(", ");
+    var next = prompt("How you notice things, comma separated.\nKeep the list short — these are lenses on attention, not topics.", cur);
+    if (next === null) return;
+    var parsed = next.split(",").map(function (t) { return t.trim().toLowerCase(); })
+                     .filter(function (t) { return t.length > 0; });
+    state.forms = parsed.length ? parsed.slice(0, 6) : DEFAULT_FORMS.slice();
+    save(); render();
+    if (typeof renderCapForms === "function") renderCapForms();
   };
   document.getElementById("tourReplay").onclick = function () {
     document.getElementById("utilMenu").style.display = "none";
