@@ -456,6 +456,11 @@
     font-size: 13px; padding: 0 5px; cursor: pointer; line-height: 1; }
   .form-edit:hover { color: var(--accent); }
   .foot-stack { display: block; }
+  .notice-mirror { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px;
+    font-family: var(--mono); font-size: 11px; color: var(--muted); margin: 0 0 10px; }
+  .nm-label { font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+  .nm-cell.thin { color: var(--accent); }
+  .nm-untagged { color: var(--faint); }
   .lens-row { display: flex; gap: 7px; flex-wrap: wrap; margin: 0 0 12px; }
   .lens { background: var(--card); border: 1px solid var(--rule); border-radius: 999px;
     padding: 3px 12px; font-family: var(--mono); font-size: 11.5px; color: var(--muted);
@@ -762,7 +767,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.65";
+  var APP_VERSION = "v1.1.66";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -988,11 +993,12 @@
       if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; }
     }, true);
   }
-  // ——— form tags ———
-  // What shape a thing is, not what it's about. Independent toggles, because
-  // occasionally one entry is two of these. Blank is the default and the
-  // common case — most stuff is just stuff and costs no taps.
-  var DEFAULT_FORMS = ["setup", "punchline", "list"];
+  // ——— noticing tags ———
+  // Not what the entry IS — how you noticed it. A feeling gives a bit its
+  // point of view, a moment gives it specificity, a pattern gives it the
+  // observation. The point isn't filing; it's that tagging as you capture
+  // trains what you catch. Independent toggles — a thing is occasionally two.
+  var DEFAULT_FORMS = ["feeling", "moment", "pattern"];
   function formList() {
     if (!state.forms || !state.forms.length) state.forms = DEFAULT_FORMS.slice();
     return state.forms;
@@ -1031,7 +1037,7 @@
     edit.onclick = function (e) {
       e.stopPropagation();
       var cur = formList().join(", ");
-      var next = prompt("Forms, comma separated.\nThese are shapes, not topics — keep the list short.", cur);
+      var next = prompt("How you notice things, comma separated.\nKeep the list short — these are lenses on attention, not topics.", cur);
       if (next === null) return;
       var parsed = next.split(",").map(function (t) { return t.trim().toLowerCase(); })
                        .filter(function (t) { return t.length > 0; });
@@ -2080,6 +2086,30 @@
     });
     return row;
   }
+  // The mirror. A filter tells you where things are; this tells you what your
+  // attention has been doing lately. 30 days, not all-time — a groove you wore
+  // three years ago isn't the habit you're training now.
+  function buildNoticeMirror(pool) {
+    var since = Date.now() - 30 * 864e5;
+    var recent = pool.filter(function (x) { return (x.created || 0) >= since; });
+    if (recent.length < 4) return null;
+    var row = el("div", "notice-mirror");
+    row.appendChild(el("span", "nm-label", "last 30 days"));
+    var counts = formList().map(function (name) {
+      return { name: name, n: recent.filter(function (x) { return hasForm(x, name); }).length };
+    });
+    var low = counts.reduce(function (a, b) { return b.n < a.n ? b : a; }, counts[0]);
+    counts.forEach(function (c) {
+      var cell = el("span", "nm-cell" + (c.n === low.n && low.n < recent.length / 6 ? " thin" : ""),
+        c.name + " " + c.n);
+      if (c.n === low.n && low.n < recent.length / 6) cell.title = "You've been catching fewer of these lately.";
+      row.appendChild(cell);
+    });
+    var untagged = recent.filter(function (x) { return !entryForms(x).length; }).length;
+    if (untagged) row.appendChild(el("span", "nm-cell nm-untagged", "untagged " + untagged));
+    return row;
+  }
+
   function lensMatch(x, lens) {
     if (!lens) return true;
     if (lens === "__none") return !entryForms(x).length;
@@ -2094,6 +2124,8 @@
       list.appendChild(el("p", "empty", "Nothing true yet. Suspicious."));
       return;
     }
+    var mirror = buildNoticeMirror(all);
+    if (mirror) list.appendChild(mirror);
     list.appendChild(buildLensRow(all, stuffLens, function (k) { stuffLens = k; render(); }));
     var truths = all.filter(function (x) { return lensMatch(x, stuffLens); });
     if (truths.length === 0) {
