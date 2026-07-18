@@ -407,21 +407,6 @@
     font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink); white-space: pre-wrap; }
   .run-est { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--faint); margin-top: 22px; }
-  /* inline edit on the run card — set-scoped, never touches the bit record */
-  .run-bit.editing { outline: none; caret-color: var(--accent);
-    border-bottom: 1px dashed color-mix(in srgb, var(--ink) 22%, transparent); }
-  .run-forked { display: flex; align-items: center; gap: 12px; margin-top: 20px;
-    font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
-    color: var(--faint); pointer-events: auto; }
-  .run-revert { background: transparent; border: none; color: var(--muted); font-family: var(--mono);
-    font-size: 11px; letter-spacing: .12em; text-transform: uppercase; text-decoration: underline;
-    padding: 0; cursor: pointer; pointer-events: auto; }
-  .run-edit { display: flex; gap: 10px; margin-top: 24px; pointer-events: auto; }
-  .run-edit button { font-family: var(--mono); font-size: 13px; letter-spacing: .04em;
-    border-radius: 9px; padding: 11px 16px; cursor: pointer; }
-  .run-edit-done { flex: 1; background: var(--accent); border: none; color: var(--onaccent); font-weight: 600; }
-  .run-edit-push { flex: 0 0 auto; background: transparent; border: 1px solid var(--rule); color: var(--muted); }
-  .run-edit-push:active { border-color: var(--accent); color: var(--accent); }
   .run-tap { position: absolute; top: 56px; bottom: 64px; width: 38%; z-index: 2; }
   .run-tap-l { left: 0; } .run-tap-r { right: 0; }
   .run-bottom { text-align: center; padding: 0 0 18px; position: relative; z-index: 3; }
@@ -460,6 +445,34 @@
     white-space: pre-wrap; cursor: pointer; }
   .axe-meta { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--faint); margin-top: 22px; }
+  .form-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; }
+  .cap-forms { margin: -2px 0 12px; }
+  .form-chip { background: transparent; border: 1px dashed var(--rule); border-radius: 999px;
+    padding: 3px 11px; font-family: var(--mono); font-size: 11px; color: var(--faint);
+    cursor: pointer; white-space: nowrap; }
+  .form-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .form-chip.on { background: var(--accent); border-color: var(--accent); border-style: solid;
+    color: var(--onaccent); }
+  .form-edit { background: transparent; border: none; color: var(--faint); font-family: var(--mono);
+    font-size: 13px; padding: 0 5px; cursor: pointer; line-height: 1; }
+  .form-edit:hover { color: var(--accent); }
+  .foot-stack { display: block; }
+  .lens-row { display: flex; gap: 7px; flex-wrap: wrap; margin: 0 0 12px; }
+  .lens { background: var(--card); border: 1px solid var(--rule); border-radius: 999px;
+    padding: 3px 12px; font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+    cursor: pointer; white-space: nowrap; }
+  .lens:hover { border-color: var(--accent); color: var(--accent); }
+  .lens.on { background: var(--accent); border-color: var(--accent); color: var(--onaccent); font-weight: 700; }
+  .axe-controls { display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 0 22px 14px; position: relative; z-index: 3; }
+  .axe-ctl { background: transparent; border: 1px solid rgba(255,255,255,.28); border-radius: 999px;
+    padding: 4px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; color: rgba(255,255,255,.72); cursor: pointer; }
+  .axe-ctl.on { border-color: var(--accent); color: var(--accent); }
+  .axe-lens-row { margin: 0; justify-content: center; }
+  .axe-lens-row .lens { background: transparent; border-color: rgba(255,255,255,.22);
+    color: rgba(255,255,255,.6); font-size: 11px; padding: 2px 10px; }
+  .axe-lens-row .lens.on { background: var(--accent); border-color: var(--accent); color: var(--onaccent); }
   .axe-verdicts { display: flex; gap: 12px; padding: 0 26px 22px; position: relative; z-index: 3; }
   .axe-verdicts button { flex: 1; border-radius: 12px; padding: 16px 0; font-family: var(--mono); font-size: 14px; cursor: pointer; }
   .axe-kill { background: transparent; border: 1.5px solid var(--accent2); color: var(--accent2); }
@@ -514,6 +527,7 @@
     <textarea id="draft" rows="7"></textarea>
     <button class="add-btn" id="addBtn">Add</button>
   </div>
+  <div class="form-row cap-forms" id="capForms"></div>
 
   <div class="wisdom" id="wisdom" style="display:none"></div>
   <div id="copyToast" class="copy-toast">copied</div>
@@ -652,6 +666,7 @@
       <div class="run-total" id="axeProgress"></div>
     </div>
     <div class="run-stage" id="axeCard"></div>
+    <div class="axe-controls" id="axeControls"></div>
     <div class="axe-verdicts" id="axeVerdicts">
       <button id="axeKill" class="axe-kill">&#129683; axe</button>
       <button id="axeKeep" class="axe-keep">keep</button>
@@ -753,7 +768,7 @@
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
   })();
-  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [], theme: "ember", notesPin: null };
+  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [], theme: "ember", notesPin: null, forms: null };
   var stageFilter = "home";
   var tagEditing = null;
   var pendingRemote = null;
@@ -863,6 +878,7 @@
     state.notes = data.notes || [];
     state.theme = data.theme || "ember";
     state.notesPin = data.notesPin || null;
+    state.forms = (data.forms && data.forms.length) ? data.forms : null;
     state.buried = data.buried || [];
     state.truths = data.truths || [];
     toPool.forEach(function (b) {
@@ -902,27 +918,15 @@
     return days >= STALE_DAYS ? days : 0;
   }
 
-  function flashCopied(msg) {
+  function flashCopied() {
     var t = document.getElementById("copyToast");
     if (!t) return;
-    t.textContent = msg || "copied";
     t.classList.add("show");
     clearTimeout(flashCopied._t);
-    flashCopied._t = setTimeout(function () { t.classList.remove("show"); t.textContent = "copied"; }, 1100);
+    flashCopied._t = setTimeout(function () { t.classList.remove("show"); }, 1100);
   }
-  function buzz(style) {
-    // Forward-compatible haptics. After the Capacitor wrap + @capacitor/haptics
-    // this fires REAL iOS haptics. In a plain browser it falls back to the
-    // Vibration API — which is a silent no-op on iOS Safari (Apple doesn't
-    // support it), so on-device haptics only truly arrive with the native shell.
-    try {
-      var cap = window.Capacitor;
-      if (cap && cap.Plugins && cap.Plugins.Haptics) {
-        cap.Plugins.Haptics.impact({ style: style || "LIGHT" });
-        return;
-      }
-    } catch (e) {}
-    try { if (navigator.vibrate) navigator.vibrate(style === "MEDIUM" ? 18 : 12); } catch (e) {}
+  function buzz() {
+    try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
   }
   function legacyCopy(str) {
     var ta = document.createElement("textarea");
@@ -951,8 +955,8 @@
       navigator.clipboard.writeText(str).then(function () { flashCopied(); buzz(); }, function () {});
     }
   }
-  function attachLongPress(node, onFire) {
-    // Block native text selection so the whole entry is the target, not a partial grab.
+  function attachLongPressCopy(node, getText) {
+    // Block native text selection so long-press copies the WHOLE entry, not a partial grab.
     node.style.webkitUserSelect = "none";
     node.style.userSelect = "none";
     node.style.webkitTouchCallout = "none";
@@ -964,7 +968,7 @@
       clearTimeout(timer);
       timer = setTimeout(function () {
         fired = true;
-        onFire();
+        copyText(getText());
       }, 450);
     }
     function moved(e) {
@@ -985,9 +989,60 @@
       if (fired) { e.stopPropagation(); e.preventDefault(); fired = false; }
     }, true);
   }
-  function attachLongPressCopy(node, getText) {
-    attachLongPress(node, function () { copyText(getText()); });
+  // ——— form tags ———
+  // What shape a thing is, not what it's about. Independent toggles, because
+  // occasionally one entry is two of these. Blank is the default and the
+  // common case — most stuff is just stuff and costs no taps.
+  var DEFAULT_FORMS = ["setup", "punchline", "list"];
+  function formList() {
+    if (!state.forms || !state.forms.length) state.forms = DEFAULT_FORMS.slice();
+    return state.forms;
   }
+  function entryForms(x) { return (x && x.forms) ? x.forms : []; }
+  function toggleForm(x, name) {
+    if (!x.forms) x.forms = [];
+    var i = x.forms.indexOf(name);
+    if (i === -1) x.forms.push(name); else x.forms.splice(i, 1);
+    if (!x.forms.length) delete x.forms;
+  }
+  function hasForm(x, name) { return entryForms(x).indexOf(name) !== -1; }
+  function formGlyph(x) {
+    var f = entryForms(x);
+    if (!f.length) return "";
+    return f.map(function (n) { return n.charAt(0).toUpperCase(); }).join("");
+  }
+
+  // A row of independent form toggles. Used at capture and on open cards.
+  function buildFormRow(get, set, onChange) {
+    var row = el("div", "form-row");
+    formList().forEach(function (name) {
+      var on = get(name);
+      var b = el("button", "form-chip" + (on ? " on" : ""), name);
+      b.title = on ? "Tap to unset" : "Mark as " + name;
+      b.onmousedown = function (ev) { ev.preventDefault(); };
+      b.onclick = function (e) {
+        e.stopPropagation();
+        set(name);
+        if (onChange) onChange();
+      };
+      row.appendChild(b);
+    });
+    var edit = el("button", "form-edit", "···");
+    edit.title = "Edit the list of forms";
+    edit.onclick = function (e) {
+      e.stopPropagation();
+      var cur = formList().join(", ");
+      var next = prompt("Forms, comma separated.\nThese are shapes, not topics — keep the list short.", cur);
+      if (next === null) return;
+      var parsed = next.split(",").map(function (t) { return t.trim().toLowerCase(); })
+                       .filter(function (t) { return t.length > 0; });
+      state.forms = parsed.length ? parsed.slice(0, 6) : DEFAULT_FORMS.slice();
+      save(); render();
+    };
+    row.appendChild(edit);
+    return row;
+  }
+
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -1283,6 +1338,7 @@
         markIfClipped(p);
         var flags = [];
         if ((b.tags || []).length) flags.push("\uD83C\uDFF7");
+        if (entryForms(b).length) flags.push(formGlyph(b));
         if (b.workshop && b.workshop.trim()) flags.push("\u270E");
         if (b.react) flags.push(b.react);
         if (staleDays(b) > 0) flags.push("\u23F3");
@@ -1343,7 +1399,14 @@
       footR.appendChild(wbBtn);
       foot.appendChild(footR);
 
-      return foot;
+      var stack = el("div", "foot-stack");
+      stack.appendChild(foot);
+      stack.appendChild(buildFormRow(
+        function (n) { return hasForm(b, n); },
+        function (n) { toggleForm(b, n); b.touched = Date.now(); save(); },
+        function () { render(); }
+      ));
+      return stack;
     }
 
     var empty = document.getElementById("empty");
@@ -1360,28 +1423,51 @@
   var draft = document.getElementById("draft");
   draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
+  var pendingForms = [];
+  function renderCapForms() {
+    var host = document.getElementById("capForms");
+    host.innerHTML = "";
+    var row = buildFormRow(
+      function (n) { return pendingForms.indexOf(n) !== -1; },
+      function (n) {
+        var i = pendingForms.indexOf(n);
+        if (i === -1) pendingForms.push(n); else pendingForms.splice(i, 1);
+      },
+      renderCapForms
+    );
+    while (row.firstChild) host.appendChild(row.firstChild);
+  }
+
   function addBit() {
     var text = draft.value.trim();
     if (!text) return;
+    var forms = pendingForms.slice();
     if (stageFilter === "pool" || stageFilter === "home") {
       if (!state.truths) state.truths = [];
-      state.truths.unshift({ id: Date.now().toString(36), text: text, created: Date.now() });
+      var t0 = { id: Date.now().toString(36), text: text, created: Date.now() };
+      if (forms.length) t0.forms = forms;
+      state.truths.unshift(t0);
       draft.value = "";
+      pendingForms = []; renderCapForms();
       save(); render();
       return;
     }
-    state.bits.unshift({
+    var b0 = {
       id: Date.now().toString(36),
       text: text,
       tags: [],
       created: Date.now(),
       statusAt: Date.now()
-    });
+    };
+    if (forms.length) b0.forms = forms;
+    state.bits.unshift(b0);
     draft.value = "";
+    pendingForms = []; renderCapForms();
     draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
     save(); render();
   }
   document.getElementById("addBtn").onclick = addBit;
+  renderCapForms();
   document.getElementById("utilBtn").onclick = function () {
     var m = document.getElementById("utilMenu");
     m.style.display = m.style.display === "none" ? "flex" : "none";
@@ -1977,12 +2063,42 @@
     if (diff === 1) return "Yesterday";
     return d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
   }
+  var stuffLens = null;
+  function buildLensRow(pool, current, onPick) {
+    var row = el("div", "lens-row");
+    var defs = [{ key: null, label: "all", n: pool.length }];
+    formList().forEach(function (name) {
+      defs.push({ key: name, label: name, n: pool.filter(function (x) { return hasForm(x, name); }).length });
+    });
+    var untyped = pool.filter(function (x) { return !entryForms(x).length; }).length;
+    if (untyped && untyped !== pool.length) defs.push({ key: "__none", label: "untyped", n: untyped });
+    defs.forEach(function (d) {
+      // a lens with nothing behind it is noise
+      if (d.key !== null && d.n === 0) return;
+      var b = el("button", "lens" + (current === d.key ? " on" : ""), d.label + " · " + d.n);
+      b.onclick = function () { onPick(current === d.key ? null : d.key); };
+      row.appendChild(b);
+    });
+    return row;
+  }
+  function lensMatch(x, lens) {
+    if (!lens) return true;
+    if (lens === "__none") return !entryForms(x).length;
+    return hasForm(x, lens);
+  }
+
   function renderTruths() {
     var list = document.getElementById("list");
     list.innerHTML = "";
-    var truths = state.truths || [];
-    if (truths.length === 0) {
+    var all = state.truths || [];
+    if (all.length === 0) {
       list.appendChild(el("p", "empty", "Nothing true yet. Suspicious."));
+      return;
+    }
+    list.appendChild(buildLensRow(all, stuffLens, function (k) { stuffLens = k; render(); }));
+    var truths = all.filter(function (x) { return lensMatch(x, stuffLens); });
+    if (truths.length === 0) {
+      list.appendChild(el("p", "empty", "Nothing of that shape yet."));
       return;
     }
     truths = truths.slice().sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
@@ -2053,6 +2169,7 @@
         markIfClipped(p);
         var flags = [];
         if ((t.tags || []).length) flags.push("\uD83C\uDFF7");
+        if (entryForms(t).length) flags.push(formGlyph(t));
         if (t.workshop && t.workshop.trim()) flags.push("\u270E");
         if (t.mined) flags.push("\u26cf");
         if (flags.length) card.appendChild(el("div", "bit-flags", flags.join(" ")));
@@ -2095,6 +2212,11 @@
       foot.appendChild(footR);
 
       card.appendChild(foot);
+      card.appendChild(buildFormRow(
+        function (n) { return hasForm(t, n); },
+        function (n) { toggleForm(t, n); t.touched = Date.now(); save(); },
+        function () { render(); }
+      ));
       shell.appendChild(card);
       attachSwipe(shell, card);
       list.appendChild(shell);
@@ -2382,8 +2504,9 @@
       verdicts.style.display = "none";
       var done = el("div", "run-card axe-done");
       done.appendChild(el("p", null, axeQueue.length
-        ? "That\u2019s everything. The basement thanks you."
-        : "Nothing to judge."));
+        ? (axeLens ? "That\u2019s every " + (axeLens === "__none" ? "untyped one" : axeLens) + ". Switch the lens for more."
+                   : "That\u2019s everything. The basement thanks you.")
+        : (axeLens ? "Nothing of that shape to judge." : "Nothing to judge.")));
       card.appendChild(done);
       return;
     }
@@ -2419,13 +2542,56 @@
       dots.appendChild(d);
     }
   }
-  document.getElementById("axeBtn").onclick = function () {
-    axeQueue = [];
-    (state.truths || []).forEach(function (t) { axeQueue.push({ item: t, kind: "stuff" }); });
-    state.bits.forEach(function (b) { axeQueue.push({ item: b, kind: "bit" }); });
-    axeQueue.sort(function (a, b) { return touchedAt(a.item) - touchedAt(b.item); });
+  // Axe session settings persist between sessions — you tend to want the same
+  // kind of pass twice in a row.
+  var axeShuffle = false, axeLens = null;
+
+  function buildAxeDeck() {
+    var pool = [];
+    (state.truths || []).forEach(function (t) { pool.push({ item: t, kind: "stuff" }); });
+    state.bits.forEach(function (b) { pool.push({ item: b, kind: "bit" }); });
+    pool = pool.filter(function (e) { return lensMatch(e.item, axeLens); });
+    if (axeShuffle) {
+      // Fisher–Yates, drawn ONCE here and then held. Reshuffling on each
+      // render would deal a new deck every verdict — you'd see repeats and
+      // never know when you'd been through everything.
+      for (var i = pool.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+      }
+    } else {
+      pool.sort(function (a, b) { return touchedAt(a.item) - touchedAt(b.item); });
+    }
+    axeQueue = pool;
     axeIdx = 0;
+  }
+
+  function renderAxeControls() {
+    var host = document.getElementById("axeControls");
+    host.innerHTML = "";
+    var sh = el("button", "axe-ctl" + (axeShuffle ? " on" : ""), axeShuffle ? "⇄ shuffled" : "↓ oldest first");
+    sh.title = "Chronological always shows you the same stale entries first";
+    sh.onclick = function () {
+      axeShuffle = !axeShuffle;
+      buildAxeDeck(); renderAxe(); renderAxeControls();
+    };
+    host.appendChild(sh);
+
+    var pool = [];
+    (state.truths || []).forEach(function (t) { pool.push(t); });
+    state.bits.forEach(function (b) { pool.push(b); });
+    var lensRow = buildLensRow(pool, axeLens, function (k) {
+      axeLens = k;
+      buildAxeDeck(); renderAxe(); renderAxeControls();
+    });
+    lensRow.classList.add("axe-lens-row");
+    host.appendChild(lensRow);
+  }
+
+  document.getElementById("axeBtn").onclick = function () {
+    buildAxeDeck();
     renderAxe();
+    renderAxeControls();
     document.getElementById("axeOverlay").classList.add("open");
   };
   document.getElementById("axeClose").onclick = function () {
@@ -2644,63 +2810,6 @@
   // showing what you ACTUALLY took vs. what you'd estimated. Nothing is saved
   // and no estimate is changed — it just tells you the truth.
   var runState = { set: null, bits: [], i: 0, actual: [], startedAt: 0, setStartedAt: 0, tick: null, done: false };
-  var runEditing = false, runEditPausedAt = 0;
-
-  // A set holds references to bits (s.bitIds). Edits made while rehearsing live
-  // in s.overrides[bitId] — a set-scoped copy — so the original bit is never
-  // touched unless you explicitly push. Empty/identical override == no fork.
-  function runSetText(bit) {
-    var ov = runState.set && runState.set.overrides && runState.set.overrides[bit.id];
-    return (ov != null && ov !== "") ? ov : bit.text;
-  }
-  function runIsForked(bit) {
-    var ov = runState.set && runState.set.overrides && runState.set.overrides[bit.id];
-    return ov != null && ov !== "" && ov !== bit.text;
-  }
-  function placeCaretEnd(node) {
-    try {
-      var r = document.createRange(); r.selectNodeContents(node); r.collapse(false);
-      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
-    } catch (e) {}
-  }
-  function runEnterEdit() {
-    if (runEditing || runState.done) return;
-    runEditing = true;
-    runEditPausedAt = Date.now();               // the clock waits while you rewrite
-    if (runState.tick) { clearInterval(runState.tick); runState.tick = null; }
-    renderRun();
-    var be = document.querySelector(".run-bit");
-    if (be) { be.focus(); placeCaretEnd(be); }
-  }
-  function runCommitEdit(pushToBit) {
-    if (!runEditing) return;
-    var be = document.querySelector(".run-bit");
-    var txt = be ? be.innerText.replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n").trim() : "";
-    var b = runState.bits[runState.i], set = runState.set;
-    if (!set.overrides) set.overrides = {};
-    if (pushToBit && txt && txt !== b.text) {
-      b.text = txt; b.updated = Date.now();     // graft the set wording onto the bit
-      delete set.overrides[b.id];               // identical now — fork dissolves
-    } else if (txt === "" || txt === b.text) {
-      delete set.overrides[b.id];               // back in sync — drop the fork
-    } else {
-      set.overrides[b.id] = txt;                // keep it set-only
-    }
-    set.updated = Date.now();
-    runEditing = false;
-    if (runEditPausedAt) {
-      var gap = Date.now() - runEditPausedAt;
-      runState.startedAt += gap; runState.setStartedAt += gap; runEditPausedAt = 0;
-    }
-    save();
-    if (!runState.tick) runState.tick = setInterval(runTick, 250);
-    renderRun(); runTick();
-  }
-  function runRevertFork() {
-    var b = runState.bits[runState.i], set = runState.set;
-    if (set.overrides) delete set.overrides[b.id];
-    set.updated = Date.now(); save(); renderRun();
-  }
 
   function openRun(s) {
     var bits = s.bitIds.map(findBitAnywhere).filter(Boolean).map(function (f) { return f.bit; });
@@ -2758,7 +2867,7 @@
   }
   // advancing banks the time you actually spent, then resets the clock
   function runAdvance(dir) {
-    if (runState.done || runEditing) return;
+    if (runState.done) return;
     if (dir > 0) {
       runState.actual[runState.i] = Math.floor((Date.now() - runState.startedAt) / 1000);
       if (runState.i >= runState.bits.length - 1) { runFinish(); return; }
@@ -2791,7 +2900,7 @@
         var est = b.est || 0;
         estTot += est; actTot += act;
         var row = el("div", "sum-row");
-        row.appendChild(el("div", "sum-txt", runSetText(b)));
+        row.appendChild(el("div", "sum-txt", b.text));
         row.appendChild(el("div", "sum-est", est ? fmtSec(est) : "?"));
         var a = el("div", "sum-act" + (est && act > est ? " slow" : ""), fmtSec(act));
         row.appendChild(a);
@@ -2811,37 +2920,13 @@
 
     var b = runState.bits[runState.i];
     var card2 = el("div", "run-card");
-    var bitEl = el("div", "run-bit", runSetText(b));
+    var bitEl = el("div", "run-bit", b.text);
+    // Tap the bit to work it — the clock pauses while you're in the bench, so a
+    // rewrite mid-rehearsal doesn't poison the timing you're measuring.
+    bitEl.title = "Tap to open the workbench (pauses the clock)";
+    bitEl.onclick = function () { runPauseForBench(b.id); };
     card2.appendChild(bitEl);
-
-    if (runEditing) {
-      // Edit right here on the card — the clock's paused, and this writes to the
-      // set copy only. "push to bit" is the one door back to the real record.
-      bitEl.contentEditable = "true";
-      bitEl.classList.add("editing");
-      var bar = el("div", "run-edit");
-      var push = el("button", "run-edit-push", "push to bit \u25B8");
-      push.title = "Also rewrite the original bit with this wording";
-      push.onclick = function (e) { e.stopPropagation(); runCommitEdit(true); };
-      var done = el("button", "run-edit-done", "done");
-      done.onclick = function (e) { e.stopPropagation(); runCommitEdit(false); };
-      bar.appendChild(push); bar.appendChild(done);
-      card2.appendChild(bar);
-    } else {
-      // Tap the line to tweak it for this set. Doesn't touch the bit.
-      bitEl.title = "Tap to tweak — just for this set";
-      bitEl.onclick = function () { runEnterEdit(); };
-      if (runIsForked(b)) {
-        var tag = el("div", "run-forked");
-        tag.appendChild(el("span", null, "edited for this set"));
-        var rv = el("button", "run-revert", "revert");
-        rv.title = "Drop the set version, go back to the original bit";
-        rv.onclick = function (e) { e.stopPropagation(); runRevertFork(); };
-        tag.appendChild(rv);
-        card2.appendChild(tag);
-      }
-      if (b.est) card2.appendChild(el("div", "run-est", "you called it " + fmtSec(b.est)));
-    }
+    if (b.est) card2.appendChild(el("div", "run-est", "you called it " + fmtSec(b.est)));
     stage.appendChild(card2);
     runState.bits.forEach(function (_, idx) {
       var d = document.createElement("i");
@@ -3046,27 +3131,6 @@
     });
   }
 
-  function duplicateSet(s) {
-    // A full, independent clone: same lineup, same set-scoped overrides, new id.
-    // Nothing points back at the original — editing one never touches the other.
-    var copy = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5),
-      name: (s.name ? s.name + " (copy)" : "untitled set (copy)"),
-      bitIds: s.bitIds.slice(),
-      created: Date.now(),
-      updated: Date.now()
-    };
-    if (s.overrides) {
-      copy.overrides = {};
-      Object.keys(s.overrides).forEach(function (k) { copy.overrides[k] = s.overrides[k]; });
-    }
-    var i = state.sets.findIndex(function (x) { return x.id === s.id; });
-    if (i < 0) state.sets.unshift(copy); else state.sets.splice(i + 1, 0, copy);
-    save();
-    buzz("MEDIUM");
-    flashCopied("set duplicated");
-    render();
-  }
   function renderSets() {
     var body = document.getElementById("list");
     body.innerHTML = "";
@@ -3223,9 +3287,6 @@
         });
         var actions = el("div", "bone-actions");
         actions.appendChild(el("span", "bone-when", n + (n === 1 ? " bit" : " bits") + " · " + fmtSec(total) + (untimed ? " +" + untimed + "?" : "")));
-        var dup = el("button", "bone-del", "copy");
-        dup.onclick = function (e) { e.stopPropagation(); duplicateSet(s); };
-        actions.appendChild(dup);
         var del = el("button", "bone-del", "delete");
         del.onclick = function (e) {
           e.stopPropagation();
@@ -3235,9 +3296,7 @@
         };
         actions.appendChild(del);
         card.appendChild(actions);
-        card.title = "Tap to open \u00b7 long-press to duplicate";
         card.onclick = function () { setOpen = s.id; render(); };
-        attachLongPress(card, function () { duplicateSet(s); });
         body.appendChild(card);
       });
     }
