@@ -762,7 +762,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.64";
+  var APP_VERSION = "v1.1.65";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1204,6 +1204,10 @@
 
     var capWrap = document.querySelector(".capture");
     var capDest = document.getElementById("capDest");
+    var capForms = document.getElementById("capForms");
+    // forms describe stuff, so the row only appears when that's where
+    // capture is headed
+    function showForms(on) { capForms.style.display = on ? "flex" : "none"; }
     var searchRow = document.getElementById("searchRow");
     var searchOut = document.getElementById("searchOut");
     searchRow.style.display = stageFilter === "home" ? "" : "none";
@@ -1216,6 +1220,7 @@
       capWrap.style.display = "";
       capDest.style.display = "";
       capDest.textContent = "capture → stuff";
+      showForms(true);
       renderSearch();
       return;
     }
@@ -1226,10 +1231,12 @@
         capWrap.style.display = "";
         capDest.style.display = "";
         capDest.textContent = "capture → stuff";
+        showForms(true);
         renderTruths();
       } else {
         capWrap.style.display = "none";
         capDest.style.display = "none";
+        showForms(false);
         renderSets();
       }
       return;
@@ -1237,6 +1244,7 @@
     capWrap.style.display = "";
     capDest.style.display = "";
     capDest.textContent = "capture → bits";
+    showForms(false);
 
     // list
     var list = document.getElementById("list");
@@ -1337,7 +1345,6 @@
         markIfClipped(p);
         var flags = [];
         if ((b.tags || []).length) flags.push("\uD83C\uDFF7");
-        if (entryForms(b).length) flags.push(formGlyph(b));
         if (b.workshop && b.workshop.trim()) flags.push("\u270E");
         if (b.react) flags.push(b.react);
         if (staleDays(b) > 0) flags.push("\u23F3");
@@ -1398,14 +1405,7 @@
       footR.appendChild(wbBtn);
       foot.appendChild(footR);
 
-      var stack = el("div", "foot-stack");
-      stack.appendChild(foot);
-      stack.appendChild(buildFormRow(
-        function (n) { return hasForm(b, n); },
-        function (n) { toggleForm(b, n); b.touched = Date.now(); save(); },
-        function () { render(); }
-      ));
-      return stack;
+      return foot;
     }
 
     var empty = document.getElementById("empty");
