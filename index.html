@@ -818,7 +818,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.71";
+  var APP_VERSION = "v1.1.72";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1121,7 +1121,25 @@
               light: { a: "#5f7043", a2: "#4a5834", on: "#f4f1e6" } },
     slate:  { label: "Slate",  dot: "#6f8ca0",
               dark:  { a: "#6f8ca0", a2: "#8aa6b8", on: "#101619" },
-              light: { a: "#4f6f84", a2: "#3d5768", on: "#eef2f4" } }
+              light: { a: "#4f6f84", a2: "#3d5768", on: "#eef2f4" } },
+    plum:   { label: "Plum",   dot: "#9b72b0",
+              dark:  { a: "#9b72b0", a2: "#b48cc7", on: "#160f1a" },
+              light: { a: "#6f4a85", a2: "#573568", on: "#f5eef8" } },
+    tide:   { label: "Tide",   dot: "#4f9a94",
+              dark:  { a: "#4f9a94", a2: "#6bb4ae", on: "#08100f" },
+              light: { a: "#2f6f6a", a2: "#245551", on: "#eaf5f3" } },
+    marquee:{ label: "Marquee", dot: "#d4568a",
+              dark:  { a: "#d4568a", a2: "#e677a6", on: "#1a0c12" },
+              light: { a: "#a83567", a2: "#87264f", on: "#fdeef4" } },
+    indigo: { label: "Indigo", dot: "#6b74c4",
+              dark:  { a: "#6b74c4", a2: "#8a92d6", on: "#0d0f1a" },
+              light: { a: "#464fa0", a2: "#343c80", on: "#eef0fb" } },
+    moss:   { label: "Moss",   dot: "#6f8f4f",
+              dark:  { a: "#6f8f4f", a2: "#8aa96a", on: "#0e1408" },
+              light: { a: "#4d6733", a2: "#3a5026", on: "#f0f5e8" } },
+    ash:    { label: "Ash",    dot: "#9a9086",
+              dark:  { a: "#9a9086", a2: "#b4aba1", on: "#141210" },
+              light: { a: "#6b625a", a2: "#524a43", on: "#f4f2ef" } }
   };
   function applyTheme() {
     var t = THEMES[state.theme] || THEMES.ember;
@@ -2566,7 +2584,57 @@
     { q: "If you don't see a clear path for what you want, sometimes you have to make it yourself.", by: "Mindy Kaling" },
     { q: "Desperation is a necessary ingredient to learning anything, or creating anything.", by: "Jim Carrey" },
     { q: "You can fail at what you don't want, so you might as well take a chance on doing what you love.", by: "Jim Carrey" },
-    { q: "Be brave enough to live life creatively.", by: "Alan Alda" }
+    { q: "Be brave enough to live life creatively.", by: "Alan Alda" },
+    { q: "I intend to live forever. So far, so good.", by: "Steven Wright" },
+    { q: "Everywhere is walking distance if you have the time.", by: "Steven Wright" },
+    { q: "I'm against picketing, but I don't know how to show it.", by: "Mitch Hedberg" },
+    { q: "I get no respect, no respect at all.", by: "Rodney Dangerfield" },
+    { q: "I think it's interesting that 'cologne' rhymes with 'alone.'", by: "Demetri Martin" },
+    { q: "Never place a period where God has placed a comma.", by: "Gracie Allen" },
+    { q: "I've always been in the right place at the right time.", by: "Bob Hope" },
+    { q: "I never told a joke in my life.", by: "Andy Kaufman" },
+    { q: "The 'what should be' never did exist.", by: "Lenny Bruce" },
+    { q: "Laughter is not our medicine. Stories hold our cure.", by: "Hannah Gadsby" },
+    { q: "I'm dating a woman now who, evidently, is unaware of it.", by: "Garry Shandling" },
+    { q: "Normal is nothing more than a cycle on a washing machine.", by: "Whoopi Goldberg" },
+    { q: "Life is a great big canvas; throw all the paint you can at it.", by: "Danny Kaye" },
+    { q: "There used to be a me, but I had it surgically removed.", by: "Peter Sellers" },
+    { q: "I'm playing all the right notes, but not necessarily in the right order.", by: "Eric Morecambe" },
+    { q: "My characters aren't losers. They're rebels.", by: "Harold Ramis" },
+    { q: "Drawing on my fine command of the English language, I said nothing.", by: "Robert Benchley" },
+    { q: "Think before you speak. Read before you think.", by: "Fran Lebowitz" },
+    { q: "It is a good rule in life never to apologize.", by: "P.G. Wodehouse" },
+    { q: "Everything is copy.", by: "Nora Ephron" },
+    { q: "Laughter and tears are both responses to frustration.", by: "Kurt Vonnegut" },
+    { q: "I've got Bright's disease, and he's got mine.", by: "S.J. Perelman" },
+    { q: "Imitation is the sincerest form of television.", by: "Fred Allen" },
+    { q: "Satire is what closes on Saturday night.", by: "George S. Kaufman" },
+    { q: "If no one ever took risks, Michelangelo would have painted the Sistine floor.", by: "Neil Simon" },
+    { q: "Here's another nice mess you've gotten me into.", by: "Oliver Hardy" },
+    { q: "The improviser has to be like a man walking backwards.", by: "Keith Johnstone" },
+    { q: "We learn through experience and experiencing.", by: "Viola Spolin" },
+    { q: "I'm not funny. What I am is brave.", by: "Lucille Ball" },
+    { q: "Laughter is the shortest distance between two people.", by: "Victor Borge" },
+    { q: "Don't sweat the petty things and don't pet the sweaty things.", by: "George Carlin" },
+    { q: "Comedy is not pretty.", by: "Steve Martin" },
+    { q: "The whole object of comedy is to be yourself.", by: "Jerry Seinfeld" },
+    { q: "It's always something.", by: "Gilda Radner" },
+    { q: "A good compromise is when both parties are dissatisfied.", by: "Larry David" },
+    { q: "I don't deserve this, but I have arthritis and I don't deserve that either.", by: "Jack Benny" },
+    { q: "Brevity is the soul of lingerie.", by: "Dorothy Parker" },
+    { q: "The only honest art form is laughter.", by: "Lenny Bruce" },
+    { q: "A sense of humor is the ability to understand a joke \u2014 and that the joke is oneself.", by: "Clifton Fadiman" },
+    { q: "The world is a comedy to those that think, a tragedy to those that feel.", by: "Horace Walpole" },
+    { q: "Total absence of humor renders life impossible.", by: "Colette" },
+    { q: "Humor is mankind's greatest blessing.", by: "Mark Twain" },
+    { q: "Comedy is the art of making people laugh without making them puke.", by: "Steve Martin" },
+    { q: "A joke is a very serious thing.", by: "Winston Churchill" },
+    { q: "Humor is the great thing, the saving thing.", by: "Mark Twain" },
+    { q: "Laughter is the sun that drives winter from the human face.", by: "Victor Hugo" },
+    { q: "Nothing is so foolish as to laugh at nothing.", by: "Seneca" },
+    { q: "Wit is educated insolence.", by: "Aristotle" },
+    { q: "He who laughs, lasts.", by: "Mary Pettibone Poole" },
+    { q: "The comic spirit is given to us in order that we may analyze, weigh, and clarify.", by: "James Thurber" },
   ];
   function dealWisdom() {
     var w = document.getElementById("wisdom");
