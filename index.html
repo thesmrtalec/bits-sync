@@ -301,6 +301,41 @@
   /* the workbench must sit ABOVE the run overlay so you can edit mid-rehearsal */
   #workbenchOverlay { z-index: 400; }
   .run-overlay.dimmed { filter: brightness(.55); }
+
+  /* ——— batch ——— */
+  .batch-open { background: transparent; border: none; color: var(--accent); font-family: var(--mono);
+    font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; cursor: pointer;
+    padding: 0 0 0 12px; }
+  .batch-open:hover { color: var(--accent2); }
+  .batch-overlay { padding: 0; }
+  .batch-top { display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px 0; }
+  .batch-count { font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); }
+  .batch-done { background: transparent; border: none; color: var(--muted); font-family: var(--mono);
+    font-size: 12px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer; padding: 4px; }
+  .batch-mid { flex: 1; overflow-y: auto; padding: 26px 22px 40px; }
+  .batch-ask { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--muted);
+    margin: 0 0 18px; }
+  .batch-stem { display: block; width: 100%; text-align: left; background: var(--card);
+    border: 1px solid var(--rule); border-radius: 10px; padding: 13px 16px; margin-bottom: 8px;
+    font-family: var(--serif); font-size: 19px; font-style: italic; color: var(--ink);
+    cursor: pointer; box-shadow: var(--cardshadow); }
+  .batch-stem:hover { border-color: var(--accent); color: var(--accent); }
+  .batch-stem-custom { font-style: normal; font-family: var(--mono); font-size: 13px; color: var(--faint); }
+  .batch-stem-live { font-family: var(--serif); font-size: 27px; font-style: italic; color: var(--accent);
+    margin-bottom: 12px; }
+  #batchInput { width: 100%; box-sizing: border-box; background: var(--card);
+    border: 1px solid var(--rule); border-radius: 10px; padding: 13px 15px;
+    font-family: var(--serif); font-size: 20px; line-height: 1.45; color: var(--ink);
+    resize: none; outline: none; box-shadow: var(--cardshadow); }
+  #batchInput:focus { border-color: var(--accent); }
+  .batch-hint { font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--faint); margin: 8px 0 0; }
+  .batch-recent { margin-top: 26px; border-top: 1px solid var(--rule); padding-top: 14px; }
+  .batch-line { font-family: var(--serif); font-size: 15px; color: var(--muted); margin: 0 0 7px;
+    line-height: 1.4; }
+  .batch-line:first-child { color: var(--ink); }
   .notes-overlay.open { display: flex; }
   .notes-inner { max-width: 620px; width: 100%; margin: 0 auto; padding: 20px 18px 40px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
   .notes-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
@@ -445,13 +480,16 @@
     white-space: pre-wrap; cursor: pointer; }
   .axe-meta { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--faint); margin-top: 22px; }
-  .form-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; margin-top: 8px; }
+  .form-row { display: flex; flex-wrap: wrap; gap: 9px; align-items: baseline; margin-top: 8px; }
   .cap-forms { margin: -4px 0 12px; }
-  .form-chip { background: transparent; border: 1px dashed var(--rule); border-radius: 999px;
-    padding: 2px 10px; font-family: var(--mono); font-size: 11px; color: var(--faint);
-    cursor: pointer; white-space: nowrap; }
-  .form-chip:hover { border-color: var(--accent); color: var(--accent); }
-  .form-chip.on { border-style: solid; border-color: var(--accent); color: var(--accent); }
+  .notice-ask { font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
+    text-transform: uppercase; color: var(--faint); flex: 0 0 auto; }
+  .notice-word { background: transparent; border: none; padding: 1px 3px; cursor: pointer;
+    font-family: var(--serif); font-size: 16.5px; font-style: italic; color: var(--muted);
+    border-bottom: 1.5px dotted var(--rule); border-radius: 3px 3px 0 0; white-space: nowrap; }
+  .notice-word:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  .notice-word.on { background: var(--accent); color: var(--onaccent); border-bottom-color: transparent;
+    border-radius: 3px; padding: 1px 8px; font-weight: 700; }
   .foot-stack { display: block; }
   .notice-mirror { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px;
     font-family: var(--mono); font-size: 11px; color: var(--muted); margin: 0 0 10px; }
@@ -523,7 +561,7 @@
   </div>
   <div id="searchOut"></div>
 
-  <span class="cap-dest" id="capDest">capture → stuff</span>
+  <span class="cap-dest" id="capDest">capture → stuff</span><button class="batch-open" id="batchBtn">batch</button>
   <div class="capture">
     <textarea id="draft" rows="7"></textarea>
     <button class="add-btn" id="addBtn">Add</button>
@@ -661,6 +699,21 @@
       </div>
     </div>
   </div>
+  <div class="run-overlay batch-overlay" id="batchOverlay">
+    <div class="batch-top">
+      <span class="batch-count" id="batchCount"></span>
+      <button class="batch-done" id="batchDone">done</button>
+    </div>
+    <div class="batch-mid">
+      <div class="batch-stems" id="batchStems"></div>
+      <div class="batch-writer" id="batchWriter" style="display:none">
+        <div class="batch-stem-live" id="batchStemLive"></div>
+        <textarea id="batchInput" rows="2" placeholder="…"></textarea>
+        <div class="batch-hint">enter to keep going</div>
+        <div class="batch-recent" id="batchRecent"></div>
+      </div>
+    </div>
+  </div>
   <div class="run-overlay axe-overlay" id="axeOverlay">
     <div class="run-top">
       <button class="run-x" id="axeClose">&times;</button>
@@ -765,7 +818,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.67";
+  var APP_VERSION = "v1.1.71";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -880,7 +933,12 @@
     state.notes = data.notes || [];
     state.theme = data.theme || "ember";
     state.notesPin = data.notesPin || null;
-    state.forms = (data.forms && data.forms.length) ? data.forms : null;
+    // A stored list identical to a superseded default was never a choice —
+    // it got written by the old formList() bug. Clear it so defaults apply.
+    var SUPERSEDED = ["setup,punchline,list", "feeling,moment,pattern"];
+    var incoming = (data.forms && data.forms.length) ? data.forms : null;
+    if (incoming && SUPERSEDED.indexOf(incoming.join(",")) !== -1) incoming = null;
+    state.forms = incoming;
     state.buried = data.buried || [];
     state.truths = data.truths || [];
     toPool.forEach(function (b) {
@@ -996,10 +1054,12 @@
   // point of view, a moment gives it specificity, a pattern gives it the
   // observation. The point isn't filing; it's that tagging as you capture
   // trains what you catch. Independent toggles — a thing is occasionally two.
-  var DEFAULT_FORMS = ["feeling", "moment", "pattern"];
+  var DEFAULT_FORMS = ["feeling", "moment", "pattern", "trait"];
+  // Never assign the defaults into state — doing that persisted them, so a
+  // saved copy of an older default list would outlive every later change.
+  // state.forms is set only when the user actually edits the list.
   function formList() {
-    if (!state.forms || !state.forms.length) state.forms = DEFAULT_FORMS.slice();
-    return state.forms;
+    return (state.forms && state.forms.length) ? state.forms : DEFAULT_FORMS;
   }
   function entryForms(x) { return (x && x.forms) ? x.forms : []; }
   function toggleForm(x, name) {
@@ -1016,11 +1076,14 @@
   }
 
   // A row of independent form toggles. Used at capture and on open cards.
+  // Reads as a sentence you finish, not a toolbar you operate — the asking is
+  // the point. Set words get stamped rather than outlined.
   function buildFormRow(get, set, onChange) {
     var row = el("div", "form-row");
+    row.appendChild(el("span", "notice-ask", "I noticed a"));
     formList().forEach(function (name) {
       var on = get(name);
-      var b = el("button", "form-chip" + (on ? " on" : ""), (on ? "\u25cf " : "+ ") + name);
+      var b = el("button", "notice-word" + (on ? " on" : ""), name);
       b.title = on ? "Tap to unset" : "Mark as " + name;
       b.onmousedown = function (ev) { ev.preventDefault(); };
       b.onclick = function (e) {
@@ -2614,6 +2677,87 @@
     lensRow.classList.add("axe-lens-row");
     host.appendChild(lensRow);
   }
+
+  // ——— batch ———
+  // The thing that actually produced half his material: sit down with one
+  // stem and fire off I-statements until the voice shows up. No tagging, no
+  // ceremony, no leaving the keyboard between entries.
+  var STEMS = [
+    "I", "I hate", "I love", "I'm embarrassed that", "I pretend",
+    "I used to", "I secretly", "I'm the guy who", "Nobody talks about"
+  ];
+  var batchStem = null, batchWritten = [];
+
+  function renderBatchStems() {
+    var host = document.getElementById("batchStems");
+    host.innerHTML = "";
+    host.appendChild(el("p", "batch-ask", "Pick a stem and don\u2019t stop to think."));
+    STEMS.forEach(function (stem) {
+      var b = el("button", "batch-stem", stem + "\u2026");
+      b.onclick = function () { startBatch(stem); };
+      host.appendChild(b);
+    });
+    var custom = el("button", "batch-stem batch-stem-custom", "something else\u2026");
+    custom.onclick = function () {
+      var v = prompt("Your stem — the words every line starts with:", "I");
+      if (v === null) return;
+      v = v.trim();
+      if (v) startBatch(v);
+    };
+    host.appendChild(custom);
+  }
+  function startBatch(stem) {
+    batchStem = stem;
+    document.getElementById("batchStems").style.display = "none";
+    document.getElementById("batchWriter").style.display = "";
+    document.getElementById("batchStemLive").textContent = stem + "\u2026";
+    var inp = document.getElementById("batchInput");
+    inp.value = "";
+    setTimeout(function () { inp.focus(); }, 50);
+    renderBatchRecent();
+  }
+  function commitBatchLine() {
+    var inp = document.getElementById("batchInput");
+    var v = inp.value.trim();
+    if (!v) return;
+    var text = batchStem ? (batchStem + " " + v) : v;
+    if (!state.truths) state.truths = [];
+    state.truths.unshift({ id: Date.now().toString(36), text: text, created: Date.now() });
+    batchWritten.push(text);
+    inp.value = "";
+    buzz();
+    save();
+    renderBatchRecent();
+    updateBatchCount();
+  }
+  function renderBatchRecent() {
+    var host = document.getElementById("batchRecent");
+    host.innerHTML = "";
+    // just enough to feel the pile growing, not enough to start editing
+    batchWritten.slice(-4).reverse().forEach(function (t) {
+      host.appendChild(el("p", "batch-line", t));
+    });
+  }
+  function updateBatchCount() {
+    document.getElementById("batchCount").textContent =
+      batchWritten.length ? batchWritten.length + (batchWritten.length === 1 ? " down" : " down") : "";
+  }
+  document.getElementById("batchBtn").onclick = function () {
+    batchStem = null; batchWritten = [];
+    document.getElementById("batchStems").style.display = "";
+    document.getElementById("batchWriter").style.display = "none";
+    renderBatchStems();
+    updateBatchCount();
+    document.getElementById("batchOverlay").classList.add("open");
+  };
+  document.getElementById("batchInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitBatchLine(); }
+  });
+  document.getElementById("batchDone").onclick = function () {
+    commitBatchLine();
+    document.getElementById("batchOverlay").classList.remove("open");
+    render();
+  };
 
   document.getElementById("axeBtn").onclick = function () {
     buildAxeDeck();
