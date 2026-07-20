@@ -353,6 +353,27 @@
   .note-del:hover { color: var(--accent2); }
 
   /* ——— workbench ——— */
+  .wb-count { color: var(--faint); font-weight: 400; letter-spacing: 0; text-transform: none; }
+  .wb-angle-input { width: 100%; box-sizing: border-box; background: var(--card); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; font-family: var(--serif);
+    font-size: 16px; outline: none; margin-bottom: 10px; }
+  .wb-angle-input:focus { border-color: var(--accent); }
+  .wb-angles { margin: 0 0 22px; }
+  .wb-angle { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0;
+    border-bottom: 1px solid var(--rule); }
+  .wb-angle:last-child { border-bottom: none; }
+  .wb-angle-when { flex: 0 0 auto; font-family: var(--mono); font-size: 9.5px; color: var(--faint);
+    letter-spacing: .06em; padding-top: 3px; width: 44px; }
+  .wb-angle-text { flex: 1; font-family: var(--serif); font-size: 15px; line-height: 1.45; color: var(--ink); }
+  .wb-angle.done .wb-angle-text { color: var(--muted); }
+  .wb-angle-act { flex: 0 0 auto; background: transparent; border: 1px solid var(--rule);
+    border-radius: 6px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); padding: 3px 7px; cursor: pointer; }
+  .wb-angle-act:hover { border-color: var(--accent); color: var(--accent); }
+  .wb-angle-act.done { border-color: transparent; color: var(--faint); cursor: default; }
+  .wb-angle-del { background: transparent; border: none; color: var(--faint); font-size: 12px;
+    padding: 2px 4px; cursor: pointer; flex: 0 0 auto; }
+  .wb-angle-del:hover { color: var(--accent2); }
   .wb-label { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 7px; }
   .wb-tags { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 16px; min-height: 26px; }
   .wb-foot { display: flex; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid var(--rule); }
@@ -749,6 +770,9 @@
       <textarea class="notes-canvas wb-bit" id="wbBit" placeholder="the line as it stands…"></textarea>
       <div class="wb-label">working it out</div>
       <textarea class="notes-canvas wb-pad" id="wbPad" placeholder="alternate tags, rewrites, what it’s really about…"></textarea>
+      <div class="wb-label">angles <span class="wb-count" id="wbAngleCount"></span></div>
+      <input id="wbAngleInput" class="wb-angle-input" placeholder="another way in… (enter to keep)" autocomplete="off" />
+      <div class="wb-angles" id="wbAngles"></div>
       <div class="wb-label">tags</div>
       <div class="wb-tags" id="wbTags"></div>
       <div class="wb-foot">
@@ -817,7 +841,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.73";
+  var APP_VERSION = "v1.1.75";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1820,17 +1844,16 @@
     workbenchId = id;
     var b = benchFind();
     if (!b) { workbenchId = null; workbenchKind = "bit"; return; }
+    // opening it counts as seeing it, whether or not you end up changing a word
+    markSeen(b); save();
     var isTruth = workbenchKind === "truth";
     document.getElementById("wbTitle").textContent = "Workbench";
     document.getElementById("wbBitLabel").textContent = isTruth ? "the stuff" : "the bit";
     document.getElementById("wbBit").value = b.text;
     document.getElementById("wbPad").value = b.workshop || "";
-    var m = document.getElementById("wbMeta");
-    if (isTruth) {
-      m.textContent = b.mined ? "mined \u00d7" + b.mined : "";
-    } else {
-      m.textContent = b.workshop ? "" : "Working notes live here \u2014 separate from the line.";
-    }
+    document.getElementById("wbAngleInput").value = "";
+    renderAngles();
+    renderWbMeta();
     renderWbTags();
     // move it across: stuff that's become a bit, or a bit that isn't one yet
     var mv = document.getElementById("wbMove");
@@ -1902,6 +1925,87 @@
     save();
     openWorkbench(carried.id, workbenchKind);
   }
+  // ——— angles ———
+  // The scratchpad is for thinking and gets overwritten. Angles accumulate:
+  // each one is dated, stays put, and can be promoted into a bit. Together
+  // with mined they're the entry's record of work.
+  function entryAngles(x) { return (x && x.angles) ? x.angles : []; }
+  function shortWhen(ts) {
+    var d = new Date(ts), now = new Date();
+    var sameYear = d.getFullYear() === now.getFullYear();
+    var mo = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+    return sameYear ? mo + " " + d.getDate() : mo + " '" + String(d.getFullYear()).slice(2);
+  }
+  function renderAngles() {
+    var host = document.getElementById("wbAngles");
+    var b = benchFind();
+    host.innerHTML = "";
+    if (!b) return;
+    var list = entryAngles(b);
+    var cnt = document.getElementById("wbAngleCount");
+    cnt.textContent = list.length ? "\u00b7 " + list.length : "";
+    // newest first — the last thing you thought is the thing you want to see
+    list.slice().reverse().forEach(function (a) {
+      var row = el("div", "wb-angle" + (a.promoted ? " done" : ""));
+      row.appendChild(el("span", "wb-angle-when", shortWhen(a.at)));
+      row.appendChild(el("span", "wb-angle-text", a.t));
+      if (a.promoted) {
+        row.appendChild(el("span", "wb-angle-act done", "\u2713 bit"));
+      } else {
+        var mk = el("button", "wb-angle-act", "\u2192 bit");
+        mk.title = "Make this a bit";
+        mk.onclick = function () {
+          state.bits.unshift({
+            id: Date.now().toString(36),
+            text: a.t,
+            tags: (b.tags || []).slice(),
+            created: Date.now(),
+            statusAt: Date.now()
+          });
+          a.promoted = true;
+          b.mined = (b.mined || 0) + 1;
+          b.touched = Date.now();
+          save(); renderAngles(); renderWbMeta(); render();
+        };
+        row.appendChild(mk);
+      }
+      var del = el("button", "wb-angle-del", "\u2715");
+      del.title = "Remove";
+      del.onclick = function () {
+        b.angles = entryAngles(b).filter(function (x) { return x !== a; });
+        if (!b.angles.length) delete b.angles;
+        save(); renderAngles(); renderWbMeta();
+      };
+      row.appendChild(del);
+      host.appendChild(row);
+    });
+  }
+  function commitAngle() {
+    var inp = document.getElementById("wbAngleInput");
+    var v = inp.value.trim();
+    var b = benchFind();
+    if (!v || !b) return;
+    if (!b.angles) b.angles = [];
+    b.angles.push({ t: v, at: Date.now() });
+    b.touched = Date.now();   // adding an angle is real work, not just a look
+    inp.value = "";
+    buzz();
+    save(); renderAngles(); renderWbMeta();
+  }
+  // the scorecard — what this entry has actually had put into it
+  function renderWbMeta() {
+    var b = benchFind();
+    if (!b) return;
+    var m = document.getElementById("wbMeta");
+    var bits = [];
+    var n = entryAngles(b).length;
+    if (n) bits.push(n + (n === 1 ? " angle" : " angles"));
+    if (b.mined) bits.push("mined \u00d7" + b.mined);
+    if (b.touched) bits.push("worked " + shortWhen(b.touched));
+    m.textContent = bits.length ? bits.join("  \u00b7  ")
+      : (workbenchKind === "truth" ? "" : "Working notes live here \u2014 separate from the line.");
+  }
+
   function saveWorkbench() {
     if (!workbenchId) return;
     var b = benchFind();
@@ -1913,6 +2017,10 @@
     b.workshop = pad;
     save();
   }
+  document.getElementById("wbAngleInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); commitAngle(); }
+  });
+  document.getElementById("wbAngleInput").addEventListener("blur", commitAngle);
   document.getElementById("wbBit").oninput = saveWorkbench;
   document.getElementById("wbPad").oninput = saveWorkbench;
   document.getElementById("wbClose").onclick = function () {
@@ -2649,6 +2757,12 @@
   var axeQueue = [], axeIdx = 0;
   var axePaused = false;
   function touchedAt(x) { return x.touched || x.statusAt || x.created || 0; }
+  // The deck should surface what you haven't LOOKED at in a while, which is
+  // not the same as what you wrote longest ago. Keeping an entry or opening
+  // its workbench counts as seeing it, even if you changed nothing — without
+  // that, the same oldest cards greet you every single session.
+  function seenAt(x) { return Math.max(x.seen || 0, touchedAt(x)); }
+  function markSeen(x) { if (x) { x.seen = Date.now(); } }
   function renderAxe() {
     var card = document.getElementById("axeCard");
     var prog = document.getElementById("axeProgress");
@@ -2684,7 +2798,7 @@
     attachLongPressCopy(ap, function () { return cur.item.text; });
     wrap.appendChild(ap);
 
-    var ts = touchedAt(cur.item);
+    var ts = seenAt(cur.item);
     var age = ts ? "untouched " + Math.max(0, Math.floor((Date.now() - ts) / DAY)) + "d" : "no timestamp";
     wrap.appendChild(el("div", "axe-meta", cur.kind + " \u00b7 " + age));
     card.appendChild(wrap);
@@ -2717,7 +2831,7 @@
         var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
       }
     } else {
-      pool.sort(function (a, b) { return touchedAt(a.item) - touchedAt(b.item); });
+      pool.sort(function (a, b) { return seenAt(a.item) - seenAt(b.item); });
     }
     axeQueue = pool;
     axeIdx = 0;
@@ -2838,6 +2952,8 @@
     render();
   };
   document.getElementById("axeKeep").onclick = function () {
+    var cur = axeQueue[axeIdx];
+    if (cur) { markSeen(cur.item); save(); }
     axeIdx++;
     renderAxe();
   };
