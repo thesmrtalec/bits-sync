@@ -484,12 +484,11 @@
   .cap-forms { margin: -4px 0 12px; }
   .notice-ask { font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
     text-transform: uppercase; color: var(--faint); flex: 0 0 auto; }
-  .notice-word { background: transparent; border: none; padding: 1px 3px; cursor: pointer;
-    font-family: var(--serif); font-size: 16.5px; font-style: italic; color: var(--muted);
-    border-bottom: 1.5px dotted var(--rule); border-radius: 3px 3px 0 0; white-space: nowrap; }
-  .notice-word:hover { color: var(--accent); border-bottom-color: var(--accent); }
-  .notice-word.on { background: var(--accent); color: var(--onaccent); border-bottom-color: transparent;
-    border-radius: 3px; padding: 1px 8px; font-weight: 700; }
+  .notice-word { background: var(--tagbg); border: none; border-radius: 3px; cursor: pointer;
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--tagink); padding: 5px 12px; white-space: nowrap; }
+  .notice-word:hover { color: var(--accent); }
+  .notice-word.on { background: var(--accent); color: var(--onaccent); }
   .foot-stack { display: block; }
   .notice-mirror { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px;
     font-family: var(--mono); font-size: 11px; color: var(--muted); margin: 0 0 10px; }
@@ -818,7 +817,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.72";
+  var APP_VERSION = "v1.1.73";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -935,7 +934,7 @@
     state.notesPin = data.notesPin || null;
     // A stored list identical to a superseded default was never a choice —
     // it got written by the old formList() bug. Clear it so defaults apply.
-    var SUPERSEDED = ["setup,punchline,list", "feeling,moment,pattern"];
+    var SUPERSEDED = ["setup,punchline,list", "feeling,moment,pattern,trait"];
     var incoming = (data.forms && data.forms.length) ? data.forms : null;
     if (incoming && SUPERSEDED.indexOf(incoming.join(",")) !== -1) incoming = null;
     state.forms = incoming;
@@ -1054,7 +1053,7 @@
   // point of view, a moment gives it specificity, a pattern gives it the
   // observation. The point isn't filing; it's that tagging as you capture
   // trains what you catch. Independent toggles — a thing is occasionally two.
-  var DEFAULT_FORMS = ["feeling", "moment", "pattern", "trait"];
+  var DEFAULT_FORMS = ["feeling", "moment", "pattern"];
   // Never assign the defaults into state — doing that persisted them, so a
   // saved copy of an older default list would outlive every later change.
   // state.forms is set only when the user actually edits the list.
