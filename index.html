@@ -903,7 +903,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.82";
+  var APP_VERSION = "v1.1.83";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1154,11 +1154,6 @@
     if (!x.forms.length) delete x.forms;
   }
   function hasForm(x, name) { return entryForms(x).indexOf(name) !== -1; }
-  function formGlyph(x) {
-    var f = entryForms(x);
-    if (!f.length) return "";
-    return f.map(function (n) { return n.charAt(0).toUpperCase(); }).join("");
-  }
 
   // A row of independent form toggles. Used at capture and on open cards.
   // Reads as a sentence you finish, not a toolbar you operate — the asking is
@@ -2459,9 +2454,8 @@
         markIfClipped(p);
         var flags = [];
         if ((t.tags || []).length) flags.push("\uD83C\uDFF7");
-        if (entryForms(t).length) flags.push(formGlyph(t));
         if (t.workshop && t.workshop.trim()) flags.push("\u270E");
-        if (t.mined) flags.push("\U0001F94A");
+        if (t.mined) flags.push("\uD83E\uDD4A");
         if (flags.length) card.appendChild(el("div", "bit-flags", flags.join(" ")));
         shell.appendChild(card);
         attachSwipe(shell, card);
@@ -2476,7 +2470,7 @@
       // tags are edited in the workbench only — this footer stays quiet
       var footR = el("div", "foot-right");
       if (t.mined) {
-        var mined = el("span", "foot-mark", "\U0001F94A " + t.mined);
+        var mined = el("span", "foot-mark", "\uD83E\uDD4A " + t.mined);
         mined.title = t.mined + " jab" + (t.mined === 1 ? "" : "s") + " landed as bits";
         footR.appendChild(mined);
       }
