@@ -654,12 +654,12 @@
   <p class="empty" id="empty" style="display:none"></p>
 
   <div class="backup">
-    <button class="notes-tab" id="notesOpen">🗒 notes</button>
-    <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">🗓️</button>
-    <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
-    <button class="notes-tab bone-key" id="shuffleBtn" aria-label="shuffle: deal a stale line" title="Shuffle — deal a stale line">🎲</button>
-    <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: deal an opener" title="Shadowbox — deal an opener">🥊</button>
-    <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🗝️</button>
+    <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: morning writing, deal an opener" title="Shadowbox — morning writing">🙏</button>
+    <button class="notes-tab bone-key" id="shuffleBtn" aria-label="get swinging: deal a line with more in it" title="Get swinging — deal a line with more in it">🪓</button>
+    <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🔪</button>
+    <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🪦</button>
+    <button class="notes-tab" id="notesOpen" aria-label="notes" title="Notes &amp; ideas">📓</button>
+    <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">📅</button>
     <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
     <span class="sync-chip" id="syncStatus"></span>
     <span class="backup-note" id="authWho"></span>
@@ -805,7 +805,7 @@
     <div class="run-stage" id="axeCard"></div>
     <div class="axe-controls" id="axeControls"></div>
     <div class="axe-verdicts" id="axeVerdicts">
-      <button id="axeKill" class="axe-kill">&#129683; axe</button>
+      <button id="axeKill" class="axe-kill">&#128298; axe</button>
       <button id="axeKeep" class="axe-keep">keep</button>
     </div>
   </div>
@@ -921,7 +921,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.85";
+  var APP_VERSION = "v1.1.89";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
