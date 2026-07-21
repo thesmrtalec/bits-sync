@@ -479,6 +479,11 @@
   .flip-bar { display: flex; align-items: center; padding: 10px 0 4px; flex: 0 0 auto; }
   .flip-x { background: transparent; border: none; color: var(--muted); font-size: 26px;
     line-height: 1; padding: 2px 8px; cursor: pointer; }
+  .notes-actions { display: flex; align-items: center; gap: 10px; }
+  .notes-week { background: transparent; border: 1px solid var(--rule); border-radius: 8px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); padding: 7px 12px; cursor: pointer; }
+  .notes-week:hover { border-color: var(--accent); color: var(--accent); }
   .batch-stem-live.is-prompt { font-style: italic; opacity: .85; font-size: 19px; }
   .batch-hint { display: flex; align-items: center; gap: 12px; }
   .batch-reroll { margin-left: auto; background: transparent; border: 1px solid var(--rule);
@@ -872,7 +877,10 @@
       </div>
       <div id="notesBody">
         <textarea class="notes-canvas" id="notesCanvas" placeholder="Free writing, workshop, set lists…"></textarea>
-        <button class="notes-save" id="notesSave">Save note</button>
+        <div class="notes-actions">
+          <button class="notes-save" id="notesSave">Save note</button>
+          <button class="notes-week" id="weekReview">week in review</button>
+        </div>
         <div class="notes-index">
           <div class="notes-index-label">earlier notes</div>
           <div id="notesList"></div>
@@ -913,7 +921,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.84";
+  var APP_VERSION = "v1.1.85";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2252,6 +2260,47 @@
       state.notes.unshift({ id: Date.now().toString(36), text: t, updated: Date.now() });
     }
     save(); resetNoteEditor(); renderNotes();
+  };
+
+  // ——— week in review ———
+  // A blank weekly page is the same bug as a blank capture box. Hand it the
+  // week's evidence and one question, so you're reacting rather than starting
+  // from nothing. Everything here is derived — no new fields to maintain.
+  function weekSummary() {
+    var since = startOfWeek(), out = [];
+    var lines = (state.truths || []).filter(function (t) {
+      return (t.created || 0) >= since;
+    }).length;
+    var bitsMade = (state.bits || []).filter(function (b) {
+      return (b.created || 0) >= since;
+    }).length;
+    var jabs = 0, best = null, bestN = 0;
+    (state.truths || []).concat(state.bits || []).forEach(function (x) {
+      var n = ((x.angles || []).filter(function (a) { return a.at >= since; })).length;
+      jabs += n;
+      if (n > bestN) { bestN = n; best = x; }
+    });
+    var sets = (state.sets || []).length;
+    if (lines) out.push(lines + (lines === 1 ? " line written" : " lines written"));
+    if (jabs) out.push(jabs + (jabs === 1 ? " jab" : " jabs"));
+    if (bitsMade) out.push(bitsMade + (bitsMade === 1 ? " bit made" : " bits made"));
+    var head = out.length ? out.join("  \u00b7  ") : "a quiet week \u2014 nothing logged";
+    var body = "THIS WEEK\n" + head + "\n";
+    if (best) {
+      var t = best.text.replace(/\s+/g, " ").trim();
+      if (t.length > 64) t = t.slice(0, 61) + "\u2026";
+      body += "most worked: \u201c" + t + "\u201d\n";
+    }
+    body += "\nWhat did you learn about comedy this week?\n\n";
+    return body;
+  }
+  document.getElementById("weekReview").onclick = function () {
+    var box = document.getElementById("notesCanvas");
+    var cur = box.value;
+    // never clobber something half-written
+    box.value = weekSummary() + (cur.trim() ? "\n" + cur : "");
+    box.focus();
+    box.setSelectionRange(box.value.length, box.value.length);
   };
 
   // ——— boneyard ———
