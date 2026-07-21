@@ -844,7 +844,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.78";
+  var APP_VERSION = "v1.1.79";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3395,6 +3395,9 @@
   // ——— drag to reorder (set lineup) ———
   // Long-press to lift (so a normal scroll never grabs a row), then drag. The
   // other rows slide to show where it'll land. Release to drop.
+  // set while a reorder finishes, so the tap that ends a drag doesn't also
+  // count as "open this bit"
+  var dragEndedAt = 0;
   function attachRowDrag(row, container, s) {
     var HOLD = 220;       // ms before it lifts
     var timer = null, lifted = false;
@@ -3451,6 +3454,7 @@
       document.body.style.userSelect = "";
       if (!lifted) return;
       lifted = false;
+      dragEndedAt = Date.now();
       rows.forEach(function (r) { r.style.transform = ""; });
       row.classList.remove("dragging");
       if (toIdx !== fromIdx) {
@@ -3528,6 +3532,13 @@
         row.appendChild(grip);
         var p = el("p", null, f.bit.text);
         if (f.buried) { p.style.opacity = ".45"; p.textContent = f.bit.text + "  (buried)"; }
+        p.style.cursor = "pointer";
+        p.title = "Tap to go into the gym";
+        p.onclick = function (e) {
+          e.stopPropagation();
+          if (Date.now() - dragEndedAt < 400) return;
+          openWorkbench(f.bit.id, "bit");
+        };
         row.appendChild(p);
         if (f.bit.react) row.appendChild(el("span", null, f.bit.react));
         if (timeEditing === f.bit.id) {
