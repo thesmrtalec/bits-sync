@@ -473,6 +473,37 @@
     font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink); white-space: pre-wrap; }
   .run-est { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--faint); margin-top: 22px; }
+  .flip-overlay { position: fixed; inset: 0; background: var(--page); z-index: 300;
+    display: none; flex-direction: column; padding: 0 18px 18px; }
+  .flip-overlay.open { display: flex; }
+  .flip-bar { display: flex; align-items: center; padding: 10px 0 4px; flex: 0 0 auto; }
+  .flip-x { background: transparent; border: none; color: var(--muted); font-size: 26px;
+    line-height: 1; padding: 2px 8px; cursor: pointer; }
+  .flip-nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+  .flip-arrow { background: transparent; border: 1px solid var(--rule); border-radius: 8px;
+    color: var(--muted); font-size: 19px; line-height: 1; padding: 3px 14px 5px; cursor: pointer; }
+  .flip-arrow:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .flip-arrow:disabled { opacity: .28; cursor: default; }
+  .flip-pos { font-family: var(--mono); font-size: 10px; color: var(--faint);
+    letter-spacing: .06em; min-width: 46px; text-align: center; }
+  /* the entry gets the room it can, but yields to the keyboard rather than
+     pushing the jab line off screen */
+  .flip-entry { flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-family: var(--serif); font-size: 25px; line-height: 1.4;
+    color: var(--ink); padding: 8px 4px; overflow: hidden; min-height: 84px; }
+  .flip-entry span { display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical;
+    overflow: hidden; }
+  .flip-bottom { flex: 0 0 auto; }
+  .flip-jab-input { width: 100%; box-sizing: border-box; background: var(--card); color: var(--ink);
+    border: 1px solid var(--rule); border-radius: 9px; padding: 12px 14px;
+    font-family: var(--serif); font-size: 16.5px; outline: none; }
+  .flip-jab-input:focus { border-color: var(--accent); }
+  .flip-jabs { max-height: 30vh; overflow-y: auto; margin-top: 8px; }
+  .flip-jab { display: flex; gap: 9px; padding: 7px 2px; border-bottom: 1px solid var(--rule);
+    font-family: var(--serif); font-size: 14.5px; line-height: 1.4; color: var(--muted); }
+  .flip-jab:last-child { border-bottom: none; }
+  .flip-jab-when { flex: 0 0 auto; font-family: var(--mono); font-size: 9px; color: var(--faint);
+    letter-spacing: .06em; padding-top: 3px; width: 40px; }
   .run-tap { position: absolute; top: 56px; bottom: 64px; width: 38%; z-index: 2; }
   .run-tap-l { left: 0; } .run-tap-r { right: 0; }
   .run-bottom { text-align: center; padding: 0 0 18px; position: relative; z-index: 3; }
@@ -757,6 +788,21 @@
       <button id="axeKeep" class="axe-keep">keep</button>
     </div>
   </div>
+  <div class="flip-overlay" id="flipOverlay">
+    <div class="flip-bar">
+      <button class="flip-x" id="flipClose">&times;</button>
+      <div class="flip-nav">
+        <button class="flip-arrow" id="flipPrev" aria-label="previous">‹</button>
+        <span class="flip-pos" id="flipPos"></span>
+        <button class="flip-arrow" id="flipNext" aria-label="next">›</button>
+      </div>
+    </div>
+    <div class="flip-entry" id="flipEntry"></div>
+    <div class="flip-bottom">
+      <input id="flipJab" class="flip-jab-input" placeholder="throw a jab… (enter to keep)" autocomplete="off" />
+      <div class="flip-jabs" id="flipJabs"></div>
+    </div>
+  </div>
   <div class="run-overlay" id="runOverlay">
     <div class="run-top">
       <button class="run-x" id="runClose">&times;</button>
@@ -774,11 +820,6 @@
     <div class="notes-inner">
       <div class="notes-head">
         <h2 id="wbTitle">The Gym</h2>
-        <div class="wb-browse" id="wbBrowse" style="display:none">
-          <button class="wb-arrow" id="wbPrev" aria-label="previous">‹</button>
-          <span class="wb-browse-pos" id="wbBrowsePos"></span>
-          <button class="wb-arrow" id="wbNext" aria-label="next">›</button>
-        </div>
         <button class="notes-close" id="wbClose">done</button>
       </div>
       <div class="wb-label" id="wbBitLabel">the bit</div>
@@ -856,7 +897,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.80";
+  var APP_VERSION = "v1.1.81";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1856,13 +1897,13 @@
     var pool = workbenchKind === "truth" ? (state.truths || []) : state.bits;
     return pool.find(function (x) { return x.id === workbenchId; });
   }
-  function openWorkbench(id, kind, browsing) {
+  function openWorkbench(id, kind) {
     workbenchKind = kind || "bit";
     workbenchId = id;
     var b = benchFind();
     if (!b) { workbenchId = null; workbenchKind = "bit"; return; }
     // opening it counts as seeing it, whether or not you end up changing a word
-    if (!browsing) { markSeen(b); save(); }
+    markSeen(b); save();
     var isTruth = workbenchKind === "truth";
     document.getElementById("wbTitle").textContent = "The Gym";
     document.getElementById("wbBitLabel").textContent = isTruth ? "the stuff" : "the bit";
@@ -1871,7 +1912,6 @@
     document.getElementById("wbAngleInput").value = "";
     renderAngles();
     renderWbMeta();
-    renderBrowseNav();
     renderWbTags();
     // move it across: stuff that's become a bit, or a bit that isn't one yet
     var mv = document.getElementById("wbMove");
@@ -2038,8 +2078,13 @@
     b.workshop = pad;
     save();
   }
-  document.getElementById("wbPrev").onclick = function () { saveWorkbench(); browseGo(-1); };
-  document.getElementById("wbNext").onclick = function () { saveWorkbench(); browseGo(1); };
+  document.getElementById("flipClose").onclick = closeFlip;
+  document.getElementById("flipPrev").onclick = function () { flipGo(-1); };
+  document.getElementById("flipNext").onclick = function () { flipGo(1); };
+  document.getElementById("flipJab").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); commitFlipJab(); }
+  });
+  document.getElementById("flipJab").addEventListener("blur", commitFlipJab);
   document.getElementById("wbAngleInput").addEventListener("keydown", function (e) {
     if (e.key === "Enter") { e.preventDefault(); commitAngle(); }
   });
@@ -2541,22 +2586,59 @@
   // flipping from inside the gym instead of closing and re-rolling.
   var browseDeck = null, browseIdx = 0, browseKind = "bit";
   function clearBrowse() { browseDeck = null; browseIdx = 0; }
-  function browseGo(step) {
+  // ——— the dice view ———
+  // Entry up top, jab line underneath. Browsing on its own leaves nowhere to
+  // put the thought that browsing produces, so the two live on one screen.
+  function flipFind() {
+    if (!browseDeck) return null;
+    var id = browseDeck[browseIdx].id;
+    var pool = browseKind === "truth" ? (state.truths || []) : state.bits;
+    return pool.find(function (x) { return x.id === id; });
+  }
+  function renderFlip() {
+    var e = flipFind();
+    if (!e) return;
+    var host = document.getElementById("flipEntry");
+    host.innerHTML = "";
+    host.appendChild(el("span", null, e.text));
+    document.getElementById("flipPos").textContent =
+      (browseIdx + 1) + " / " + browseDeck.length;
+    document.getElementById("flipPrev").disabled = browseIdx === 0;
+    document.getElementById("flipNext").disabled = browseIdx === browseDeck.length - 1;
+    var list = document.getElementById("flipJabs");
+    list.innerHTML = "";
+    // newest at top
+    entryAngles(e).slice().reverse().forEach(function (a) {
+      var row = el("div", "flip-jab");
+      row.appendChild(el("span", "flip-jab-when", shortWhen(a.at)));
+      row.appendChild(el("span", null, a.t));
+      list.appendChild(row);
+    });
+  }
+  function flipGo(step) {
     if (!browseDeck) return;
     var n = browseIdx + step;
     if (n < 0 || n >= browseDeck.length) return;
     browseIdx = n;
-    openWorkbench(browseDeck[n].id, browseKind, true);
+    document.getElementById("flipJab").value = "";
+    renderFlip();
   }
-  function renderBrowseNav() {
-    var nav = document.getElementById("wbBrowse");
-    if (!nav) return;
-    if (!browseDeck || browseDeck.length < 2) { nav.style.display = "none"; return; }
-    nav.style.display = "flex";
-    document.getElementById("wbBrowsePos").textContent =
-      (browseIdx + 1) + " / " + browseDeck.length;
-    document.getElementById("wbPrev").disabled = browseIdx === 0;
-    document.getElementById("wbNext").disabled = browseIdx === browseDeck.length - 1;
+  function commitFlipJab() {
+    var inp = document.getElementById("flipJab");
+    var v = inp.value.trim();
+    var e = flipFind();
+    if (!v || !e) return;
+    if (!e.angles) e.angles = [];
+    e.angles.push({ t: v, at: Date.now() });
+    e.touched = Date.now();   // a jab is real work — this drops down the axe deck
+    inp.value = "";
+    buzz();
+    save(); renderFlip();
+  }
+  function closeFlip() {
+    clearBrowse();
+    document.getElementById("flipOverlay").classList.remove("open");
+    render();
   }
   function dealShuffle(which) {
     var pool, kind;
@@ -2587,7 +2669,9 @@
       remaining.splice(k, 1); remW.splice(k, 1);
     }
     browseDeck = order; browseIdx = 0; browseKind = kind;
-    openWorkbench(order[0].id, kind, true);
+    document.getElementById("flipJab").value = "";
+    renderFlip();
+    document.getElementById("flipOverlay").classList.add("open");
   }
   // ——— green room wall ———
   var WISDOM = [
