@@ -768,11 +768,11 @@
       </div>
       <div class="wb-label" id="wbBitLabel">the bit</div>
       <textarea class="notes-canvas wb-bit" id="wbBit" placeholder="the line as it stands…"></textarea>
+      <div class="wb-label">the speed bag <span class="wb-count" id="wbAngleCount"></span></div>
+      <input id="wbAngleInput" class="wb-angle-input" placeholder="throw a jab… (enter to keep)" autocomplete="off" />
+      <div class="wb-angles" id="wbAngles"></div>
       <div class="wb-label">working it out</div>
       <textarea class="notes-canvas wb-pad" id="wbPad" placeholder="alternate tags, rewrites, what it’s really about…"></textarea>
-      <div class="wb-label">angles <span class="wb-count" id="wbAngleCount"></span></div>
-      <input id="wbAngleInput" class="wb-angle-input" placeholder="another way in… (enter to keep)" autocomplete="off" />
-      <div class="wb-angles" id="wbAngles"></div>
       <div class="wb-label">tags</div>
       <div class="wb-tags" id="wbTags"></div>
       <div class="wb-foot">
@@ -841,7 +841,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.75";
+  var APP_VERSION = "v1.1.76";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1950,10 +1950,10 @@
       row.appendChild(el("span", "wb-angle-when", shortWhen(a.at)));
       row.appendChild(el("span", "wb-angle-text", a.t));
       if (a.promoted) {
-        row.appendChild(el("span", "wb-angle-act done", "\u2713 bit"));
+        row.appendChild(el("span", "wb-angle-act done", "\u2713 landed"));
       } else {
-        var mk = el("button", "wb-angle-act", "\u2192 bit");
-        mk.title = "Make this a bit";
+        var mk = el("button", "wb-angle-act", "landed");
+        mk.title = "It connected \u2014 make this a bit";
         mk.onclick = function () {
           state.bits.unshift({
             id: Date.now().toString(36),
@@ -1999,8 +1999,11 @@
     var m = document.getElementById("wbMeta");
     var bits = [];
     var n = entryAngles(b).length;
-    if (n) bits.push(n + (n === 1 ? " angle" : " angles"));
-    if (b.mined) bits.push("mined \u00d7" + b.mined);
+    if (n) bits.push(n + (n === 1 ? " jab" : " jabs"));
+    // b.mined is the stored field name; it counts jabs that became bits.
+    // KO is deliberately NOT used here — that word is reserved for material
+    // that destroys in front of an actual room, once the post-mic loop exists.
+    if (b.mined) bits.push(b.mined + " landed");
     if (b.touched) bits.push("worked " + shortWhen(b.touched));
     m.textContent = bits.length ? bits.join("  \u00b7  ")
       : (workbenchKind === "truth" ? "" : "Working notes live here \u2014 separate from the line.");
@@ -2386,7 +2389,7 @@
         if ((t.tags || []).length) flags.push("\uD83C\uDFF7");
         if (entryForms(t).length) flags.push(formGlyph(t));
         if (t.workshop && t.workshop.trim()) flags.push("\u270E");
-        if (t.mined) flags.push("\u26cf");
+        if (t.mined) flags.push("\U0001F94A");
         if (flags.length) card.appendChild(el("div", "bit-flags", flags.join(" ")));
         shell.appendChild(card);
         attachSwipe(shell, card);
@@ -2415,8 +2418,8 @@
 
       var footR = el("div", "foot-right");
       if (t.mined) {
-        var mined = el("span", "foot-mark", "\u26cf " + t.mined);
-        mined.title = "Mined into bits " + t.mined + "\u00d7";
+        var mined = el("span", "foot-mark", "\U0001F94A " + t.mined);
+        mined.title = t.mined + " jab" + (t.mined === 1 ? "" : "s") + " landed as bits";
         footR.appendChild(mined);
       }
       var twb = el("button", "foot-btn", "\uD83D\uDCDD");
