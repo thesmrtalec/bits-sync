@@ -357,6 +357,13 @@
 
   /* ——— workbench ——— */
   .wb-count { color: var(--faint); font-weight: 400; letter-spacing: 0; text-transform: none; }
+  .wb-browse { display: flex; align-items: center; gap: 4px; margin-left: auto; margin-right: 10px; }
+  .wb-arrow { background: transparent; border: 1px solid var(--rule); border-radius: 7px;
+    color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 10px 4px; cursor: pointer; }
+  .wb-arrow:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .wb-arrow:disabled { opacity: .3; cursor: default; }
+  .wb-browse-pos { font-family: var(--mono); font-size: 9.5px; color: var(--faint);
+    letter-spacing: .06em; min-width: 44px; text-align: center; }
   .wb-angle-input { width: 100%; box-sizing: border-box; background: var(--card); color: var(--ink);
     border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; font-family: var(--serif);
     font-size: 16px; outline: none; margin-bottom: 10px; }
@@ -767,6 +774,11 @@
     <div class="notes-inner">
       <div class="notes-head">
         <h2 id="wbTitle">The Gym</h2>
+        <div class="wb-browse" id="wbBrowse" style="display:none">
+          <button class="wb-arrow" id="wbPrev" aria-label="previous">‹</button>
+          <span class="wb-browse-pos" id="wbBrowsePos"></span>
+          <button class="wb-arrow" id="wbNext" aria-label="next">›</button>
+        </div>
         <button class="notes-close" id="wbClose">done</button>
       </div>
       <div class="wb-label" id="wbBitLabel">the bit</div>
@@ -844,7 +856,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.79";
+  var APP_VERSION = "v1.1.80";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1844,13 +1856,13 @@
     var pool = workbenchKind === "truth" ? (state.truths || []) : state.bits;
     return pool.find(function (x) { return x.id === workbenchId; });
   }
-  function openWorkbench(id, kind) {
+  function openWorkbench(id, kind, browsing) {
     workbenchKind = kind || "bit";
     workbenchId = id;
     var b = benchFind();
     if (!b) { workbenchId = null; workbenchKind = "bit"; return; }
     // opening it counts as seeing it, whether or not you end up changing a word
-    markSeen(b); save();
+    if (!browsing) { markSeen(b); save(); }
     var isTruth = workbenchKind === "truth";
     document.getElementById("wbTitle").textContent = "The Gym";
     document.getElementById("wbBitLabel").textContent = isTruth ? "the stuff" : "the bit";
@@ -1859,6 +1871,7 @@
     document.getElementById("wbAngleInput").value = "";
     renderAngles();
     renderWbMeta();
+    renderBrowseNav();
     renderWbTags();
     // move it across: stuff that's become a bit, or a bit that isn't one yet
     var mv = document.getElementById("wbMove");
@@ -2025,6 +2038,8 @@
     b.workshop = pad;
     save();
   }
+  document.getElementById("wbPrev").onclick = function () { saveWorkbench(); browseGo(-1); };
+  document.getElementById("wbNext").onclick = function () { saveWorkbench(); browseGo(1); };
   document.getElementById("wbAngleInput").addEventListener("keydown", function (e) {
     if (e.key === "Enter") { e.preventDefault(); commitAngle(); }
   });
@@ -2033,6 +2048,7 @@
   document.getElementById("wbPad").oninput = saveWorkbench;
   document.getElementById("wbClose").onclick = function () {
     saveWorkbench();
+    clearBrowse();
     workbenchId = null;
     workbenchKind = "bit";
     wbTagEditing = false;
@@ -2521,6 +2537,27 @@
     return names.map(function (t) { return { tag: t, count: counts[t] }; });
   }
   // ——— shuffle: pick a pool, get an age-weighted deal ———
+  // The roll builds a whole deck rather than one card, so you can keep
+  // flipping from inside the gym instead of closing and re-rolling.
+  var browseDeck = null, browseIdx = 0, browseKind = "bit";
+  function clearBrowse() { browseDeck = null; browseIdx = 0; }
+  function browseGo(step) {
+    if (!browseDeck) return;
+    var n = browseIdx + step;
+    if (n < 0 || n >= browseDeck.length) return;
+    browseIdx = n;
+    openWorkbench(browseDeck[n].id, browseKind, true);
+  }
+  function renderBrowseNav() {
+    var nav = document.getElementById("wbBrowse");
+    if (!nav) return;
+    if (!browseDeck || browseDeck.length < 2) { nav.style.display = "none"; return; }
+    nav.style.display = "flex";
+    document.getElementById("wbBrowsePos").textContent =
+      (browseIdx + 1) + " / " + browseDeck.length;
+    document.getElementById("wbPrev").disabled = browseIdx === 0;
+    document.getElementById("wbNext").disabled = browseIdx === browseDeck.length - 1;
+  }
   function dealShuffle(which) {
     var pool, kind;
     if (which === "pool") {
@@ -2535,17 +2572,22 @@
     var weights = pool.map(function (x) {
       return 1 + Math.floor((now - (x.at || now)) / DAY);
     });
-    var total = 0;
-    weights.forEach(function (w) { total += w; });
-    var r = Math.random() * total;
-    var pick = pool[pool.length - 1];
-    for (var i = 0; i < pool.length; i++) {
-      r -= weights[i];
-      if (r <= 0) { pick = pool[i]; break; }
+    // draw the whole pool in weighted order: older material floats up, but
+    // nothing is locked out, so a long browse still reaches everything
+    var remaining = pool.slice(), remW = weights.slice(), order = [];
+    while (remaining.length) {
+      var total = 0;
+      remW.forEach(function (w) { total += w; });
+      var r = Math.random() * total, k = remaining.length - 1;
+      for (var i = 0; i < remaining.length; i++) {
+        r -= remW[i];
+        if (r <= 0) { k = i; break; }
+      }
+      order.push(remaining[k]);
+      remaining.splice(k, 1); remW.splice(k, 1);
     }
-    openWorkbench(pick.id, kind);
-    var age = Math.floor((now - (pick.at || now)) / DAY);
-    if (age > 0) document.getElementById("wbMeta").textContent = "untouched " + age + "d";
+    browseDeck = order; browseIdx = 0; browseKind = kind;
+    openWorkbench(order[0].id, kind, true);
   }
   // ——— green room wall ———
   var WISDOM = [
