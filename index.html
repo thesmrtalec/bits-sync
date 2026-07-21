@@ -218,6 +218,9 @@
   .foot-mark { font-family: var(--mono); font-size: 11px; color: var(--faint); }
   .foot-btn { background: transparent; border: 1px solid var(--rule); border-radius: 7px;
     padding: 3px 8px; font-size: 13px; line-height: 1.4; cursor: pointer; }
+  .foot-btn.bench-btn { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted); padding: 5px 10px; }
+  .foot-btn.bench-btn:hover { border-color: var(--accent); color: var(--accent); }
   .truth-noted { font-size: 11px; color: var(--faint); line-height: 1; }
   .truth-more { background: transparent; border: none; color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 5px; cursor: pointer; }
   .tag-cloud { display: flex; flex-wrap: wrap; gap: 9px; padding-top: 6px; }
@@ -666,7 +669,7 @@
       <div class="tour-rule"></div>
       <div class="tour-stage"><span class="tour-dot alt">capture</span><p>Write it down. You won’t remember it in 30 seconds. <b>WRITE IT DOWN.</b> The tab you’re on says which drawer it lands in — stuff or bits.</p></div>
       <div class="tour-stage"><span class="tour-dot alt">tags</span><p>Casually organize your mess. Buzzwords of your choice — topic, voice, theme, intended audience. Tap one to filter; the ones you use most rise to the top.</p></div>
-      <div class="tour-stage"><span class="tour-dot alt">workbench</span><p>Tap a bit to open its workbench — the line up top, a scratch pad below for rewrites and angles. Each bit keeps its own.</p></div>
+      <div class="tour-stage"><span class="tour-dot alt">the gym</span><p>Tap a bit to take it into the gym — the line up top, the speed bag for jabs, a scratch pad below. Each bit keeps its own.</p></div>
       <div class="tour-stage"><span class="tour-dot alt">notes</span><p>Endless blank space to fuel your existential crisis. Exercises, brain-dumps, half-thoughts — the stuff that isn’t a bit.</p></div>
       <div class="tour-stage"><span class="tour-dot alt">vault</span><p>Dead bits in your basement. Think there’s still meat on the bone? Take a look. Ready to say goodbye? Delete for good from here.</p></div>
       <button class="tour-go" id="tourGo">Let's go</button>
@@ -763,7 +766,7 @@
   <div class="notes-overlay" id="workbenchOverlay">
     <div class="notes-inner">
       <div class="notes-head">
-        <h2 id="wbTitle">Workbench</h2>
+        <h2 id="wbTitle">The Gym</h2>
         <button class="notes-close" id="wbClose">done</button>
       </div>
       <div class="wb-label" id="wbBitLabel">the bit</div>
@@ -841,7 +844,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.76";
+  var APP_VERSION = "v1.1.78";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1101,9 +1104,11 @@
   // A row of independent form toggles. Used at capture and on open cards.
   // Reads as a sentence you finish, not a toolbar you operate — the asking is
   // the point. Set words get stamped rather than outlined.
-  function buildFormRow(get, set, onChange) {
+  function buildFormRow(get, set, onChange, lead) {
     var row = el("div", "form-row");
-    row.appendChild(el("span", "notice-ask", "I noticed a"));
+    // The capture row has space for the sentence; on a card it costs a line,
+    // so the words carry the meaning alone.
+    if (lead !== false) row.appendChild(el("span", "notice-ask", "I noticed a"));
     formList().forEach(function (name) {
       var on = get(name);
       var b = el("button", "notice-word" + (on ? " on" : ""), name);
@@ -1493,9 +1498,9 @@
         save(); render();
       };
       footR.appendChild(rBtn);
-      var wbBtn = el("button", "foot-btn", "\uD83D\uDCDD");
-      wbBtn.title = "Open the workbench";
-      wbBtn.setAttribute("aria-label", "workbench");
+      var wbBtn = el("button", "foot-btn bench-btn", "gym");
+      wbBtn.title = "Into the gym";
+      wbBtn.setAttribute("aria-label", "gym");
       wbBtn.onclick = function (e) { e.stopPropagation(); openWorkbench(b.id); };
       footR.appendChild(wbBtn);
       foot.appendChild(footR);
@@ -1847,7 +1852,7 @@
     // opening it counts as seeing it, whether or not you end up changing a word
     markSeen(b); save();
     var isTruth = workbenchKind === "truth";
-    document.getElementById("wbTitle").textContent = "Workbench";
+    document.getElementById("wbTitle").textContent = "The Gym";
     document.getElementById("wbBitLabel").textContent = isTruth ? "the stuff" : "the bit";
     document.getElementById("wbBit").value = b.text;
     document.getElementById("wbPad").value = b.workshop || "";
@@ -2401,30 +2406,16 @@
       // (kill + promote now live on the swipe, so they're off the card.)
       var foot = el("div", "card-foot");
 
-      var tagLine = el("button", "tag-line");
-      if (tagEditing === t.id) {
-        var tp = el("div", "tag-line-edit");
-        buildTagPicker(tp, t, function () { tagEditing = null; render(); });
-        foot.appendChild(tp);
-      } else {
-        tagLine.textContent = (t.tags && t.tags.length)
-          ? t.tags.join("  \u00b7  ")
-          : "+ tag";
-        if (!(t.tags && t.tags.length)) tagLine.classList.add("empty");
-        tagLine.title = "Tap to edit tags";
-        tagLine.onclick = function (e) { e.stopPropagation(); tagEditing = t.id; render(); };
-        foot.appendChild(tagLine);
-      }
-
+      // tags are edited in the workbench only — this footer stays quiet
       var footR = el("div", "foot-right");
       if (t.mined) {
         var mined = el("span", "foot-mark", "\U0001F94A " + t.mined);
         mined.title = t.mined + " jab" + (t.mined === 1 ? "" : "s") + " landed as bits";
         footR.appendChild(mined);
       }
-      var twb = el("button", "foot-btn", "\uD83D\uDCDD");
-      twb.setAttribute("aria-label", "workbench");
-      twb.title = "Open the workbench";
+      var twb = el("button", "foot-btn bench-btn", "gym");
+      twb.setAttribute("aria-label", "gym");
+      twb.title = "Into the gym";
       twb.onclick = function (e) { e.stopPropagation(); openWorkbench(t.id, "truth"); };
       footR.appendChild(twb);
       foot.appendChild(footR);
@@ -2433,7 +2424,8 @@
       card.appendChild(buildFormRow(
         function (n) { return hasForm(t, n); },
         function (n) { toggleForm(t, n); t.touched = Date.now(); save(); },
-        function () { render(); }
+        function () { render(); },
+        false
       ));
       shell.appendChild(card);
       attachSwipe(shell, card);
@@ -2790,7 +2782,7 @@
 
     var wrap = el("div", "run-card");
     var ap = el("div", "axe-bit", cur.item.text);
-    ap.title = "Tap to open the workbench";
+    ap.title = "Tap to go into the gym";
     ap.onclick = function () {
       // stay in the queue — the bench opens over axe mode, and closing it
       // drops you right back where you were instead of losing your place
@@ -3100,7 +3092,7 @@
       var card = el("div", "bone-card search-hit swipe-face");
       var p = el("p", null, it.text);
       p.style.cursor = "pointer";
-      p.title = "Tap to open the workbench";
+      p.title = "Tap to go into the gym";
       p.onclick = function () {
         if (swipeOpenCard === card) { closeSwipe(); return; }
         openWorkbench(it.id, isStuff ? "truth" : "bit");
@@ -3280,7 +3272,7 @@
     var bitEl = el("div", "run-bit", b.text);
     // Tap the bit to work it — the clock pauses while you're in the bench, so a
     // rewrite mid-rehearsal doesn't poison the timing you're measuring.
-    bitEl.title = "Tap to open the workbench (pauses the clock)";
+    bitEl.title = "Tap to go into the gym (pauses the clock)";
     bitEl.onclick = function () { runPauseForBench(b.id); };
     card2.appendChild(bitEl);
     if (b.est) card2.appendChild(el("div", "run-est", "you called it " + fmtSec(b.est)));
