@@ -655,8 +655,8 @@
 
   <div class="backup">
     <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: morning writing, deal an opener" title="Shadowbox — morning writing">🙏</button>
-    <button class="notes-tab bone-key" id="shuffleBtn" aria-label="get swinging: deal a line with more in it" title="Get swinging — deal a line with more in it">🪓</button>
-    <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🔪</button>
+    <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it: deal a line with more in it" title="Work it — deal a line with more in it">🔨</button>
+    <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🪦</button>
     <button class="notes-tab" id="notesOpen" aria-label="notes" title="Notes &amp; ideas">📓</button>
     <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">📅</button>
@@ -805,7 +805,7 @@
     <div class="run-stage" id="axeCard"></div>
     <div class="axe-controls" id="axeControls"></div>
     <div class="axe-verdicts" id="axeVerdicts">
-      <button id="axeKill" class="axe-kill">&#128298; axe</button>
+      <button id="axeKill" class="axe-kill">&#129683; axe</button>
       <button id="axeKeep" class="axe-keep">keep</button>
     </div>
   </div>
@@ -921,12 +921,12 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.89";
+  var APP_VERSION = "v1.1.91";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
   })();
-  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [], theme: "ember", notesPin: null, forms: null };
+  var state = { bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [], theme: "ember", notesPin: null, forms: null, sb: null };
   var stageFilter = "home";
   var tagEditing = null;
   var pendingRemote = null;
@@ -1032,6 +1032,7 @@
     state.quota = data.quota || 10;
     state.mics = data.mics || [];
     state.riffs = data.riffs || [];
+    state.sb = data.sb || null;
     state.planned = data.planned || [];
     state.notes = data.notes || [];
     state.theme = data.theme || "ember";
@@ -3067,7 +3068,21 @@
   var REROLLS = 3;        // rerolls before it locks
   var EARN_EVERY = 3;     // lines written to buy another
   var batchStem = null, batchKind = "stem", batchWritten = [];
-  var rerollsLeft = REROLLS, earnedAt = 0;
+
+  // The allowance is per DAY and lives in state, not in the overlay. Closing
+  // and reopening used to hand back a full budget, which made the door itself
+  // the way around the limit.
+  function sbDayKey() {
+    var d = new Date();
+    return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+  }
+  function sbToday() {
+    var k = sbDayKey();
+    if (!state.sb || state.sb.day !== k) {
+      state.sb = { day: k, left: REROLLS, since: 0, cur: null };
+    }
+    return state.sb;
+  }
 
   function dealOpener() {
     var pick = OPENERS[Math.floor(Math.random() * OPENERS.length)];
@@ -3077,6 +3092,13 @@
         pick = OPENERS[Math.floor(Math.random() * OPENERS.length)];
       }
     }
+    sbToday().cur = { k: pick.k, t: pick.t };
+    save();
+    showOpener(pick);
+  }
+  // painting the opener is separate from dealing one, so reopening can put
+  // the same one back without spending anything
+  function showOpener(pick) {
     batchStem = pick.t; batchKind = pick.k;
     var live = document.getElementById("batchStemLive");
     live.textContent = pick.k === "stem" ? pick.t + "\u2026" : pick.t;
@@ -3088,18 +3110,17 @@
     setTimeout(function () { inp.focus(); }, 50);
   }
   function renderReroll() {
+    var sb = sbToday();
     var btn = document.getElementById("batchReroll");
     var hint = document.getElementById("batchHintText");
-    if (rerollsLeft > 0) {
+    if (sb.left > 0) {
       btn.disabled = false;
-      btn.textContent = "another \u21bb  " + rerollsLeft;
+      btn.textContent = "another \u21bb  " + sb.left;
       hint.textContent = "enter to keep going";
     } else {
       btn.disabled = true;
       btn.textContent = "another \u21bb";
-      var since = batchWritten.length - earnedAt;
-      var need = EARN_EVERY - (since % EARN_EVERY);
-      hint.textContent = "write " + need + " more to earn another";
+      hint.textContent = "write " + (EARN_EVERY - sb.since) + " more to earn another";
     }
   }
   function commitBatchLine() {
@@ -3117,10 +3138,11 @@
     renderBatchRecent();
     updateBatchCount();
     // the lock isn't a punishment — reps buy the reroll back
-    if (rerollsLeft < REROLLS &&
-        (batchWritten.length - earnedAt) >= EARN_EVERY) {
-      earnedAt = batchWritten.length;
-      rerollsLeft++;
+    var sb = sbToday();
+    if (sb.left < REROLLS) {
+      sb.since++;
+      if (sb.since >= EARN_EVERY) { sb.since = 0; sb.left++; }
+      save();
     }
     renderReroll();
   }
@@ -3138,14 +3160,18 @@
   }
   document.getElementById("shadowBtn").onclick = function () {
     batchStem = null; batchWritten = [];
-    rerollsLeft = REROLLS; earnedAt = 0;
+    var sb = sbToday();     // rolls over on a new day, otherwise picks up where you left off
     updateBatchCount();
     document.getElementById("batchOverlay").classList.add("open");
-    dealOpener();
+    // the day's first open deals free; after that you get back what you left
+    if (sb.cur) { showOpener(sb.cur); renderReroll(); }
+    else dealOpener();
   };
   document.getElementById("batchReroll").onclick = function () {
-    if (rerollsLeft <= 0) return;
-    rerollsLeft--;
+    var sb = sbToday();
+    if (sb.left <= 0) return;
+    sb.left--;
+    save();
     dealOpener();
   };
   document.getElementById("batchInput").addEventListener("keydown", function (e) {
