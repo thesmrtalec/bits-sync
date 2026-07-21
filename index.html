@@ -479,6 +479,13 @@
   .flip-bar { display: flex; align-items: center; padding: 10px 0 4px; flex: 0 0 auto; }
   .flip-x { background: transparent; border: none; color: var(--muted); font-size: 26px;
     line-height: 1; padding: 2px 8px; cursor: pointer; }
+  .batch-stem-live.is-prompt { font-style: italic; opacity: .85; font-size: 19px; }
+  .batch-hint { display: flex; align-items: center; gap: 12px; }
+  .batch-reroll { margin-left: auto; background: transparent; border: 1px solid var(--rule);
+    border-radius: 7px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); padding: 5px 10px; cursor: pointer; }
+  .batch-reroll:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .batch-reroll:disabled { opacity: .3; cursor: default; }
   .flip-pos { font-family: var(--mono); font-size: 10px; color: var(--faint);
     letter-spacing: .06em; margin-left: auto; }
   /* the arrows are rails either side of the entry: big targets, quiet ink.
@@ -628,7 +635,7 @@
   </div>
   <div id="searchOut"></div>
 
-  <span class="cap-dest" id="capDest">capture → stuff</span><button class="batch-open" id="batchBtn">batch</button>
+  <span class="cap-dest" id="capDest">capture → stuff</span>
   <div class="capture">
     <textarea id="draft" rows="7"></textarea>
     <button class="add-btn" id="addBtn">Add</button>
@@ -646,6 +653,7 @@
     <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">🗓️</button>
     <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
     <button class="notes-tab bone-key" id="shuffleBtn" aria-label="shuffle: deal a stale line" title="Shuffle — deal a stale line">🎲</button>
+    <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: deal an opener" title="Shadowbox — deal an opener">🥊</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🗝️</button>
     <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
     <span class="sync-chip" id="syncStatus"></span>
@@ -772,11 +780,13 @@
       <button class="batch-done" id="batchDone">done</button>
     </div>
     <div class="batch-mid">
-      <div class="batch-stems" id="batchStems"></div>
-      <div class="batch-writer" id="batchWriter" style="display:none">
+      <div class="batch-writer" id="batchWriter">
         <div class="batch-stem-live" id="batchStemLive"></div>
         <textarea id="batchInput" rows="2" placeholder="…"></textarea>
-        <div class="batch-hint">enter to keep going</div>
+        <div class="batch-hint">
+          <span id="batchHintText">enter to keep going</span>
+          <button class="batch-reroll" id="batchReroll">another ↻</button>
+        </div>
         <div class="batch-recent" id="batchRecent"></div>
       </div>
     </div>
@@ -903,7 +913,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.83";
+  var APP_VERSION = "v1.1.84";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2984,45 +2994,71 @@
   // The thing that actually produced half his material: sit down with one
   // stem and fire off I-statements until the voice shows up. No tagging, no
   // ceremony, no leaving the keyboard between entries.
-  var STEMS = [
-    "I", "I hate", "I love", "I'm embarrassed that", "I pretend",
-    "I used to", "I secretly", "I'm the guy who", "Nobody talks about"
+  // ——— shadowbox ———
+  // No menu. A picker at 6am is a decision, and decisions are where mornings
+  // die — so it deals one opener and the cursor is already waiting.
+  //
+  // Two kinds, told apart by what they do rather than by you picking:
+  //   stem   — glued to the front of every line you type
+  //   prompt — a question above an empty box; your words stand alone
+  var OPENERS = [
+    { k: "stem", t: "I" },
+    { k: "stem", t: "I hate" },
+    { k: "stem", t: "I love" },
+    { k: "stem", t: "I'm embarrassed that" },
+    { k: "stem", t: "I pretend" },
+    { k: "stem", t: "I used to" },
+    { k: "stem", t: "I secretly" },
+    { k: "stem", t: "I'm the guy who" },
+    { k: "stem", t: "Nobody talks about" },
+    { k: "prompt", t: "What did you believe at a specific age?" },
+    { k: "prompt", t: "Where do people behave worse than they admit?" },
+    { k: "prompt", t: "What are you good at that doesn\u2019t count as being smart?" }
   ];
-  var batchStem = null, batchWritten = [];
+  var REROLLS = 3;        // rerolls before it locks
+  var EARN_EVERY = 3;     // lines written to buy another
+  var batchStem = null, batchKind = "stem", batchWritten = [];
+  var rerollsLeft = REROLLS, earnedAt = 0;
 
-  function renderBatchStems() {
-    var host = document.getElementById("batchStems");
-    host.innerHTML = "";
-    host.appendChild(el("p", "batch-ask", "Pick a stem and don\u2019t stop to think."));
-    STEMS.forEach(function (stem) {
-      var b = el("button", "batch-stem", stem + "\u2026");
-      b.onclick = function () { startBatch(stem); };
-      host.appendChild(b);
-    });
-    var custom = el("button", "batch-stem batch-stem-custom", "something else\u2026");
-    custom.onclick = function () {
-      var v = prompt("Your stem — the words every line starts with:", "I");
-      if (v === null) return;
-      v = v.trim();
-      if (v) startBatch(v);
-    };
-    host.appendChild(custom);
-  }
-  function startBatch(stem) {
-    batchStem = stem;
-    document.getElementById("batchStems").style.display = "none";
-    document.getElementById("batchWriter").style.display = "";
-    document.getElementById("batchStemLive").textContent = stem + "\u2026";
+  function dealOpener() {
+    var pick = OPENERS[Math.floor(Math.random() * OPENERS.length)];
+    if (batchStem && OPENERS.length > 1) {   // never hand back the one just rejected
+      var guard = 0;
+      while (pick.t === batchStem && guard++ < 20) {
+        pick = OPENERS[Math.floor(Math.random() * OPENERS.length)];
+      }
+    }
+    batchStem = pick.t; batchKind = pick.k;
+    var live = document.getElementById("batchStemLive");
+    live.textContent = pick.k === "stem" ? pick.t + "\u2026" : pick.t;
+    live.className = "batch-stem-live" + (pick.k === "prompt" ? " is-prompt" : "");
     var inp = document.getElementById("batchInput");
     inp.value = "";
+    inp.placeholder = pick.k === "stem" ? "\u2026" : "answer it";
+    renderReroll();
     setTimeout(function () { inp.focus(); }, 50);
-    renderBatchRecent();
+  }
+  function renderReroll() {
+    var btn = document.getElementById("batchReroll");
+    var hint = document.getElementById("batchHintText");
+    if (rerollsLeft > 0) {
+      btn.disabled = false;
+      btn.textContent = "another \u21bb  " + rerollsLeft;
+      hint.textContent = "enter to keep going";
+    } else {
+      btn.disabled = true;
+      btn.textContent = "another \u21bb";
+      var since = batchWritten.length - earnedAt;
+      var need = EARN_EVERY - (since % EARN_EVERY);
+      hint.textContent = "write " + need + " more to earn another";
+    }
   }
   function commitBatchLine() {
     var inp = document.getElementById("batchInput");
     var v = inp.value.trim();
     if (!v) return;
-    var text = batchStem ? (batchStem + " " + v) : v;
+    // a prompt is a question, not a prefix — only stems glue on
+    var text = (batchStem && batchKind === "stem") ? (batchStem + " " + v) : v;
     if (!state.truths) state.truths = [];
     state.truths.unshift({ id: Date.now().toString(36), text: text, created: Date.now() });
     batchWritten.push(text);
@@ -3031,6 +3067,13 @@
     save();
     renderBatchRecent();
     updateBatchCount();
+    // the lock isn't a punishment — reps buy the reroll back
+    if (rerollsLeft < REROLLS &&
+        (batchWritten.length - earnedAt) >= EARN_EVERY) {
+      earnedAt = batchWritten.length;
+      rerollsLeft++;
+    }
+    renderReroll();
   }
   function renderBatchRecent() {
     var host = document.getElementById("batchRecent");
@@ -3044,13 +3087,17 @@
     document.getElementById("batchCount").textContent =
       batchWritten.length ? batchWritten.length + (batchWritten.length === 1 ? " down" : " down") : "";
   }
-  document.getElementById("batchBtn").onclick = function () {
+  document.getElementById("shadowBtn").onclick = function () {
     batchStem = null; batchWritten = [];
-    document.getElementById("batchStems").style.display = "";
-    document.getElementById("batchWriter").style.display = "none";
-    renderBatchStems();
+    rerollsLeft = REROLLS; earnedAt = 0;
     updateBatchCount();
     document.getElementById("batchOverlay").classList.add("open");
+    dealOpener();
+  };
+  document.getElementById("batchReroll").onclick = function () {
+    if (rerollsLeft <= 0) return;
+    rerollsLeft--;
+    dealOpener();
   };
   document.getElementById("batchInput").addEventListener("keydown", function (e) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitBatchLine(); }
