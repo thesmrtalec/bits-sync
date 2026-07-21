@@ -479,18 +479,24 @@
   .flip-bar { display: flex; align-items: center; padding: 10px 0 4px; flex: 0 0 auto; }
   .flip-x { background: transparent; border: none; color: var(--muted); font-size: 26px;
     line-height: 1; padding: 2px 8px; cursor: pointer; }
-  .flip-nav { display: flex; align-items: center; gap: 6px; margin-left: auto; }
-  .flip-arrow { background: transparent; border: 1px solid var(--rule); border-radius: 8px;
-    color: var(--muted); font-size: 19px; line-height: 1; padding: 3px 14px 5px; cursor: pointer; }
-  .flip-arrow:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-  .flip-arrow:disabled { opacity: .28; cursor: default; }
   .flip-pos { font-family: var(--mono); font-size: 10px; color: var(--faint);
-    letter-spacing: .06em; min-width: 46px; text-align: center; }
+    letter-spacing: .06em; margin-left: auto; }
+  /* the arrows are rails either side of the entry: big targets, quiet ink.
+     Flex rather than absolute so the text can never run underneath them. */
+  .flip-body { flex: 1 1 auto; display: flex; align-items: stretch; min-height: 0; }
+  .flip-arrow { flex: 0 0 auto; background: transparent; border: none; color: var(--faint);
+    font-size: 42px; line-height: 1; padding: 0 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; }
+  .flip-arrow:hover:not(:disabled) { color: var(--accent); }
+  .flip-arrow:active:not(:disabled) { color: var(--accent); }
+  .flip-arrow:disabled { opacity: .18; cursor: default; }
+  @media (min-width: 700px) { .flip-arrow { font-size: 56px; padding: 0 30px; } }
   /* the entry gets the room it can, but yields to the keyboard rather than
      pushing the jab line off screen */
   .flip-entry { flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
     text-align: center; font-family: var(--serif); font-size: 25px; line-height: 1.4;
-    color: var(--ink); padding: 8px 4px; overflow: hidden; min-height: 84px; }
+    color: var(--ink); padding: 8px 4px; overflow: hidden; min-width: 0; }
+  @media (min-width: 700px) { .flip-entry { font-size: 30px; } }
   .flip-entry span { display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical;
     overflow: hidden; }
   .flip-bottom { flex: 0 0 auto; }
@@ -791,13 +797,13 @@
   <div class="flip-overlay" id="flipOverlay">
     <div class="flip-bar">
       <button class="flip-x" id="flipClose">&times;</button>
-      <div class="flip-nav">
-        <button class="flip-arrow" id="flipPrev" aria-label="previous">‹</button>
-        <span class="flip-pos" id="flipPos"></span>
-        <button class="flip-arrow" id="flipNext" aria-label="next">›</button>
-      </div>
+      <span class="flip-pos" id="flipPos"></span>
     </div>
-    <div class="flip-entry" id="flipEntry"></div>
+    <div class="flip-body">
+      <button class="flip-arrow" id="flipPrev" aria-label="previous">‹</button>
+      <div class="flip-entry" id="flipEntry"></div>
+      <button class="flip-arrow" id="flipNext" aria-label="next">›</button>
+    </div>
     <div class="flip-bottom">
       <input id="flipJab" class="flip-jab-input" placeholder="throw a jab… (enter to keep)" autocomplete="off" />
       <div class="flip-jabs" id="flipJabs"></div>
@@ -897,7 +903,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.81";
+  var APP_VERSION = "v1.1.82";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
