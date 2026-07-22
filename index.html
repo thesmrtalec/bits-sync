@@ -555,6 +555,9 @@
   /* axe mode — same full-screen treatment as the runner, but it keeps its
      verdict buttons: this one's a decision, not a pass-through. */
   .axe-overlay .run-stage { align-items: center; }
+  .inline-edit { width: 100%; box-sizing: border-box; background: transparent; border: none;
+    outline: none; resize: none; text-align: center; color: inherit; font: inherit;
+    padding: 0; margin: 0; overflow: hidden; }
   .axe-bit { font-family: 'Caveat', 'Bradley Hand', cursive; font-weight: 500;
     font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink);
     white-space: pre-wrap; cursor: pointer; }
@@ -921,7 +924,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.93";
+  var APP_VERSION = "v1.1.94";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2944,6 +2947,38 @@
   // that, the same oldest cards greet you every single session.
   function seenAt(x) { return Math.max(x.seen || 0, touchedAt(x)); }
   function markSeen(x) { if (x) { x.seen = Date.now(); } }
+  // Turns a centered line into edit-in-place: tap to edit, enter or blur saves
+  // to the record itself. Shared by axe mode and set practice.
+  function focusEditable(el0, findItem, cls, onFocus, onBlur) {
+    el0.title = "Tap to edit";
+    el0.style.cursor = "text";
+    el0.onclick = function () {
+      var item = findItem();
+      if (!item) return;
+      var ta = document.createElement("textarea");
+      ta.className = cls + " inline-edit";
+      ta.value = item.text;
+      el0.replaceWith(ta);
+      var fit = function () { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
+      ta.addEventListener("input", fit);
+      if (onFocus) onFocus();
+      var done = function () {
+        var v = ta.value.trim();
+        if (v && v !== item.text) { item.text = v; item.touched = Date.now(); save(); }
+        if (onBlur) onBlur();
+        else render();
+      };
+      ta.addEventListener("blur", done);
+      ta.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ta.blur(); }
+        if (e.key === "Escape") { ta.value = item.text; ta.blur(); }
+      });
+      ta.focus();
+      var end = ta.value.length; ta.setSelectionRange(end, end);
+      fit();
+    };
+  }
+
   function renderAxe() {
     var card = document.getElementById("axeCard");
     var prog = document.getElementById("axeProgress");
@@ -2968,14 +3003,7 @@
 
     var wrap = el("div", "run-card");
     var ap = el("div", "axe-bit", cur.item.text);
-    ap.title = "Tap to go into the gym";
-    ap.onclick = function () {
-      // stay in the queue — the bench opens over axe mode, and closing it
-      // drops you right back where you were instead of losing your place
-      axePaused = true;
-      document.getElementById("axeOverlay").classList.add("dimmed");
-      openWorkbench(cur.item.id, cur.kind === "stuff" ? "truth" : "bit");
-    };
+    focusEditable(ap, function () { return cur.item; }, "axe-bit");
     attachLongPressCopy(ap, function () { return cur.item.text; });
     wrap.appendChild(ap);
 
@@ -3428,6 +3456,23 @@
     document.getElementById("runOverlay").classList.remove("open");
   }
 
+  // Inline editing pauses the clock while the field is focused, then shifts the
+  // start forward by the gap so rewriting time isn't counted as delivery time.
+  var runClockPaused = null;
+  function runPauseClock() {
+    if (runState.done || runClockPaused) return;
+    runClockPaused = Date.now();
+    if (runState.tick) { clearInterval(runState.tick); runState.tick = null; }
+  }
+  function runResumeClock() {
+    if (!runClockPaused) return;
+    var gap = Date.now() - runClockPaused;
+    runState.startedAt += gap;
+    runState.setStartedAt += gap;
+    runClockPaused = null;
+    if (!runState.tick) runState.tick = setInterval(runTick, 250);
+  }
+
   // Editing mid-run: pause both clocks, open the bench, resume where we left off
   // when it closes. The time spent rewriting isn't time spent performing.
   var runPaused = null;
@@ -3518,10 +3563,15 @@
     var b = runState.bits[runState.i];
     var card2 = el("div", "run-card");
     var bitEl = el("div", "run-bit", b.text);
-    // Tap the bit to work it — the clock pauses while you're in the bench, so a
-    // rewrite mid-rehearsal doesn't poison the timing you're measuring.
-    bitEl.title = "Tap to go into the gym (pauses the clock)";
-    bitEl.onclick = function () { runPauseForBench(b.id); };
+    // Edit in place. The clock pauses while the field is focused so the time
+    // you spend rewriting isn't measured against your delivery.
+    focusEditable(
+      bitEl,
+      function () { return runState.bits[runState.i]; },
+      "run-bit",
+      function () { runPauseClock(); },
+      function () { runResumeClock(); renderRun(); runTick(); }
+    );
     card2.appendChild(bitEl);
     if (b.est) card2.appendChild(el("div", "run-est", "you called it " + fmtSec(b.est)));
     stage.appendChild(card2);
