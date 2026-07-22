@@ -491,6 +491,13 @@
     text-transform: uppercase; color: var(--muted); padding: 5px 10px; cursor: pointer; }
   .batch-reroll:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
   .batch-reroll:disabled { opacity: .3; cursor: default; }
+  #demoBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 500;
+    align-items: center; justify-content: center; gap: 14px;
+    background: var(--accent); color: var(--onaccent); padding: 9px 14px;
+    font-family: var(--mono); font-size: 11px; letter-spacing: .06em; }
+  #demoBar button { background: var(--onaccent); color: var(--accent); border: none;
+    border-radius: 6px; font-family: var(--mono); font-size: 11px; font-weight: 700;
+    padding: 5px 12px; cursor: pointer; }
   .flip-pos { font-family: var(--mono); font-size: 10px; color: var(--faint);
     letter-spacing: .06em; margin-left: auto; }
   /* the arrows are rails either side of the entry: big targets, quiet ink.
@@ -672,6 +679,7 @@
       <button id="notesLockBtn">Notes lock</button>
       <button id="formsEdit">Noticing tags</button>
       <button id="tourReplay">Replay tutorial</button>
+      <button id="demoBtn">Demo mode</button>
       <button id="exportBtn">Export backup</button>
       <button id="importBtn">Import</button>
       <input type="file" id="importFile" accept=".json" style="display:none" />
@@ -793,6 +801,7 @@
         <textarea id="batchInput" rows="2" placeholder="…"></textarea>
         <div class="batch-hint">
           <span id="batchHintText">enter to keep going</span>
+          <button class="batch-reroll batch-next" id="batchNext" style="display:none">next →</button>
           <button class="batch-reroll" id="batchReroll">another ↻</button>
         </div>
         <div class="batch-recent" id="batchRecent"></div>
@@ -826,6 +835,10 @@
       <input id="flipJab" class="flip-jab-input" placeholder="throw a jab… (enter to keep)" autocomplete="off" />
       <div class="flip-jabs" id="flipJabs"></div>
     </div>
+  </div>
+  <div id="demoBar" style="display:none">
+    <span>DEMO — sample material, nothing saved</span>
+    <button id="demoExit">exit demo</button>
   </div>
   <div class="run-overlay" id="runOverlay">
     <div class="run-top">
@@ -924,7 +937,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.94";
+  var APP_VERSION = "v1.1.96";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1062,7 +1075,9 @@
     } catch (e) {}
   }
 
+  var demoLive = false, demoBackup = null;
   function save() {
+    if (demoLive) return;   // demo runs entirely in memory; nothing is persisted
     state.updatedAt = Date.now();
     try {
       localStorage.setItem(KEY, JSON.stringify(state));
@@ -1070,6 +1085,61 @@
       alert("Save failed — storage may be full or blocked.");
     }
     schedulePush();
+  }
+
+  // A first-run demo: believable sample material so you can walk someone
+  // through catch -> shadowbox -> bits -> a set -> practice without touching
+  // your real notebook or seeding a stranger into your synced row. State is
+  // snapshotted, swapped for samples, and restored intact on exit.
+  function demoData() {
+    var now = Date.now(), d = DAY;
+    var stuff = [
+      "I have soft skin. Mosquitos treat me like a spa.",
+      "My wife reorganizes the dishwasher after I load it. In front of me. Silently.",
+      "Public pools are just group baths with a lifeguard watching.",
+      "I clap when the plane lands. Someone has to thank the pilot.",
+      "In 8th grade I thought the only boobs I'd ever hold were my own.",
+      "I do smart things but I wouldn't call myself smart.",
+      "My toddler negotiates like a hostage taker with no demands.",
+      "Church parking lots are the most passive-aggressive place on earth.",
+      "I bought a label maker and now everything is a project.",
+      "I cry at Independence Day. The movie. Every time."
+    ].map(function (t, i) {
+      return { id: "demo_s" + i, text: t, created: now - (i + 1) * d,
+               seen: now - (i + 1) * d };
+    });
+    var bits = [
+      "I have soft skin, mosquitos love me. I'm not a person to them, I'm a smoothie.",
+      "I married up. My wife is a product of Canadian public school but with most tasks she does fine.",
+      "Public pools are just a park with plausible deniability."
+    ].map(function (t, i) {
+      return { id: "demo_b" + i, text: t, created: now - (i + 1) * d,
+               statusAt: now - (i + 1) * d, est: [10, 20, 15][i] };
+    });
+    var sets = [{ id: "demo_set0", name: "Got the girl",
+                  bitIds: ["demo_b0", "demo_b1", "demo_b2"], created: now }];
+    return { bits: bits, truths: stuff, sets: sets, buried: [],
+             quota: 10, mics: [], riffs: [], planned: [], notes: [],
+             theme: state.theme, notesPin: null, forms: null, sb: null,
+             updatedAt: now };
+  }
+  function enterDemo() {
+    if (demoLive) return;
+    demoBackup = JSON.parse(JSON.stringify(state));
+    demoLive = true;                 // freeze persistence first
+    hydrate(demoData());
+    stageFilter = "home"; setOpen = null;
+    render();
+    document.getElementById("demoBar").style.display = "flex";
+  }
+  function exitDemo() {
+    if (!demoLive) return;
+    hydrate(demoBackup);             // put the real notebook back exactly
+    demoBackup = null;
+    demoLive = false;                // unfreeze only after restore
+    stageFilter = "home"; setOpen = null;
+    render();
+    document.getElementById("demoBar").style.display = "none";
   }
 
   function startOfWeek() {
@@ -1774,6 +1844,12 @@
     a.click();
     URL.revokeObjectURL(a.href);
   };
+  document.getElementById("demoBtn").onclick = function () {
+    document.getElementById("utilMenu").style.display = "none";
+    if (demoLive) { exitDemo(); return; }
+    if (confirm("Load demo mode? Your real notebook is set aside and comes back untouched when you exit. Nothing in the demo is saved or synced.")) enterDemo();
+  };
+  document.getElementById("demoExit").onclick = exitDemo;
   document.getElementById("importBtn").onclick = function () {
     document.getElementById("importFile").click();
   };
@@ -1824,7 +1900,7 @@
     });
   }
   function pullState(force) {
-    if (!sb || !sbUser) return;
+    if (!sb || !sbUser || demoLive) return;   // never pull over a live demo
     sb.from("notebooks").select("data").eq("owner", sbUser.id).maybeSingle().then(function (res) {
       if (res.error || !res.data || !res.data.data) { setSyncStatus("synced"); return; }
       var remote = res.data.data;
@@ -1842,6 +1918,7 @@
       .on("postgres_changes",
         { event: "*", schema: "public", table: "notebooks", filter: "owner=eq." + sbUser.id },
         function (payload) {
+          if (demoLive) return;   // ignore remote changes while demoing
           if (payload.new && payload.new.data) {
             var remote = payload.new.data;
             if ((remote.updatedAt || 0) > (state.updatedAt || 0)) {
@@ -3095,7 +3172,7 @@
   ];
   var REROLLS = 3;        // rerolls before it locks
   var EARN_EVERY = 3;     // lines written to buy another
-  var batchStem = null, batchKind = "stem", batchWritten = [];
+  var batchStem = null, batchKind = "stem", batchWritten = [], wroteThisOpener = 0;
 
   // The allowance is per DAY and lives in state, not in the overlay. Closing
   // and reopening used to hand back a full budget, which made the door itself
@@ -3128,6 +3205,7 @@
   // the same one back without spending anything
   function showOpener(pick) {
     batchStem = pick.t; batchKind = pick.k;
+    wroteThisOpener = 0;
     var live = document.getElementById("batchStemLive");
     live.textContent = pick.k === "stem" ? pick.t + "\u2026" : pick.t;
     live.className = "batch-stem-live" + (pick.k === "prompt" ? " is-prompt" : "");
@@ -3140,7 +3218,11 @@
   function renderReroll() {
     var sb = sbToday();
     var btn = document.getElementById("batchReroll");
+    var nextBtn = document.getElementById("batchNext");
     var hint = document.getElementById("batchHintText");
+    // once you've written to this opener, moving on is free — submitting is
+    // the whole point, so it must never cost a skip
+    nextBtn.style.display = wroteThisOpener ? "" : "none";
     if (sb.left > 0) {
       btn.disabled = false;
       btn.textContent = "another \u21bb  " + sb.left;
@@ -3148,7 +3230,9 @@
     } else {
       btn.disabled = true;
       btn.textContent = "another \u21bb";
-      hint.textContent = "write " + (EARN_EVERY - sb.since) + " more to earn another";
+      hint.textContent = wroteThisOpener
+        ? "enter to keep going"
+        : "write " + (EARN_EVERY - sb.since) + " more to earn another";
     }
   }
   function commitBatchLine() {
@@ -3160,6 +3244,7 @@
     if (!state.truths) state.truths = [];
     state.truths.unshift({ id: Date.now().toString(36), text: text, created: Date.now() });
     batchWritten.push(text);
+    wroteThisOpener++;
     inp.value = "";
     buzz();
     save();
@@ -3200,6 +3285,11 @@
     if (sb.left <= 0) return;
     sb.left--;
     save();
+    dealOpener();
+  };
+  document.getElementById("batchNext").onclick = function () {
+    // free: you only see this once you've written to the current opener
+    if (!wroteThisOpener) return;
     dealOpener();
   };
   document.getElementById("batchInput").addEventListener("keydown", function (e) {
