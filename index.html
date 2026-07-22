@@ -220,6 +220,8 @@
     padding: 3px 8px; font-size: 13px; line-height: 1.4; cursor: pointer; }
   .foot-btn.bench-btn { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em;
     text-transform: uppercase; color: var(--muted); padding: 5px 10px; }
+  .foot-btn.star-btn { font-size: 14px; line-height: 1; padding: 3px 7px; color: var(--faint); border-color: transparent; }
+  .foot-btn.star-btn.on { color: var(--accent); }
   .foot-btn.bench-btn:hover { border-color: var(--accent); color: var(--accent); }
   .truth-noted { font-size: 11px; color: var(--faint); line-height: 1; }
   .truth-more { background: transparent; border: none; color: var(--muted); font-size: 17px; line-height: 1; padding: 2px 5px; cursor: pointer; }
@@ -680,14 +682,11 @@
       <button id="formsEdit">Noticing tags</button>
       <button id="tourReplay">Replay tutorial</button>
       <button id="demoBtn">Demo mode</button>
+      <button id="flaggedBtn">Flagged \u2605</button>
       <button id="exportBtn">Export backup</button>
       <button id="importBtn">Import</button>
       <input type="file" id="importFile" accept=".json" style="display:none" />
       <button id="signOut" class="util-signout">Sign out</button>
-    </div>
-    <div class="util-menu" id="shuffleMenu" style="display:none">
-      <button data-pool="pool">deal some stuff</button>
-      <button data-pool="bit">deal a bit</button>
     </div>
   </div>
   <div class="notes-overlay" id="boneOverlay">
@@ -699,6 +698,18 @@
       <p class="bone-note" id="boneNote"></p>
       <div class="notes-index" style="margin-top:8px">
         <div id="boneList"></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="flaggedOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Flagged \u2605</h2>
+        <button class="notes-close" id="flaggedClose">done</button>
+      </div>
+      <p class="bone-note" id="flaggedNote"></p>
+      <div class="notes-index" style="margin-top:8px">
+        <div id="flaggedList"></div>
       </div>
     </div>
   </div>
@@ -937,7 +948,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.97";
+  var APP_VERSION = "v1.1.98";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1164,6 +1175,27 @@
   }
   function buzz() {
     try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
+  }
+  function toast(msg) {
+    var t = document.getElementById("copyToast");
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { t.classList.remove("show"); t.textContent = "copied"; }, 1600);
+  }
+  // ☆ hollow off / ★ solid on. Flags an entry for hammer to prioritise.
+  function starToggle(item) {
+    var on = !!item.flag;
+    var b = el("button", "foot-btn star-btn" + (on ? " on" : ""), on ? "\u2605" : "\u2606");
+    b.title = on ? "Flagged to work \u2014 tap to clear" : "Flag to work";
+    b.setAttribute("aria-label", on ? "flagged" : "flag to work");
+    b.onclick = function (e) {
+      e.stopPropagation();
+      if (item.flag) delete item.flag; else item.flag = true;
+      save(); render();
+    };
+    return b;
   }
   function legacyCopy(str) {
     var ta = document.createElement("textarea");
@@ -1644,6 +1676,7 @@
         save(); render();
       };
       footR.appendChild(rBtn);
+      footR.appendChild(starToggle(b));
       var wbBtn = el("button", "foot-btn bench-btn", "gym");
       wbBtn.title = "Into the gym";
       wbBtn.setAttribute("aria-label", "gym");
@@ -2436,6 +2469,45 @@
     renderBoneyard();
     document.getElementById("boneOverlay").classList.add("open");
   };
+  // ——— flagged list: a flat survey of everything starred, stuff + bits ———
+  function renderFlagged() {
+    var list = document.getElementById("flaggedList");
+    var note = document.getElementById("flaggedNote");
+    list.innerHTML = "";
+    var flagged = [];
+    (state.truths || []).forEach(function (t) { if (t.flag) flagged.push({ item: t, kind: "truth" }); });
+    (state.bits || []).forEach(function (b) { if (b.flag) flagged.push({ item: b, kind: "bit" }); });
+    if (!flagged.length) {
+      note.textContent = "Nothing flagged. Tap the \u2606 on any stuff or bit to send it here \u2014 hammer works these first.";
+      return;
+    }
+    note.textContent = flagged.length + " flagged. Hammer (\ud83d\udd28) deals these first. Tap one to work it; tap \u2605 to clear.";
+    flagged.forEach(function (f) {
+      var card = el("div", "bone-card");
+      var txt = el("p", null, f.item.text);
+      txt.style.cursor = "pointer";
+      txt.onclick = function () {
+        document.getElementById("flaggedOverlay").classList.remove("open");
+        openWorkbench(f.item.id, f.kind === "truth" ? "truth" : "bit");
+      };
+      card.appendChild(txt);
+      var actions = el("div", "bone-actions");
+      actions.appendChild(el("span", "bone-when", f.kind === "truth" ? "stuff" : "bit"));
+      var unf = el("button", "bone-del", "\u2605 clear");
+      unf.onclick = function () { delete f.item.flag; save(); renderFlagged(); render(); };
+      actions.appendChild(unf);
+      card.appendChild(actions);
+      list.appendChild(card);
+    });
+  }
+  document.getElementById("flaggedBtn").onclick = function () {
+    document.getElementById("utilMenu").style.display = "none";
+    renderFlagged();
+    document.getElementById("flaggedOverlay").classList.add("open");
+  };
+  document.getElementById("flaggedClose").onclick = function () {
+    document.getElementById("flaggedOverlay").classList.remove("open");
+  };
   document.getElementById("boneClose").onclick = function () {
     document.getElementById("boneOverlay").classList.remove("open");
   };
@@ -2614,6 +2686,7 @@
         mined.title = t.mined + " jab" + (t.mined === 1 ? "" : "s") + " landed as bits";
         footR.appendChild(mined);
       }
+      footR.appendChild(starToggle(t));
       var twb = el("button", "foot-btn bench-btn", "gym");
       twb.setAttribute("aria-label", "gym");
       twb.title = "Into the gym";
@@ -2731,9 +2804,10 @@
   // put the thought that browsing produces, so the two live on one screen.
   function flipFind() {
     if (!browseDeck) return null;
-    var id = browseDeck[browseIdx].id;
-    var pool = browseKind === "truth" ? (state.truths || []) : state.bits;
-    return pool.find(function (x) { return x.id === id; });
+    var cur = browseDeck[browseIdx];
+    var k = cur.kind || browseKind;   // hammer decks mix kinds per entry
+    var pool = k === "truth" ? (state.truths || []) : state.bits;
+    return pool.find(function (x) { return x.id === cur.id; });
   }
   function renderFlip() {
     var e = flipFind();
@@ -2780,39 +2854,40 @@
     document.getElementById("flipOverlay").classList.remove("open");
     render();
   }
-  function dealShuffle(which) {
-    var pool, kind;
-    if (which === "pool") {
-      pool = (state.truths || []).map(function (t) { return { id: t.id, at: t.created }; });
-      kind = "truth";
-    } else {
-      pool = state.bits.map(function (b) { return { id: b.id, at: b.statusAt || b.created }; });
-      kind = "bit";
-    }
-    if (pool.length === 0) return;
-    var now = Date.now();
-    var weights = pool.map(function (x) {
-      return 1 + Math.floor((now - (x.at || now)) / DAY);
+  // ——— hammer: work the middle ———
+  // Deals a weighted deck across BOTH stuff and bits. Flagged (★) entries
+  // float to the front — prioritised, not exclusive, so nothing is buried and
+  // a forgotten flag just loses ground as newer flags arrive. Replaces the old
+  // deal-stuff / deal-a-bit menu.
+  function dealHammer() {
+    var now = Date.now(), pool = [];
+    (state.truths || []).forEach(function (t) {
+      pool.push({ id: t.id, kind: "truth", at: t.created, flag: !!t.flag });
     });
-    // draw the whole pool in weighted order: older material floats up, but
-    // nothing is locked out, so a long browse still reaches everything
-    var remaining = pool.slice(), remW = weights.slice(), order = [];
+    (state.bits || []).forEach(function (b) {
+      pool.push({ id: b.id, kind: "bit", at: b.statusAt || b.created, flag: !!b.flag });
+    });
+    if (!pool.length) return false;
+    // weight = age in days, but a flag multiplies it hard so stars lead
+    var order = [], remaining = pool.slice();
+    var weights = remaining.map(function (x) {
+      var age = 1 + Math.floor((now - (x.at || now)) / DAY);
+      return x.flag ? age * 1000 : age;   // flagged jump the line, still ordered by age among themselves
+    });
     while (remaining.length) {
-      var total = 0;
-      remW.forEach(function (w) { total += w; });
+      var total = 0; weights.forEach(function (w) { total += w; });
       var r = Math.random() * total, k = remaining.length - 1;
-      for (var i = 0; i < remaining.length; i++) {
-        r -= remW[i];
-        if (r <= 0) { k = i; break; }
-      }
+      for (var i = 0; i < remaining.length; i++) { r -= weights[i]; if (r <= 0) { k = i; break; } }
       order.push(remaining[k]);
-      remaining.splice(k, 1); remW.splice(k, 1);
+      remaining.splice(k, 1); weights.splice(k, 1);
     }
-    browseDeck = order; browseIdx = 0; browseKind = kind;
+    browseDeck = order; browseIdx = 0; browseKind = null;
     document.getElementById("flipJab").value = "";
     renderFlip();
     document.getElementById("flipOverlay").classList.add("open");
+    return true;
   }
+
   // ——— green room wall ———
   var WISDOM = [
     { q: "Wit has truth in it; wisecracking is simply calisthenics with words.", by: "Dorothy Parker" },
@@ -3511,15 +3586,8 @@
   };
 
   document.getElementById("shuffleBtn").onclick = function () {
-    var m = document.getElementById("shuffleMenu");
-    m.style.display = m.style.display === "none" ? "flex" : "none";
+    if (!dealHammer()) toast("Nothing to work yet \u2014 star an entry to send it here.");
   };
-  document.querySelectorAll("#shuffleMenu button").forEach(function (b) {
-    b.onclick = function () {
-      document.getElementById("shuffleMenu").style.display = "none";
-      dealShuffle(b.getAttribute("data-pool"));
-    };
-  });
 
   // ——— sets ———
   var setOpen = null;
