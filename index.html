@@ -313,6 +313,17 @@
     padding: 0 0 0 12px; }
   .batch-open:hover { color: var(--accent2); }
   .batch-overlay { padding: 0; }
+  .batch-sessions { background: transparent; border: none; color: var(--faint); font-size: 15px;
+    cursor: pointer; padding: 2px 8px; margin-right: auto; }
+  .batch-sessions:hover { color: var(--accent); }
+  .sb-log-row { padding: 11px 2px; border-bottom: 1px solid var(--rule); cursor: pointer; }
+  .sb-log-row:last-child { border-bottom: none; }
+  .sb-log-head { display: flex; align-items: baseline; gap: 10px; }
+  .sb-log-when { font-family: var(--serif); font-size: 15px; color: var(--ink); }
+  .sb-log-stat { font-family: var(--mono); font-size: 10px; color: var(--faint); letter-spacing: .05em; margin-left: auto; }
+  .sb-log-lines { margin-top: 8px; padding-left: 4px; }
+  .sb-log-line { font-family: var(--serif); font-size: 14px; color: var(--muted); line-height: 1.5; padding: 2px 0; }
+  .batch-timer { font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: .06em; margin-left: 12px; }
   .batch-top { display: flex; align-items: center; justify-content: space-between;
     padding: 18px 22px 0; }
   .batch-count { font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
@@ -803,7 +814,9 @@
   </div>
   <div class="run-overlay batch-overlay" id="batchOverlay">
     <div class="batch-top">
+      <button class="batch-sessions" id="batchSessions" title="Past sessions">☷</button>
       <span class="batch-count" id="batchCount"></span>
+      <span class="batch-timer" id="batchTimer"></span>
       <button class="batch-done" id="batchDone">done</button>
     </div>
     <div class="batch-mid">
@@ -816,6 +829,18 @@
           <button class="batch-reroll" id="batchReroll">another ↻</button>
         </div>
         <div class="batch-recent" id="batchRecent"></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="sbLogOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Shadowbox sessions</h2>
+        <button class="notes-close" id="sbLogClose">done</button>
+      </div>
+      <p class="bone-note" id="sbLogNote"></p>
+      <div class="notes-index" style="margin-top:8px">
+        <div id="sbLogList"></div>
       </div>
     </div>
   </div>
@@ -948,7 +973,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.2.0";
+  var APP_VERSION = "v1.2.1";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1060,6 +1085,7 @@
     state.mics = data.mics || [];
     state.riffs = data.riffs || [];
     state.sb = data.sb || null;
+    state.sbLog = data.sbLog || [];
     state.planned = data.planned || [];
     state.notes = data.notes || [];
     state.theme = data.theme || "ember";
@@ -3256,6 +3282,42 @@
     var d = new Date();
     return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
   }
+  // ——— shadowbox sessions ———
+  // Each open of the overlay starts a session: a stable id stamped on every
+  // line written, plus a running clock. On close we file a record (id, start,
+  // duration, the line ids) so the morning\'s bundle survives as a bundle,
+  // separate from ambient stuff. Stamping starts now — past sessions can\'t be
+  // reconstructed, so any morning before this ships isn\'t recoverable.
+  var sbSession = null, sbTimerInt = null;
+  function startSession() {
+    sbSession = { id: "sb" + Date.now().toString(36), start: Date.now(), lineIds: [] };
+    if (sbTimerInt) clearInterval(sbTimerInt);
+    sbTimerInt = setInterval(renderSbTimer, 1000);
+    renderSbTimer();
+  }
+  function renderSbTimer() {
+    var el0 = document.getElementById("batchTimer");
+    if (!el0 || !sbSession) return;
+    var secs = Math.floor((Date.now() - sbSession.start) / 1000);
+    var m = Math.floor(secs / 60), ss = secs % 60;
+    el0.textContent = m + ":" + (ss < 10 ? "0" : "") + ss;
+  }
+  function endSession() {
+    if (sbTimerInt) { clearInterval(sbTimerInt); sbTimerInt = null; }
+    if (!sbSession) return;
+    // only file a session that actually produced lines
+    if (sbSession.lineIds.length) {
+      if (!state.sbLog) state.sbLog = [];
+      state.sbLog.unshift({
+        id: sbSession.id,
+        start: sbSession.start,
+        end: Date.now(),
+        lineIds: sbSession.lineIds.slice()
+      });
+      save();
+    }
+    sbSession = null;
+  }
   function sbToday() {
     var k = sbDayKey();
     if (!state.sb || state.sb.day !== k) {
@@ -3341,7 +3403,10 @@
     // a prompt is a question, not a prefix — only stems glue on
     var text = (batchStem && batchKind === "stem") ? (batchStem + " " + v) : v;
     if (!state.truths) state.truths = [];
-    state.truths.unshift({ id: Date.now().toString(36), text: text, created: Date.now() });
+    var lineId = Date.now().toString(36);
+    var entry = { id: lineId, text: text, created: Date.now() };
+    if (sbSession) { entry.sb = sbSession.id; sbSession.lineIds.push(lineId); }
+    state.truths.unshift(entry);
     batchWritten.push(text);
     wroteThisOpener++;
     inp.value = "";
@@ -3373,6 +3438,7 @@
   document.getElementById("shadowBtn").onclick = function () {
     batchStem = null; batchWritten = [];
     var sb = sbToday();     // rolls over on a new day, otherwise picks up where you left off
+    startSession();
     updateBatchCount();
     document.getElementById("batchOverlay").classList.add("open");
     // the day's first open deals free; after that you get back what you left
@@ -3396,8 +3462,68 @@
   });
   document.getElementById("batchDone").onclick = function () {
     commitBatchLine();
+    endSession();
     document.getElementById("batchOverlay").classList.remove("open");
     render();
+  };
+  // ——— shadowbox session history ———
+  function sbLogText(id) {
+    // a line may have been edited or killed since; show what still exists
+    var t = (state.truths || []).find(function (x) { return x.id === id; });
+    return t ? t.text : null;
+  }
+  function fmtDur(ms) {
+    var secs = Math.round(ms / 1000), m = Math.floor(secs / 60), ss = secs % 60;
+    if (m < 1) return secs + "s";
+    return m + "m" + (ss ? " " + ss + "s" : "");
+  }
+  var sbLogOpen = {};
+  function renderSbLog() {
+    var list = document.getElementById("sbLogList");
+    var note = document.getElementById("sbLogNote");
+    list.innerHTML = "";
+    var log = state.sbLog || [];
+    if (!log.length) {
+      note.textContent = "No sessions yet. Every \ud83d\ude4f you close with lines written lands here \u2014 the morning\'s bundle, kept whole.";
+      return;
+    }
+    var totalLines = log.reduce(function (n, s2) { return n + s2.lineIds.length; }, 0);
+    note.textContent = log.length + (log.length === 1 ? " session" : " sessions") + " \u00b7 " + totalLines + " lines";
+    log.forEach(function (sesh) {
+      var row = el("div", "sb-log-row");
+      var head = el("div", "sb-log-head");
+      var d = new Date(sesh.start);
+      var today = new Date(); today.setHours(0,0,0,0);
+      var that = new Date(d); that.setHours(0,0,0,0);
+      var diff = Math.round((today - that) / DAY);
+      var day = diff === 0 ? "Today" : diff === 1 ? "Yesterday"
+        : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      var time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      head.appendChild(el("span", "sb-log-when", day + " \u00b7 " + time));
+      var n = sesh.lineIds.length;
+      var dur = (sesh.end && sesh.end > sesh.start) ? "  \u00b7  " + fmtDur(sesh.end - sesh.start) : "";
+      head.appendChild(el("span", "sb-log-stat", n + (n === 1 ? " line" : " lines") + dur));
+      row.appendChild(head);
+      if (sbLogOpen[sesh.id]) {
+        var lines = el("div", "sb-log-lines");
+        var any = false;
+        sesh.lineIds.forEach(function (id) {
+          var txt = sbLogText(id);
+          if (txt) { lines.appendChild(el("p", "sb-log-line", txt)); any = true; }
+        });
+        if (!any) lines.appendChild(el("p", "sb-log-line", "(these lines were edited or removed later)"));
+        row.appendChild(lines);
+      }
+      row.onclick = function () { sbLogOpen[sesh.id] = !sbLogOpen[sesh.id]; renderSbLog(); };
+      list.appendChild(row);
+    });
+  }
+  document.getElementById("batchSessions").onclick = function () {
+    renderSbLog();
+    document.getElementById("sbLogOverlay").classList.add("open");
+  };
+  document.getElementById("sbLogClose").onclick = function () {
+    document.getElementById("sbLogOverlay").classList.remove("open");
   };
 
   document.getElementById("axeBtn").onclick = function () {
