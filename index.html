@@ -937,7 +937,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.96";
+  var APP_VERSION = "v1.1.97";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3189,14 +3189,38 @@
     return state.sb;
   }
 
-  function dealOpener() {
-    var pick = OPENERS[Math.floor(Math.random() * OPENERS.length)];
-    if (batchStem && OPENERS.length > 1) {   // never hand back the one just rejected
-      var guard = 0;
-      while (pick.t === batchStem && guard++ < 20) {
-        pick = OPENERS[Math.floor(Math.random() * OPENERS.length)];
-      }
+  // Two bags, one per kind. Pick the kind as a coin flip so prompts show up as
+  // often as stems (there are 3x more stems, so a flat dice roll buried them),
+  // then deal from a shuffled bag of that kind — every opener appears once per
+  // cycle before any repeats, which kills the "same few over and over" feel
+  // that pure random produces.
+  var sbBags = { stem: [], prompt: [] };
+  function refillBag(kind) {
+    var pool = OPENERS.filter(function (o) { return o.k === kind; }).slice();
+    for (var i = pool.length - 1; i > 0; i--) {   // Fisher–Yates
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
     }
+    sbBags[kind] = pool;
+  }
+  function drawFromBag(kind) {
+    if (!sbBags[kind] || !sbBags[kind].length) refillBag(kind);
+    var pick = sbBags[kind].shift();
+    // avoid an immediate repeat across a reshuffle boundary
+    if (pick && pick.t === batchStem && sbBags[kind].length) {
+      sbBags[kind].push(pick);
+      pick = sbBags[kind].shift();
+    }
+    return pick;
+  }
+  function dealOpener() {
+    var haveStem = OPENERS.some(function (o) { return o.k === "stem"; });
+    var havePrompt = OPENERS.some(function (o) { return o.k === "prompt"; });
+    var kind = (haveStem && havePrompt)
+      ? (Math.random() < 0.5 ? "stem" : "prompt")
+      : (haveStem ? "stem" : "prompt");
+    var pick = drawFromBag(kind);
+    if (!pick) return;
     sbToday().cur = { k: pick.k, t: pick.t };
     save();
     showOpener(pick);
