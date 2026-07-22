@@ -316,6 +316,10 @@
   .batch-sessions { background: transparent; border: none; color: var(--faint); font-size: 15px;
     cursor: pointer; padding: 2px 8px; margin-right: auto; }
   .batch-sessions:hover { color: var(--accent); }
+  .sb-start { display: block; width: 100%; box-sizing: border-box; background: var(--accent);
+    color: var(--onaccent); border: none; border-radius: 12px; padding: 16px; margin: 4px 0 18px;
+    font-family: var(--serif); font-size: 18px; cursor: pointer; }
+  .sb-start:hover { filter: brightness(1.05); }
   .sb-log-row { padding: 11px 2px; border-bottom: 1px solid var(--rule); cursor: pointer; }
   .sb-log-row:last-child { border-bottom: none; }
   .sb-log-head { display: flex; align-items: baseline; gap: 10px; }
@@ -835,9 +839,10 @@
   <div class="notes-overlay" id="sbLogOverlay">
     <div class="notes-inner">
       <div class="notes-head">
-        <h2>Shadowbox sessions</h2>
+        <h2>Shadowbox</h2>
         <button class="notes-close" id="sbLogClose">done</button>
       </div>
+      <button class="sb-start" id="sbStart">🙏  start writing</button>
       <p class="bone-note" id="sbLogNote"></p>
       <div class="notes-index" style="margin-top:8px">
         <div id="sbLogList"></div>
@@ -973,7 +978,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.2.1";
+  var APP_VERSION = "v1.2.3";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1328,6 +1333,14 @@
     return row;
   }
 
+  // Date.now() alone collides when you commit faster than 1/ms — which never
+  // happened until shadowbox let you fire lines back to back. A counter makes
+  // every id unique regardless of how fast they\'re minted.
+  var _idSeq = 0;
+  function uid() {
+    _idSeq = (_idSeq + 1) % 1000000;
+    return Date.now().toString(36) + _idSeq.toString(36);
+  }
   function el(tag, cls, text) {
     var e = document.createElement(tag);
     if (cls) e.className = cls;
@@ -1748,7 +1761,7 @@
     var forms = pendingForms.slice();
     if (stageFilter === "pool" || stageFilter === "home") {
       if (!state.truths) state.truths = [];
-      var t0 = { id: Date.now().toString(36), text: text, created: Date.now() };
+      var t0 = { id: uid(), text: text, created: Date.now() };
       if (forms.length) t0.forms = forms;
       state.truths.unshift(t0);
       draft.value = "";
@@ -1757,7 +1770,7 @@
       return;
     }
     var b0 = {
-      id: Date.now().toString(36),
+      id: uid(),
       text: text,
       tags: [],
       created: Date.now(),
@@ -1835,7 +1848,7 @@
     var whenVal = document.getElementById("planWhen").value;
     if (!whenVal) { alert("Pick a date and time."); return; }
     state.planned.push({
-      id: Date.now().toString(36),
+      id: uid(),
       when: new Date(whenVal).getTime(),
       note: document.getElementById("planNote").value.trim()
     });
@@ -2173,7 +2186,7 @@
         mk.title = "It connected \u2014 make this a bit";
         mk.onclick = function () {
           state.bits.unshift({
-            id: Date.now().toString(36),
+            id: uid(),
             text: a.t,
             tags: (b.tags || []).slice(),
             created: Date.now(),
@@ -2397,7 +2410,7 @@
     if (noteEditing) {
       state.notes = state.notes.map(function (n) { return n.id === noteEditing ? { id: n.id, text: t, updated: Date.now() } : n; });
     } else {
-      state.notes.unshift({ id: Date.now().toString(36), text: t, updated: Date.now() });
+      state.notes.unshift({ id: uid(), text: t, updated: Date.now() });
     }
     save(); resetNoteEditor(); renderNotes();
   };
@@ -2663,7 +2676,7 @@
       actR.onclick = function (e) {
         e.stopPropagation();
         state.bits.unshift({
-          id: Date.now().toString(36),
+          id: uid(),
           text: t.text,
           tags: (t.tags || []).slice(),
           workshop: t.workshop || "",
@@ -3403,7 +3416,7 @@
     // a prompt is a question, not a prefix — only stems glue on
     var text = (batchStem && batchKind === "stem") ? (batchStem + " " + v) : v;
     if (!state.truths) state.truths = [];
-    var lineId = Date.now().toString(36);
+    var lineId = uid();
     var entry = { id: lineId, text: text, created: Date.now() };
     if (sbSession) { entry.sb = sbSession.id; sbSession.lineIds.push(lineId); }
     state.truths.unshift(entry);
@@ -3435,7 +3448,13 @@
     document.getElementById("batchCount").textContent =
       batchWritten.length ? batchWritten.length + (batchWritten.length === 1 ? " down" : " down") : "";
   }
+  // 🙏 lands on the sessions log first — see the work, then start a round.
   document.getElementById("shadowBtn").onclick = function () {
+    renderSbLog();
+    document.getElementById("sbLogOverlay").classList.add("open");
+  };
+  function startWriting() {
+    document.getElementById("sbLogOverlay").classList.remove("open");
     batchStem = null; batchWritten = [];
     var sb = sbToday();     // rolls over on a new day, otherwise picks up where you left off
     startSession();
@@ -3444,7 +3463,8 @@
     // the day's first open deals free; after that you get back what you left
     if (sb.cur) { showOpener(sb.cur); renderReroll(); }
     else dealOpener();
-  };
+  }
+  document.getElementById("sbStart").onclick = startWriting;
   document.getElementById("batchReroll").onclick = function () {
     var sb = sbToday();
     if (sb.left <= 0) return;
@@ -3519,8 +3539,13 @@
     });
   }
   document.getElementById("batchSessions").onclick = function () {
+    // finish the current round and step back to the log
+    commitBatchLine();
+    endSession();
+    document.getElementById("batchOverlay").classList.remove("open");
     renderSbLog();
     document.getElementById("sbLogOverlay").classList.add("open");
+    render();
   };
   document.getElementById("sbLogClose").onclick = function () {
     document.getElementById("sbLogOverlay").classList.remove("open");
@@ -3657,7 +3682,7 @@
         e.stopPropagation();
         if (isStuff) {
           state.bits.unshift({
-            id: Date.now().toString(36),
+            id: uid(),
             text: it.text,
             tags: (it.tags || []).slice(),
             workshop: it.workshop || "",
@@ -4230,7 +4255,7 @@
       var nw = el("button", "bone-digup", "+ new set");
       nw.style.marginBottom = "14px";
       nw.onclick = function () {
-        var id = Date.now().toString(36);
+        var id = uid();
         state.sets.unshift({ id: id, name: "", bitIds: [], created: Date.now(), updated: Date.now() });
         setOpen = id;
         save(); render();
