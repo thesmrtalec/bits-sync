@@ -1009,7 +1009,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.2.4";
+  var APP_VERSION = "v1.2.5";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1215,6 +1215,9 @@
     document.getElementById("demoBar").style.display = "none";
   }
 
+  function dayStart() {
+    var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime();
+  }
   function startOfWeek() {
     var d = new Date();
     var day = d.getDay();
@@ -3248,13 +3251,19 @@
   }
   // Axe session settings persist between sessions — you tend to want the same
   // kind of pass twice in a row.
-  var axeShuffle = false, axeLens = null;
+  var axeShuffle = false, axeLens = null, axeWindow = null;   // null | "today" | "week"
 
   function buildAxeDeck() {
     var pool = [];
     (state.truths || []).forEach(function (t) { pool.push({ item: t, kind: "stuff" }); });
     state.bits.forEach(function (b) { pool.push({ item: b, kind: "bit" }); });
     pool = pool.filter(function (e) { return lensMatch(e.item, axeLens); });
+    if (axeWindow) {
+      // an end-of-day trim: only what you dumped in the window, so you can
+      // edit down today's crap while it's fresh
+      var since = axeWindow === "today" ? dayStart() : dayStart() - 6 * DAY;
+      pool = pool.filter(function (e) { return (e.item.created || 0) >= since; });
+    }
     if (axeShuffle) {
       // Fisher–Yates, drawn ONCE here and then held. Reshuffling on each
       // render would deal a new deck every verdict — you'd see repeats and
@@ -3263,6 +3272,9 @@
         var j = Math.floor(Math.random() * (i + 1));
         var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
       }
+    } else if (axeWindow) {
+      // reviewing a fresh dump reads best newest-first
+      pool.sort(function (a, b) { return (b.item.created || 0) - (a.item.created || 0); });
     } else {
       pool.sort(function (a, b) { return seenAt(a.item) - seenAt(b.item); });
     }
@@ -3273,7 +3285,17 @@
   function renderAxeControls() {
     var host = document.getElementById("axeControls");
     host.innerHTML = "";
-    var sh = el("button", "axe-ctl" + (axeShuffle ? " on" : ""), axeShuffle ? "⇄ shuffled" : "↓ oldest first");
+    var winLabel = axeWindow === "today" ? "\u25f4 today"
+                 : axeWindow === "week" ? "\u25f4 this week" : "\u25f4 all time";
+    var win = el("button", "axe-ctl" + (axeWindow ? " on" : ""), winLabel);
+    win.title = "Trim just what you dumped recently";
+    win.onclick = function () {
+      axeWindow = axeWindow === null ? "today" : axeWindow === "today" ? "week" : null;
+      buildAxeDeck(); renderAxe(); renderAxeControls();
+    };
+    host.appendChild(win);
+
+    var sh = el("button", "axe-ctl" + (axeShuffle ? " on" : ""), axeShuffle ? "\u21c4 shuffled" : (axeWindow ? "\u2193 newest first" : "\u2193 oldest first"));
     sh.title = "Chronological always shows you the same stale entries first";
     sh.onclick = function () {
       axeShuffle = !axeShuffle;
