@@ -670,6 +670,7 @@
     <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it: deal a line with more in it" title="Work it — deal a line with more in it">🔨</button>
     <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🪦</button>
+    <button class="notes-tab bone-key" id="flaggedBtn" aria-label="flagged" title="Flagged — what you’ve starred to work">⭐</button>
     <button class="notes-tab" id="notesOpen" aria-label="notes" title="Notes &amp; ideas">📓</button>
     <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">📅</button>
     <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
@@ -682,7 +683,6 @@
       <button id="formsEdit">Noticing tags</button>
       <button id="tourReplay">Replay tutorial</button>
       <button id="demoBtn">Demo mode</button>
-      <button id="flaggedBtn">Flagged \u2605</button>
       <button id="exportBtn">Export backup</button>
       <button id="importBtn">Import</button>
       <input type="file" id="importFile" accept=".json" style="display:none" />
@@ -948,7 +948,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.1.98";
+  var APP_VERSION = "v1.1.99";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
