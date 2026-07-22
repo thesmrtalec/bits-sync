@@ -316,6 +316,21 @@
   .batch-sessions { background: transparent; border: none; color: var(--faint); font-size: 15px;
     cursor: pointer; padding: 2px 8px; margin-right: auto; }
   .batch-sessions:hover { color: var(--accent); }
+  .circuit-sizes { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .circuit-size { text-align: left; background: var(--card); border: 1px solid var(--rule);
+    border-radius: 12px; padding: 14px 16px; cursor: pointer; }
+  .circuit-size:hover { border-color: var(--accent); }
+  .circuit-size b { font-family: var(--serif); font-size: 17px; color: var(--ink); }
+  .circuit-size span { display: block; font-family: var(--mono); font-size: 10px; color: var(--faint);
+    letter-spacing: .05em; margin-top: 3px; }
+  .circuit-phase { position: fixed; top: 0; left: 0; right: 0; z-index: 320; display: none;
+    align-items: center; justify-content: center; gap: 10px; background: var(--accent);
+    color: var(--onaccent); padding: 7px 14px; font-family: var(--mono); font-size: 10.5px;
+    letter-spacing: .08em; }
+  .circuit-phase.show { display: flex; }
+  .circuit-phase button { background: var(--onaccent); color: var(--accent); border: none;
+    border-radius: 6px; font-family: var(--mono); font-size: 10px; font-weight: 700;
+    padding: 4px 10px; cursor: pointer; }
   .sb-start { display: block; width: 100%; box-sizing: border-box; background: var(--accent);
     color: var(--onaccent); border: none; border-radius: 12px; padding: 16px; margin: 4px 0 18px;
     font-family: var(--serif); font-size: 18px; cursor: pointer; }
@@ -694,6 +709,7 @@
     <span class="ver-chip" id="verChip"></span>
     <div class="util-menu" id="utilMenu" style="display:none">
       <div class="theme-picker" id="themePicker"></div>
+      <button id="circuitBtn">Run a workout</button>
       <button id="notesLockBtn">Notes lock</button>
       <button id="formsEdit">Noticing tags</button>
       <button id="tourReplay">Replay tutorial</button>
@@ -816,6 +832,11 @@
       </div>
     </div>
   </div>
+  <div class="circuit-phase" id="circuitPhase">
+    <span id="circuitPhaseText"></span>
+    <button id="circuitSkip">skip →</button>
+    <button id="circuitQuit">quit</button>
+  </div>
   <div class="run-overlay batch-overlay" id="batchOverlay">
     <div class="batch-top">
       <button class="batch-sessions" id="batchSessions" title="Past sessions">☷</button>
@@ -834,6 +855,16 @@
         </div>
         <div class="batch-recent" id="batchRecent"></div>
       </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="circuitOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Workout</h2>
+        <button class="notes-close" id="circuitClose">done</button>
+      </div>
+      <p class="bone-note">Warm up, work the middle, clear the deck \u2014 one pass through all three. Pick a size:</p>
+      <div class="circuit-sizes" id="circuitSizes"></div>
     </div>
   </div>
   <div class="notes-overlay" id="sbLogOverlay">
@@ -978,7 +1009,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.2.3";
+  var APP_VERSION = "v1.2.4";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2887,8 +2918,10 @@
     inp.value = "";
     buzz();
     save(); renderFlip();
+    circuitProgress("hammer");
   }
   function closeFlip() {
+    if (circuit.active && circuit.phase === "hammer") { nextPhase(); return; }
     clearBrowse();
     document.getElementById("flipOverlay").classList.remove("open");
     render();
@@ -3422,6 +3455,7 @@
     state.truths.unshift(entry);
     batchWritten.push(text);
     wroteThisOpener++;
+    circuitProgress("shadow");
     inp.value = "";
     buzz();
     save();
@@ -3448,6 +3482,117 @@
     document.getElementById("batchCount").textContent =
       batchWritten.length ? batchWritten.length + (batchWritten.length === 1 ? " down" : " down") : "";
   }
+  // ——— the workout: warm up \u2192 work \u2192 cull, one guided pass ———
+  // A tiny state machine. Each phase launches the tool it owns, capped at a
+  // count; when the cap is hit (or you skip) it advances to the next. The three
+  // phase-close handlers check `circuit.active` and call nextPhase() instead of
+  // returning home. Quitting or finishing tears the banner down.
+  var SIZES = {
+    light:  { shadow: 3, hammer: 2, axe: 3, label: "Light", note: "3 warm-up \u00b7 2 worked \u00b7 3 culled" },
+    normal: { shadow: 5, hammer: 3, axe: 5, label: "Normal", note: "5 warm-up \u00b7 3 worked \u00b7 5 culled" },
+    long:   { shadow: 8, hammer: 5, axe: 8, label: "Long", note: "8 warm-up \u00b7 5 worked \u00b7 8 culled" }
+  };
+  var circuit = { active: false, phase: null, plan: null, done: 0, target: 0, tally: null };
+
+  function startCircuit(sizeKey) {
+    var plan = SIZES[sizeKey];
+    if (!plan) return;
+    circuit = { active: true, phase: null, plan: plan, done: 0, target: 0,
+                tally: { shadow: 0, hammer: 0, axe: 0 } };
+    document.getElementById("circuitOverlay").classList.remove("open");
+    document.getElementById("utilMenu").style.display = "none";
+    beginPhase("shadow");
+  }
+  function circuitBanner() {
+    var b = document.getElementById("circuitPhase");
+    if (!circuit.active) { b.classList.remove("show"); return; }
+    var names = { shadow: "WARM UP", hammer: "WORK IT", axe: "CULL" };
+    document.getElementById("circuitPhaseText").textContent =
+      names[circuit.phase] + "  \u00b7  " + circuit.done + " / " + circuit.target;
+    b.classList.add("show");
+  }
+  function beginPhase(phase) {
+    circuit.phase = phase;
+    circuit.done = 0;
+    circuit.target = phase === "shadow" ? circuit.plan.shadow
+                   : phase === "hammer" ? circuit.plan.hammer
+                   : circuit.plan.axe;
+    if (phase === "shadow") {
+      batchStem = null; batchWritten = [];
+      sbToday(); startSession(); updateBatchCount();
+      document.getElementById("batchOverlay").classList.add("open");
+      var sb = sbToday();
+      if (sb.cur) { showOpener(sb.cur); renderReroll(); } else dealOpener();
+    } else if (phase === "hammer") {
+      if (!dealHammer()) { nextPhase(); return; }   // nothing flagged/available -> skip ahead
+    } else if (phase === "axe") {
+      buildAxeDeck(); renderAxe(); renderAxeControls();
+      document.getElementById("axeOverlay").classList.add("open");
+    }
+    circuitBanner();
+  }
+  function circuitProgress(phase) {
+    // called when the active phase produces one unit of work
+    if (!circuit.active || circuit.phase !== phase) return;
+    circuit.done++;
+    if (circuit.tally) circuit.tally[phase]++;
+    circuitBanner();
+    if (circuit.done >= circuit.target) nextPhase();
+  }
+  function nextPhase() {
+    // close whatever's open, then advance
+    if (circuit.phase === "shadow") {
+      endSession();
+      document.getElementById("batchOverlay").classList.remove("open");
+      beginPhase("hammer");
+    } else if (circuit.phase === "hammer") {
+      clearBrowse();
+      document.getElementById("flipOverlay").classList.remove("open");
+      beginPhase("axe");
+    } else {
+      document.getElementById("axeOverlay").classList.remove("open", "dimmed");
+      finishCircuit();
+    }
+  }
+  function finishCircuit() {
+    var t = circuit.tally || { shadow: 0, hammer: 0, axe: 0 };
+    circuit.active = false; circuit.phase = null;
+    circuitBanner();
+    render();
+    toast(t.shadow + " written \u00b7 " + t.hammer + " worked \u00b7 " + t.axe + " culled");
+  }
+  function quitCircuit() {
+    var was = circuit.phase;
+    circuit.active = false; circuit.phase = null;
+    if (was === "shadow") { endSession(); document.getElementById("batchOverlay").classList.remove("open"); }
+    else if (was === "hammer") { clearBrowse(); document.getElementById("flipOverlay").classList.remove("open"); }
+    else if (was === "axe") { document.getElementById("axeOverlay").classList.remove("open", "dimmed"); }
+    circuitBanner();
+    render();
+  }
+  function renderCircuitSizes() {
+    var host = document.getElementById("circuitSizes");
+    host.innerHTML = "";
+    ["light", "normal", "long"].forEach(function (k) {
+      var s2 = SIZES[k];
+      var b = el("button", "circuit-size");
+      b.appendChild(el("b", null, s2.label));
+      b.appendChild(el("span", null, s2.note));
+      b.onclick = function () { startCircuit(k); };
+      host.appendChild(b);
+    });
+  }
+  document.getElementById("circuitBtn").onclick = function () {
+    document.getElementById("utilMenu").style.display = "none";
+    renderCircuitSizes();
+    document.getElementById("circuitOverlay").classList.add("open");
+  };
+  document.getElementById("circuitClose").onclick = function () {
+    document.getElementById("circuitOverlay").classList.remove("open");
+  };
+  document.getElementById("circuitSkip").onclick = function () { if (circuit.active) nextPhase(); };
+  document.getElementById("circuitQuit").onclick = quitCircuit;
+
   // 🙏 lands on the sessions log first — see the work, then start a round.
   document.getElementById("shadowBtn").onclick = function () {
     renderSbLog();
@@ -3482,6 +3627,7 @@
   });
   document.getElementById("batchDone").onclick = function () {
     commitBatchLine();
+    if (circuit.active && circuit.phase === "shadow") { nextPhase(); return; }
     endSession();
     document.getElementById("batchOverlay").classList.remove("open");
     render();
@@ -3559,6 +3705,7 @@
   };
   document.getElementById("axeClose").onclick = function () {
     axePaused = false;
+    if (circuit.active && circuit.phase === "axe") { nextPhase(); return; }
     document.getElementById("axeOverlay").classList.remove("open", "dimmed");
     render();
   };
@@ -3567,6 +3714,7 @@
     if (cur) { markSeen(cur.item); save(); }
     axeIdx++;
     renderAxe();
+    circuitProgress("axe");
   };
   document.getElementById("axeKill").onclick = function () {
     var cur = axeQueue[axeIdx];
@@ -3583,6 +3731,7 @@
     axeIdx++;
     save();
     renderAxe();
+    circuitProgress("axe");
   };
 
   // ——— search (home) ———
