@@ -291,6 +291,14 @@
   .empty { color: var(--faint); font-style: italic; font-size: 15px; padding: 14px 2px; }
 
   .backup { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--rule); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  /* two kinds of button were sharing one row: things you DO, and piles you
+     LOOK AT. Splitting them lets the work read first and the shelves recede. */
+  .tool-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
+  .do-row .bone-key { font-size: 21px; opacity: .95; padding: 7px 9px; }
+  .do-row .bone-key:hover { opacity: 1; }
+  .look-row { gap: 6px; margin-top: 2px; opacity: .62; }
+  .look-row:hover { opacity: 1; }
+  .look-row .bone-key { font-size: 13px; padding: 3px 4px; }
   .backup button { background: var(--card); border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 4px 12px; font-size: 11.5px; font-family: var(--mono); }
   .backup button:hover { border-color: var(--accent); color: var(--accent); }
   .backup-note { font-size: 11.5px; color: var(--faint); font-style: italic; }
@@ -525,6 +533,7 @@
     font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--muted); padding: 7px 12px; cursor: pointer; }
   .notes-week:hover { border-color: var(--accent); color: var(--accent); }
+  .batch-stem-live.is-truth { font-style: normal; font-size: 21px; color: var(--accent); }
   .batch-stem-live.is-prompt { font-style: italic; opacity: .85; font-size: 19px; }
   .batch-hint { display: flex; align-items: center; gap: 12px; }
   .batch-reroll { margin-left: auto; background: transparent; border: 1px solid var(--rule);
@@ -567,6 +576,8 @@
   .tl-contra-tag { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--accent2); flex: 0 0 auto; padding-top: 3px; }
   .tl-contra-txt { font-family: var(--serif); font-size: 14px; line-height: 1.45; color: var(--muted); }
+  .tl-yield { font-family: var(--mono); font-size: 9px; letter-spacing: .07em; color: var(--faint);
+    margin-top: 5px; }
   .tl-orphan { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
     color: var(--faint); margin-top: 6px; }
   .truth-ask { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--muted);
@@ -767,16 +778,20 @@
   <p class="empty" id="empty" style="display:none"></p>
 
   <div class="backup">
-    <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: morning writing, deal an opener" title="Shadowbox — morning writing">🙏</button>
-    <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it: deal a line with more in it" title="Work it — deal a line with more in it">🔨</button>
-    <button class="notes-tab bone-key" id="truthBtn" aria-label="truth drill" title="Truth &amp; contradiction — what’s always true because of this?">⚜</button>
-    <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
-    <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🪦</button>
-    <button class="notes-tab bone-key" id="flaggedBtn" aria-label="flagged" title="Flagged — what you’ve starred to work">⭐</button>
-    <button class="notes-tab bone-key" id="jabsBtn" aria-label="jabs" title="The jab stack — every rewrite you’ve thrown">🥊</button>
-    <button class="notes-tab" id="notesOpen" aria-label="notes" title="Notes &amp; ideas">📓</button>
-    <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">📅</button>
-    <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
+    <div class="tool-row do-row">
+      <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: morning writing, deal an opener" title="Shadowbox — morning writing">🙏</button>
+      <button class="notes-tab bone-key" id="truthBtn" aria-label="truth drill" title="Truths — what’s always true, and what shouldn’t be">🧱</button>
+      <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it: deal a line with more in it" title="Work it — deal a line with more in it">🔨</button>
+      <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
+    </div>
+    <div class="tool-row look-row">
+      <button class="notes-tab bone-key" id="flaggedBtn" aria-label="flagged" title="Flagged — what you’ve starred to work">⭐</button>
+      <button class="notes-tab bone-key" id="jabsBtn" aria-label="jabs" title="The jab stack — every rewrite you’ve thrown">🥊</button>
+      <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🪦</button>
+      <button class="notes-tab" id="notesOpen" aria-label="notes" title="Notes &amp; ideas">📓</button>
+      <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">📅</button>
+      <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
+    </div>
     <span class="sync-chip" id="syncStatus"></span>
     <span class="backup-note" id="authWho"></span>
     <span class="ver-chip" id="verChip"></span>
@@ -985,7 +1000,7 @@
         <h2>Truths</h2>
         <button class="notes-close" id="truthLibClose">done</button>
       </div>
-      <button class="sb-start" id="truthLibStart">⚜  start drilling</button>
+      <button class="sb-start" id="truthLibStart">🧱  start drilling</button>
       <p class="bone-note" id="truthLibNote"></p>
       <div class="notes-index" style="margin-top:8px">
         <div id="truthLibList"></div>
@@ -1127,7 +1142,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.3.3";
+  var APP_VERSION = "v1.3.5";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2874,6 +2889,14 @@
       row.appendChild(head);
       var from = all.find(function (x) { return x.id === t.src; });
       if (from) row.appendChild(el("div", "tl-from", "\u2190 " + from.text));
+      var yielded = all.filter(function (x) { return x.src === t.id && x.kind !== "contradiction"; }).length;
+      var jabs = entryAngles(t).length;
+      if (yielded || jabs) {
+        row.appendChild(el("div", "tl-yield",
+          (yielded ? yielded + (yielded === 1 ? " line" : " lines") : "") +
+          (yielded && jabs ? "  \u00b7  " : "") +
+          (jabs ? jabs + (jabs === 1 ? " jab" : " jabs") : "")));
+      }
       contras.filter(function (c) { return c.src === t.id; }).forEach(function (c) {
         var cr = el("div", "tl-contra");
         cr.appendChild(el("span", "tl-contra-tag", "but"));
@@ -3076,7 +3099,7 @@
       if (t.kind === "truth" || t.kind === "contradiction") {
         var src = (state.truths || []).find(function (x) { return x.id === t.src; });
         var lab = el("div", "card-kind " + t.kind);
-        lab.appendChild(el("span", "card-kind-tag", t.kind === "truth" ? "\u269c truth" : "\u269c contradiction"));
+        lab.appendChild(el("span", "card-kind-tag", t.kind === "truth" ? "\ud83e\uddf1 truth" : "\ud83e\uddf1 contradiction"));
         if (src) lab.appendChild(el("span", "card-kind-src", "  \u2190  " + src.text));
         card.appendChild(lab);
       }
@@ -3706,7 +3729,7 @@
   ];
   var REROLLS = 3;        // rerolls before it locks
   var EARN_EVERY = 3;     // lines written to buy another
-  var batchStem = null, batchKind = "stem", batchWritten = [], wroteThisOpener = 0;
+  var batchStem = null, batchKind = "stem", batchWritten = [], wroteThisOpener = 0, batchTruthId = null;
 
   // The allowance is per DAY and lives in state, not in the overlay. Closing
   // and reopening used to hand back a full budget, which made the door itself
@@ -3764,9 +3787,19 @@
   // then deal from a shuffled bag of that kind — every opener appears once per
   // cycle before any repeats, which kills the "same few over and over" feel
   // that pure random produces.
-  var sbBags = { stem: [], prompt: [] };
+  var sbBags = { stem: [], prompt: [], truth: [] };
+  function openersOfKind(kind) {
+    // truths aren't a fixed list — they're whatever he's distilled so far,
+    // so mining them happens inside the morning ritual rather than a 4th mode
+    if (kind === "truth") {
+      return (state.truths || [])
+        .filter(function (t) { return t.kind === "truth"; })
+        .map(function (t) { return { k: "truth", t: t.text, id: t.id }; });
+    }
+    return OPENERS.filter(function (o) { return o.k === kind; });
+  }
   function refillBag(kind) {
-    var pool = OPENERS.filter(function (o) { return o.k === kind; }).slice();
+    var pool = openersOfKind(kind).slice();
     for (var i = pool.length - 1; i > 0; i--) {   // Fisher–Yates
       var j = Math.floor(Math.random() * (i + 1));
       var t = pool[i]; pool[i] = pool[j]; pool[j] = t;
@@ -3784,28 +3817,31 @@
     return pick;
   }
   function dealOpener() {
-    var haveStem = OPENERS.some(function (o) { return o.k === "stem"; });
-    var havePrompt = OPENERS.some(function (o) { return o.k === "prompt"; });
-    var kind = (haveStem && havePrompt)
-      ? (Math.random() < 0.5 ? "stem" : "prompt")
-      : (haveStem ? "stem" : "prompt");
+    var kinds = ["stem", "prompt", "truth"].filter(function (k) {
+      return openersOfKind(k).length > 0;
+    });
+    if (!kinds.length) return;
+    var kind = kinds[Math.floor(Math.random() * kinds.length)];
     var pick = drawFromBag(kind);
     if (!pick) return;
-    sbToday().cur = { k: pick.k, t: pick.t };
+    sbToday().cur = { k: pick.k, t: pick.t, id: pick.id || null };
     save();
     showOpener(pick);
   }
   // painting the opener is separate from dealing one, so reopening can put
   // the same one back without spending anything
   function showOpener(pick) {
-    batchStem = pick.t; batchKind = pick.k;
+    batchStem = pick.t; batchKind = pick.k; batchTruthId = pick.id || null;
     wroteThisOpener = 0;
     var live = document.getElementById("batchStemLive");
     live.textContent = pick.k === "stem" ? pick.t + "\u2026" : pick.t;
-    live.className = "batch-stem-live" + (pick.k === "prompt" ? " is-prompt" : "");
+    live.className = "batch-stem-live"
+      + (pick.k === "prompt" ? " is-prompt" : "")
+      + (pick.k === "truth" ? " is-truth" : "");
     var inp = document.getElementById("batchInput");
     inp.value = "";
-    inp.placeholder = pick.k === "stem" ? "\u2026" : "answer it";
+    inp.placeholder = pick.k === "stem" ? "\u2026"
+      : pick.k === "truth" ? "where else is this true?" : "answer it";
     renderReroll();
     setTimeout(function () { inp.focus(); }, 50);
   }
@@ -3848,6 +3884,7 @@
     var lineId = uid();
     var entry = { id: lineId, text: text, created: Date.now() };
     if (batchStem && batchKind === "prompt") entry.prompt = batchStem;
+    if (batchKind === "truth" && batchTruthId) { entry.src = batchTruthId; entry.prompt = batchStem; }
     if (batchStem && batchKind === "stem") entry.stem = batchStem;
     if (sbSession) { entry.sb = sbSession.id; sbSession.lineIds.push(lineId); }
     state.truths.unshift(entry);
