@@ -342,6 +342,9 @@
   .sb-log-stat { font-family: var(--mono); font-size: 10px; color: var(--faint); letter-spacing: .05em; margin-left: auto; }
   .sb-log-lines { margin-top: 8px; padding-left: 4px; }
   .sb-log-line { font-family: var(--serif); font-size: 14px; color: var(--muted); line-height: 1.5; padding: 2px 0; }
+  .sb-log-prompt { font-style: italic; opacity: .7; }
+  .card-prompt { font-family: var(--serif); font-style: italic; font-size: 12.5px; color: var(--muted);
+    opacity: .7; margin-bottom: 3px; line-height: 1.35; }
   .batch-timer { font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: .06em; margin-left: 12px; }
   .batch-top { display: flex; align-items: center; justify-content: space-between;
     padding: 18px 22px 0; }
@@ -548,6 +551,8 @@
     text-align: center; font-family: var(--serif); font-size: 25px; line-height: 1.4;
     color: var(--ink); padding: 8px 4px; overflow: hidden; min-width: 0; }
   @media (min-width: 700px) { .flip-entry { font-size: 30px; } }
+  .flip-prompt { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--muted);
+    opacity: .75; margin-bottom: 10px; line-height: 1.4; }
   .flip-entry span { display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical;
     overflow: hidden; }
   .flip-bottom { flex: 0 0 auto; }
@@ -600,6 +605,13 @@
   .axe-bit { font-family: 'Caveat', 'Bradley Hand', cursive; font-weight: 500;
     font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink);
     white-space: pre-wrap; cursor: pointer; }
+  .axe-star { background: transparent; border: 1px solid var(--rule); border-radius: 10px;
+    color: var(--muted); font-size: 20px; line-height: 1; padding: 10px 16px; cursor: pointer;
+    flex: 0 0 auto; }
+  .axe-star:hover { border-color: var(--accent); color: var(--accent); }
+  .axe-star.on { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
+  .axe-prompt { font-family: var(--serif); font-style: italic; font-size: 15px; color: var(--muted);
+    text-align: center; max-width: 80%; margin: 0 auto 14px; line-height: 1.4; opacity: .8; }
   .axe-meta { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--faint); margin-top: 22px; }
   .form-row { display: flex; flex-wrap: wrap; gap: 9px; align-items: baseline; margin-top: 8px; }
@@ -890,6 +902,7 @@
     <div class="axe-controls" id="axeControls"></div>
     <div class="axe-verdicts" id="axeVerdicts">
       <button id="axeKill" class="axe-kill">&#129683; axe</button>
+      <button id="axeStar" class="axe-star" title="Gold — flag it and move on">&#9734;</button>
       <button id="axeKeep" class="axe-keep">keep</button>
     </div>
   </div>
@@ -1009,7 +1022,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.2.5";
+  var APP_VERSION = "v1.2.7";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2725,6 +2738,7 @@
       shell.appendChild(actL);   // revealed on swipe LEFT  (sits right)
 
       var card = el("div", "bone-card truth-card swipe-face" + (isOpen ? " open" : ""));
+      if (t.prompt) card.appendChild(el("div", "card-prompt", t.prompt));
       var p = el("p", null, t.text);
       p.style.cursor = "pointer";
       p.title = isOpen ? "Tap to collapse \u00b7 long-press to copy" : "Tap to open \u00b7 long-press to copy";
@@ -2887,6 +2901,7 @@
     if (!e) return;
     var host = document.getElementById("flipEntry");
     host.innerHTML = "";
+    if (e.prompt) host.appendChild(el("div", "flip-prompt", e.prompt));
     host.appendChild(el("span", null, e.text));
     document.getElementById("flipPos").textContent =
       (browseIdx + 1) + " / " + browseDeck.length;
@@ -3227,8 +3242,17 @@
     verdicts.style.display = "";
     var cur = axeQueue[axeIdx];
     prog.textContent = (axeIdx + 1) + "/" + axeQueue.length;
+    var starBtn = document.getElementById("axeStar");
+    if (starBtn) {
+      var already = !!cur.item.flag;
+      starBtn.classList.toggle("on", already);
+      starBtn.innerHTML = already ? "&#9733;" : "&#9734;";
+    }
 
     var wrap = el("div", "run-card");
+    if (cur.item.prompt) {
+      wrap.appendChild(el("div", "axe-prompt", cur.item.prompt));
+    }
     var ap = el("div", "axe-bit", cur.item.text);
     focusEditable(ap, function () { return cur.item; }, "axe-bit");
     attachLongPressCopy(ap, function () { return cur.item.text; });
@@ -3468,11 +3492,14 @@
     var inp = document.getElementById("batchInput");
     var v = inp.value.trim();
     if (!v) return;
-    // a prompt is a question, not a prefix — only stems glue on
+    // Stems glue into the line ("I love" + "driving with my knees"). Prompts
+    // are questions, so the answer keeps the prompt as recorded context —
+    // otherwise a bare answer like "driving with my knees" is a mystery later.
     var text = (batchStem && batchKind === "stem") ? (batchStem + " " + v) : v;
     if (!state.truths) state.truths = [];
     var lineId = uid();
     var entry = { id: lineId, text: text, created: Date.now() };
+    if (batchStem && batchKind === "prompt") entry.prompt = batchStem;
     if (sbSession) { entry.sb = sbSession.id; sbSession.lineIds.push(lineId); }
     state.truths.unshift(entry);
     batchWritten.push(text);
@@ -3697,7 +3724,18 @@
         var any = false;
         sesh.lineIds.forEach(function (id) {
           var txt = sbLogText(id);
-          if (txt) { lines.appendChild(el("p", "sb-log-line", txt)); any = true; }
+          if (txt) {
+            var t2 = (state.truths || []).find(function (x) { return x.id === id; });
+            if (t2 && t2.prompt) {
+              var wrap2 = el("div", "sb-log-line");
+              wrap2.appendChild(el("span", "sb-log-prompt", t2.prompt + " \u2014 "));
+              wrap2.appendChild(document.createTextNode(txt));
+              lines.appendChild(wrap2);
+            } else {
+              lines.appendChild(el("p", "sb-log-line", txt));
+            }
+            any = true;
+          }
         });
         if (!any) lines.appendChild(el("p", "sb-log-line", "(these lines were edited or removed later)"));
         row.appendChild(lines);
@@ -3730,6 +3768,17 @@
     if (circuit.active && circuit.phase === "axe") { nextPhase(); return; }
     document.getElementById("axeOverlay").classList.remove("open", "dimmed");
     render();
+  };
+  document.getElementById("axeStar").onclick = function () {
+    var cur = axeQueue[axeIdx];
+    if (!cur) return;
+    cur.item.flag = true;         // straight into the hammer/⭐ pile
+    markSeen(cur.item);
+    buzz();
+    axeIdx++;
+    save();
+    renderAxe();
+    circuitProgress("axe");
   };
   document.getElementById("axeKeep").onclick = function () {
     var cur = axeQueue[axeIdx];
