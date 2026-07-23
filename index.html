@@ -572,6 +572,35 @@
   .run-clock { font-family: var(--mono); font-size: 30px; font-weight: 600; color: var(--accent); letter-spacing: .04em; }
   .run-clock.over { color: var(--accent2); }
   /* end-of-run scorecard */
+  .run-mark { background: transparent; border: 1px solid var(--rule); border-radius: 50%;
+    width: 42px; height: 42px; font-size: 15px; line-height: 1; cursor: pointer;
+    color: var(--faint); flex: 0 0 auto; pointer-events: auto; }
+  .run-mark:hover { border-color: var(--accent); color: var(--accent); }
+  .run-mark.on { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
+  .run-bottom { display: flex; align-items: center; justify-content: center; gap: 22px; }
+  .jab-row { padding: 12px 2px; border-bottom: 1px solid var(--rule); }
+  .jab-row:last-child { border-bottom: none; }
+  .jab-row.done .jab-text { color: var(--muted); }
+  .jab-head { display: flex; align-items: baseline; gap: 9px; }
+  .jab-when { font-family: var(--mono); font-size: 9px; color: var(--faint); letter-spacing: .06em; flex: 0 0 auto; }
+  .jab-text { font-family: var(--serif); font-size: 15.5px; line-height: 1.45; color: var(--ink); flex: 1; }
+  .jab-src { font-family: var(--serif); font-style: italic; font-size: 12.5px; color: var(--faint);
+    margin-top: 5px; padding-left: 4px; line-height: 1.35; cursor: pointer; }
+  .jab-src:hover { color: var(--accent); }
+  .jab-acts { display: flex; gap: 8px; margin-top: 7px; padding-left: 4px; }
+  .jab-act { background: transparent; border: 1px solid var(--rule); border-radius: 6px;
+    font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); padding: 4px 9px; cursor: pointer; }
+  .jab-act:hover { border-color: var(--accent); color: var(--accent); }
+  .jab-act.done { border-color: transparent; color: var(--faint); cursor: default; }
+  .lineup-mark { font-family: var(--mono); font-size: 12px; }
+  .lineup-mark.weak { color: var(--accent2); }
+  .lineup-mark.strong { color: var(--accent); }
+  .sum-marks-note { font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+    color: var(--muted); margin: 0 0 10px; }
+  .sum-mark { font-family: var(--mono); font-size: 13px; width: 16px; text-align: center; flex: 0 0 auto; }
+  .sum-mark.weak { color: var(--accent2); }
+  .sum-mark.strong { color: var(--accent); }
   .run-card.run-sum { max-width: 560px; }
   .run-sum h3 { font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
     color: var(--muted); margin: 0 0 16px; font-weight: 600; }
@@ -713,6 +742,7 @@
     <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🪦</button>
     <button class="notes-tab bone-key" id="flaggedBtn" aria-label="flagged" title="Flagged — what you’ve starred to work">⭐</button>
+    <button class="notes-tab bone-key" id="jabsBtn" aria-label="jabs" title="The jab stack — every rewrite you’ve thrown">🥊</button>
     <button class="notes-tab" id="notesOpen" aria-label="notes" title="Notes &amp; ideas">📓</button>
     <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">📅</button>
     <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
@@ -741,6 +771,18 @@
       <p class="bone-note" id="boneNote"></p>
       <div class="notes-index" style="margin-top:8px">
         <div id="boneList"></div>
+      </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="jabsOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>The jab stack</h2>
+        <button class="notes-close" id="jabsClose">done</button>
+      </div>
+      <p class="bone-note" id="jabsNote"></p>
+      <div class="notes-index" style="margin-top:8px">
+        <div id="jabsList"></div>
       </div>
     </div>
   </div>
@@ -935,7 +977,9 @@
     <div class="run-tap run-tap-l" id="runTapL"></div>
     <div class="run-tap run-tap-r" id="runTapR"></div>
     <div class="run-bottom">
+      <button class="run-mark" id="runMarkWeak" title="That didn’t land">○</button>
       <div class="run-clock" id="runClock">0:00</div>
+      <button class="run-mark" id="runMarkStrong" title="That one worked">●</button>
     </div>
   </div>
   <div class="notes-overlay" id="workbenchOverlay">
@@ -1022,7 +1066,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.2.7";
+  var APP_VERSION = "v1.3.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2586,6 +2630,82 @@
       list.appendChild(card);
     });
   }
+  // ——— the jab stack ———
+  // Every jab across every entry, newest first. Thrown one at a time from
+  // inside the gym or the flip view, they scatter into N different gyms —
+  // this is where they read as one body of work.
+  function renderJabs() {
+    var list = document.getElementById("jabsList");
+    var note = document.getElementById("jabsNote");
+    list.innerHTML = "";
+    var all = [];
+    function collect(pool, kind) {
+      (pool || []).forEach(function (item) {
+        entryAngles(item).forEach(function (a) {
+          all.push({ a: a, item: item, kind: kind });
+        });
+      });
+    }
+    collect(state.truths, "truth");
+    collect(state.bits, "bit");
+    all.sort(function (x, y) { return (y.a.at || 0) - (x.a.at || 0); });
+    if (!all.length) {
+      note.textContent = "No jabs yet. Throw one from the gym\u2019s speed bag or while working an entry with \ud83d\udd28.";
+      return;
+    }
+    var landed = all.filter(function (x) { return x.a.promoted; }).length;
+    note.textContent = all.length + (all.length === 1 ? " jab" : " jabs")
+      + (landed ? "  \u00b7  " + landed + " landed" : "");
+    all.forEach(function (rec) {
+      var row = el("div", "jab-row" + (rec.a.promoted ? " done" : ""));
+      var head = el("div", "jab-head");
+      head.appendChild(el("span", "jab-when", shortWhen(rec.a.at)));
+      head.appendChild(el("span", "jab-text", rec.a.t));
+      row.appendChild(head);
+      var src = el("div", "jab-src", "\u21b3 " + rec.item.text);
+      src.title = "Open it in the gym";
+      src.onclick = function () {
+        document.getElementById("jabsOverlay").classList.remove("open");
+        openWorkbench(rec.item.id, rec.kind === "truth" ? "truth" : "bit");
+      };
+      row.appendChild(src);
+      var acts = el("div", "jab-acts");
+      if (rec.a.promoted) {
+        acts.appendChild(el("span", "jab-act done", "\u2713 landed"));
+      } else {
+        var mk = el("button", "jab-act", "landed");
+        mk.title = "It connected \u2014 make this a bit";
+        mk.onclick = function () {
+          state.bits.unshift({
+            id: uid(), text: rec.a.t, tags: (rec.item.tags || []).slice(),
+            created: Date.now(), statusAt: Date.now()
+          });
+          rec.a.promoted = true;
+          rec.item.mined = (rec.item.mined || 0) + 1;
+          rec.item.touched = Date.now();
+          save(); renderJabs(); render();
+        };
+        acts.appendChild(mk);
+      }
+      var del = el("button", "jab-act", "\u2715");
+      del.title = "Remove this jab";
+      del.onclick = function () {
+        rec.item.angles = entryAngles(rec.item).filter(function (x) { return x !== rec.a; });
+        if (!rec.item.angles.length) delete rec.item.angles;
+        save(); renderJabs();
+      };
+      acts.appendChild(del);
+      row.appendChild(acts);
+      list.appendChild(row);
+    });
+  }
+  document.getElementById("jabsBtn").onclick = function () {
+    renderJabs();
+    document.getElementById("jabsOverlay").classList.add("open");
+  };
+  document.getElementById("jabsClose").onclick = function () {
+    document.getElementById("jabsOverlay").classList.remove("open");
+  };
   document.getElementById("flaggedBtn").onclick = function () {
     document.getElementById("utilMenu").style.display = "none";
     renderFlagged();
@@ -3495,11 +3615,19 @@
     // Stems glue into the line ("I love" + "driving with my knees"). Prompts
     // are questions, so the answer keeps the prompt as recorded context —
     // otherwise a bare answer like "driving with my knees" is a mystery later.
-    var text = (batchStem && batchKind === "stem") ? (batchStem + " " + v) : v;
+    // Glue the stem on — unless you already typed it. Retyping shouldn't
+    // double it, leaving it out shouldn't lose it. Either way the saved line
+    // reads as a whole sentence.
+    var text = v;
+    if (batchStem && batchKind === "stem") {
+      var norm = function (x) { return x.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim(); };
+      text = norm(v).indexOf(norm(batchStem)) === 0 ? v : (batchStem + " " + v);
+    }
     if (!state.truths) state.truths = [];
     var lineId = uid();
     var entry = { id: lineId, text: text, created: Date.now() };
     if (batchStem && batchKind === "prompt") entry.prompt = batchStem;
+    if (batchStem && batchKind === "stem") entry.stem = batchStem;
     if (sbSession) { entry.sb = sbSession.id; sbSession.lineIds.push(lineId); }
     state.truths.unshift(entry);
     batchWritten.push(text);
@@ -3987,13 +4115,14 @@
   // zero on each bit (resets the moment you advance), and a scorecard at the end
   // showing what you ACTUALLY took vs. what you'd estimated. Nothing is saved
   // and no estimate is changed — it just tells you the truth.
-  var runState = { set: null, bits: [], i: 0, actual: [], startedAt: 0, setStartedAt: 0, tick: null, done: false };
+  var runState = { set: null, bits: [], i: 0, actual: [], marks: [], startedAt: 0, setStartedAt: 0, tick: null, done: false };
 
   function openRun(s) {
     var bits = s.bitIds.map(findBitAnywhere).filter(Boolean).map(function (f) { return f.bit; });
     if (!bits.length) { alert("Nothing to run — add some bits to this set first."); return; }
     runState.set = s;
     runState.bits = bits;
+    runState.marks = [];
     runState.i = 0;
     runState.actual = [];
     runState.done = false;
@@ -4050,6 +4179,32 @@
     renderRun();
     runTick();
   }
+  // A read-through is the only place you FEEL a dead spot, and the signal is
+  // gone in ten seconds. One tap, no typing, keep moving.
+  function setRunMark(kind) {
+    if (runState.done) return;
+    var i = runState.i;
+    runState.marks[i] = runState.marks[i] === kind ? null : kind;
+    // remember it on the bit too, so the set list can show it later
+    var b = runState.bits[i];
+    if (b) {
+      var f = findBitAnywhere(b.id);
+      if (f) { if (runState.marks[i]) f.bit.lastRead = runState.marks[i]; else delete f.bit.lastRead; save(); }
+    }
+    buzz();
+    renderRunMarks();
+  }
+  function renderRunMarks() {
+    var w = document.getElementById("runMarkWeak");
+    var st = document.getElementById("runMarkStrong");
+    if (!w || !st) return;
+    var m = runState.marks[runState.i];
+    var hide = runState.done;
+    w.style.visibility = hide ? "hidden" : "";
+    st.style.visibility = hide ? "hidden" : "";
+    w.classList.toggle("on", m === "weak");
+    st.classList.toggle("on", m === "strong");
+  }
   function runTick() {
     if (runState.done) return;
     var clk = document.getElementById("runClock");
@@ -4074,6 +4229,7 @@
     runState.startedAt = Date.now();
     renderRun();
     runTick();
+    renderRunMarks();
   }
   function runFinish() {
     runState.done = true;
@@ -4087,14 +4243,25 @@
 
     if (runState.done) {
       document.getElementById("runClock").textContent = "";
+      renderRunMarks();
       var card = el("div", "run-card run-sum");
       card.appendChild(el("h3", null, "how it actually went"));
+      var nWeak = runState.marks.filter(function (m) { return m === "weak"; }).length;
+      var nStrong = runState.marks.filter(function (m) { return m === "strong"; }).length;
+      if (nWeak || nStrong) {
+        card.appendChild(el("p", "sum-marks-note",
+          (nStrong ? "\u25cf " + nStrong + " worked" : "") +
+          (nStrong && nWeak ? "   \u00b7   " : "") +
+          (nWeak ? "\u25cb " + nWeak + " to fix" : "")));
+      }
       var estTot = 0, actTot = 0;
       runState.bits.forEach(function (b, i) {
         var act = runState.actual[i] || 0;
         var est = b.est || 0;
         estTot += est; actTot += act;
         var row = el("div", "sum-row");
+        var mk = runState.marks[i];
+        row.appendChild(el("div", "sum-mark" + (mk ? " " + mk : ""), mk === "weak" ? "\u25cb" : mk === "strong" ? "\u25cf" : ""));
         row.appendChild(el("div", "sum-txt", b.text));
         row.appendChild(el("div", "sum-est", est ? fmtSec(est) : "?"));
         var a = el("div", "sum-act" + (est && act > est ? " slow" : ""), fmtSec(act));
@@ -4134,6 +4301,8 @@
       dots.appendChild(d);
     });
   }
+  document.getElementById("runMarkWeak").onclick = function () { setRunMark("weak"); };
+  document.getElementById("runMarkStrong").onclick = function () { setRunMark("strong"); };
   document.getElementById("runClose").onclick = closeRun;
   document.getElementById("runTapR").onclick = function () { runAdvance(1); };
   document.getElementById("runTapL").onclick = function () { runAdvance(-1); };
@@ -4382,6 +4551,11 @@
         grip.title = "Hold and drag to reorder";
         row.appendChild(grip);
         var p = el("p", null, f.bit.text);
+        if (f.bit.lastRead) {
+          // carried over from your last read-through
+          var dot = el("span", "lineup-mark " + f.bit.lastRead, f.bit.lastRead === "weak" ? "\u25cb " : "\u25cf ");
+          p.insertBefore(dot, p.firstChild);
+        }
         if (f.buried) { p.style.opacity = ".45"; p.textContent = f.bit.text + "  (buried)"; }
         p.style.cursor = "pointer";
         p.title = "Tap to go into the gym";
