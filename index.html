@@ -295,16 +295,19 @@
   /* two kinds of button were sharing one row: things you DO, and piles you
      LOOK AT. Splitting them lets the work read first and the shelves recede. */
   .tool-row { display: flex; align-items: center; gap: 8px; }
-  .tool-row .bone-key { font-size: 21px; padding: 7px 9px; opacity: .95; }
+  .tool-row .bone-key { font-size: 21px; padding: 7px 9px; opacity: 1; }
   .tool-row .bone-key:hover { opacity: 1; }
   /* the shelves are still a different kind of thing — separated by a gap and
      a hairline, not by a second row, since there's room to spare */
-  .look-row { opacity: .55; margin-left: 6px; padding-left: 14px;
-    border-left: 1px solid var(--rule); }
-  .look-row:hover { opacity: 1; }
+  /* a gap is enough to group them — the rule read as clutter */
+  .look-row { margin-left: 10px; }
+  /* ten buttons have to fit a phone in one line: tighten everything and drop
+     the word "more" to its glyph, which was eating a whole icon's worth */
   @media (max-width: 560px) {
-    .tool-row .bone-key { font-size: 18px; padding: 5px 6px; }
-    .look-row { margin-left: 2px; padding-left: 8px; }
+    .backup { gap: 2px; }
+    .tool-row { gap: 2px; }
+    .tool-row .bone-key { font-size: 17px; padding: 4px 4px; }
+    .look-row { margin-left: 7px; }
   }
   .backup button { background: var(--card); border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 4px 12px; font-size: 11.5px; font-family: var(--mono); }
   .backup button:hover { border-color: var(--accent); color: var(--accent); }
@@ -797,7 +800,7 @@
       <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🪦</button>
       <button class="notes-tab" id="notesOpen" aria-label="notes" title="Notes &amp; ideas">📓</button>
       <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">📅</button>
-      <button class="notes-tab" id="utilBtn" title="More">⚙ more</button>
+      <button class="notes-tab bone-key" id="utilBtn" aria-label="settings" title="Settings">⚙️</button>
     </div>
     <span class="sync-chip" id="syncStatus"></span>
     <span class="backup-note" id="authWho"></span>
@@ -1149,7 +1152,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.3.6";
+  var APP_VERSION = "v1.4.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2852,6 +2855,7 @@
       drill.truthId = tid;
       drill.step = "contra";
       buzz(); save(); renderDrill();
+      circuitProgress("truth");
     } else {
       state.truths.unshift({ id: uid(), text: v, created: Date.now(),
                              kind: "contradiction", src: drill.truthId });
@@ -2861,11 +2865,15 @@
   }
   function nextDrill() {
     drill.step = "truth"; drill.truthText = ""; drill.truthId = null;
-    if (drill.i >= drill.deck.length - 1) { closeDrill(); toast("Deck finished."); return; }
+    if (drill.i >= drill.deck.length - 1) {
+      if (circuit.active && circuit.phase === "truth") { nextPhase(); return; }
+      closeDrill(); toast("Deck finished."); return;
+    }
     drill.i++;
     renderDrill();
   }
   function closeDrill() {
+    if (circuit.active && circuit.phase === "truth") { nextPhase(); return; }
     document.getElementById("truthOverlay").classList.remove("open");
     renderTruthLib();
     document.getElementById("truthLibOverlay").classList.add("open");
@@ -3930,9 +3938,12 @@
   // phase-close handlers check `circuit.active` and call nextPhase() instead of
   // returning home. Quitting or finishing tears the banner down.
   var SIZES = {
-    light:  { shadow: 3, hammer: 2, axe: 3, label: "Light", note: "3 warm-up \u00b7 2 worked \u00b7 3 culled" },
-    normal: { shadow: 5, hammer: 3, axe: 5, label: "Normal", note: "5 warm-up \u00b7 3 worked \u00b7 5 culled" },
-    long:   { shadow: 8, hammer: 5, axe: 8, label: "Long", note: "8 warm-up \u00b7 5 worked \u00b7 8 culled" }
+    light:  { shadow: 3, truth: 3, hammer: 2, axe: 3, label: "Light",
+              note: "3 warm-up \u00b7 3 truths \u00b7 2 worked \u00b7 3 culled" },
+    normal: { shadow: 5, truth: 3, hammer: 3, axe: 5, label: "Normal",
+              note: "5 warm-up \u00b7 3 truths \u00b7 3 worked \u00b7 5 culled" },
+    long:   { shadow: 8, truth: 5, hammer: 5, axe: 8, label: "Long",
+              note: "8 warm-up \u00b7 5 truths \u00b7 5 worked \u00b7 8 culled" }
   };
   var circuit = { active: false, phase: null, plan: null, done: 0, target: 0, tally: null };
 
@@ -3940,7 +3951,7 @@
     var plan = SIZES[sizeKey];
     if (!plan) return;
     circuit = { active: true, phase: null, plan: plan, done: 0, target: 0,
-                tally: { shadow: 0, hammer: 0, axe: 0 } };
+                tally: { shadow: 0, truth: 0, hammer: 0, axe: 0 } };
     document.getElementById("circuitOverlay").classList.remove("open");
     document.getElementById("utilMenu").style.display = "none";
     beginPhase("shadow");
@@ -3948,7 +3959,7 @@
   function circuitBanner() {
     var b = document.getElementById("circuitPhase");
     if (!circuit.active) { b.classList.remove("show"); return; }
-    var names = { shadow: "WARM UP", hammer: "WORK IT", axe: "CULL" };
+    var names = { shadow: "WARM UP", truth: "DISTILL", hammer: "WORK IT", axe: "CULL" };
     document.getElementById("circuitPhaseText").textContent =
       names[circuit.phase] + "  \u00b7  " + circuit.done + " / " + circuit.target;
     b.classList.add("show");
@@ -3957,6 +3968,7 @@
     circuit.phase = phase;
     circuit.done = 0;
     circuit.target = phase === "shadow" ? circuit.plan.shadow
+                   : phase === "truth"  ? circuit.plan.truth
                    : phase === "hammer" ? circuit.plan.hammer
                    : circuit.plan.axe;
     if (phase === "shadow") {
@@ -3965,6 +3977,8 @@
       document.getElementById("batchOverlay").classList.add("open");
       var sb = sbToday();
       if (sb.cur) { showOpener(sb.cur); renderReroll(); } else dealOpener();
+    } else if (phase === "truth") {
+      if (!dealDrill()) { nextPhase(); return; }    // nothing to distill -> skip ahead
     } else if (phase === "hammer") {
       if (!dealHammer()) { nextPhase(); return; }   // nothing flagged/available -> skip ahead
     } else if (phase === "axe") {
@@ -3986,6 +4000,9 @@
     if (circuit.phase === "shadow") {
       endSession();
       document.getElementById("batchOverlay").classList.remove("open");
+      beginPhase("truth");
+    } else if (circuit.phase === "truth") {
+      document.getElementById("truthOverlay").classList.remove("open");
       beginPhase("hammer");
     } else if (circuit.phase === "hammer") {
       clearBrowse();
@@ -4001,12 +4018,13 @@
     circuit.active = false; circuit.phase = null;
     circuitBanner();
     render();
-    toast(t.shadow + " written \u00b7 " + t.hammer + " worked \u00b7 " + t.axe + " culled");
+    toast(t.shadow + " written \u00b7 " + t.truth + " truths \u00b7 " + t.hammer + " worked \u00b7 " + t.axe + " culled");
   }
   function quitCircuit() {
     var was = circuit.phase;
     circuit.active = false; circuit.phase = null;
     if (was === "shadow") { endSession(); document.getElementById("batchOverlay").classList.remove("open"); }
+    else if (was === "truth") { document.getElementById("truthOverlay").classList.remove("open"); }
     else if (was === "hammer") { clearBrowse(); document.getElementById("flipOverlay").classList.remove("open"); }
     else if (was === "axe") { document.getElementById("axeOverlay").classList.remove("open", "dimmed"); }
     circuitBanner();
