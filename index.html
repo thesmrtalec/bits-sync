@@ -343,6 +343,12 @@
   .sb-log-lines { margin-top: 8px; padding-left: 4px; }
   .sb-log-line { font-family: var(--serif); font-size: 14px; color: var(--muted); line-height: 1.5; padding: 2px 0; }
   .sb-log-prompt { font-style: italic; opacity: .7; }
+  .card-kind { display: flex; align-items: baseline; flex-wrap: wrap; margin-bottom: 4px; }
+  .card-kind-tag { font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--accent); }
+  .card-kind.contradiction .card-kind-tag { color: var(--accent2); }
+  .card-kind-src { font-family: var(--serif); font-style: italic; font-size: 11.5px; color: var(--faint);
+    opacity: .8; }
   .card-prompt { font-family: var(--serif); font-style: italic; font-size: 12.5px; color: var(--muted);
     opacity: .7; margin-bottom: 3px; line-height: 1.35; }
   .batch-timer { font-family: var(--mono); font-size: 11px; color: var(--faint); letter-spacing: .06em; margin-left: 12px; }
@@ -551,6 +557,18 @@
     text-align: center; font-family: var(--serif); font-size: 25px; line-height: 1.4;
     color: var(--ink); padding: 8px 4px; overflow: hidden; min-width: 0; }
   @media (min-width: 700px) { .flip-entry { font-size: 30px; } }
+  .truth-ask { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--muted);
+    margin-bottom: 9px; line-height: 1.4; }
+  .truth-steps { margin-top: 12px; }
+  .truth-step { display: flex; gap: 9px; padding: 6px 0; font-family: var(--serif); font-size: 14.5px;
+    line-height: 1.45; color: var(--muted); }
+  .truth-step-tag { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--faint); flex: 0 0 auto; padding-top: 3px; width: 62px; }
+  .truth-nav { display: flex; justify-content: flex-end; margin-top: 12px; }
+  .truth-skip { background: transparent; border: 1px solid var(--rule); border-radius: 7px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); padding: 6px 11px; cursor: pointer; }
+  .truth-skip:hover { border-color: var(--accent); color: var(--accent); }
   .flip-prompt { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--muted);
     opacity: .75; margin-bottom: 10px; line-height: 1.4; }
   .flip-entry span { display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical;
@@ -739,6 +757,7 @@
   <div class="backup">
     <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: morning writing, deal an opener" title="Shadowbox — morning writing">🙏</button>
     <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it: deal a line with more in it" title="Work it — deal a line with more in it">🔨</button>
+    <button class="notes-tab bone-key" id="truthBtn" aria-label="truth drill" title="Truth &amp; contradiction — what’s always true because of this?">⚜</button>
     <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
     <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🪦</button>
     <button class="notes-tab bone-key" id="flaggedBtn" aria-label="flagged" title="Flagged — what you’ve starred to work">⭐</button>
@@ -948,6 +967,23 @@
       <button id="axeKeep" class="axe-keep">keep</button>
     </div>
   </div>
+  <div class="flip-overlay" id="truthOverlay">
+    <div class="flip-bar">
+      <button class="flip-x" id="truthClose">&times;</button>
+      <span class="flip-pos" id="truthPos"></span>
+    </div>
+    <div class="flip-body">
+      <div class="flip-entry" id="truthMoment"></div>
+    </div>
+    <div class="flip-bottom">
+      <div class="truth-ask" id="truthAsk"></div>
+      <input id="truthInput" class="flip-jab-input" placeholder="…" autocomplete="off" />
+      <div class="truth-steps" id="truthSteps"></div>
+      <div class="truth-nav">
+        <button class="truth-skip" id="truthSkip">something else →</button>
+      </div>
+    </div>
+  </div>
   <div class="flip-overlay" id="flipOverlay">
     <div class="flip-bar">
       <button class="flip-x" id="flipClose">&times;</button>
@@ -1066,7 +1102,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.3.0";
+  var APP_VERSION = "v1.3.2";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2699,6 +2735,102 @@
       list.appendChild(row);
     });
   }
+  // ——— truth & contradiction ———
+  // The drill behind his best material: take a moment you already caught and
+  // ask what's ALWAYS true because of it, then ask what shouldn't be true.
+  // Not funny, just true — the joke is downstream. Two reps, one card.
+  var TRUTH_Q = "What\u2019s always true because of this?";
+  var CONTRA_Q = "And what shouldn\u2019t be true?";
+  var drill = { deck: [], i: 0, step: "truth", truthText: "" };
+
+  function drillPool() {
+    // starred first, then anything with some age — you're distilling material
+    // you already thought was worth something
+    var now = Date.now(), pool = [];
+    (state.truths || []).forEach(function (t) {
+      if (t.kind === "truth" || t.kind === "contradiction") return;   // don't drill the output
+      pool.push({ item: t, w: (t.flag ? 1000 : 1) * (1 + Math.floor((now - (t.created || now)) / DAY)) });
+    });
+    return pool;
+  }
+  function dealDrill() {
+    var pool = drillPool();
+    if (!pool.length) return false;
+    var order = [], rem = pool.slice();
+    while (rem.length) {
+      var tot = 0; rem.forEach(function (x) { tot += x.w; });
+      var r = Math.random() * tot, k = rem.length - 1;
+      for (var i = 0; i < rem.length; i++) { r -= rem[i].w; if (r <= 0) { k = i; break; } }
+      order.push(rem[k].item); rem.splice(k, 1);
+    }
+    drill = { deck: order, i: 0, step: "truth", truthText: "" };
+    renderDrill();
+    document.getElementById("truthOverlay").classList.add("open");
+    return true;
+  }
+  function drillCurrent() { return drill.deck[drill.i] || null; }
+  function renderDrill() {
+    var m = drillCurrent();
+    if (!m) return;
+    var host = document.getElementById("truthMoment");
+    host.innerHTML = "";
+    host.appendChild(el("span", null, m.text));
+    document.getElementById("truthPos").textContent = (drill.i + 1) + " / " + drill.deck.length;
+    document.getElementById("truthAsk").textContent =
+      drill.step === "truth" ? TRUTH_Q : CONTRA_Q;
+    var inp = document.getElementById("truthInput");
+    inp.value = "";
+    inp.placeholder = drill.step === "truth" ? "not funny \u2014 just true" : "the thing that undercuts it";
+    var steps = document.getElementById("truthSteps");
+    steps.innerHTML = "";
+    if (drill.step === "contra" && drill.truthText) {
+      var row = el("div", "truth-step");
+      row.appendChild(el("span", "truth-step-tag", "truth"));
+      row.appendChild(el("span", null, drill.truthText));
+      steps.appendChild(row);
+    }
+    setTimeout(function () { inp.focus(); }, 50);
+  }
+  function commitDrill() {
+    var inp = document.getElementById("truthInput");
+    var v = inp.value.trim();
+    var m = drillCurrent();
+    if (!v || !m) return;
+    if (drill.step === "truth") {
+      var tid = uid();
+      state.truths.unshift({ id: tid, text: v, created: Date.now(),
+                             kind: "truth", src: m.id, flag: true });
+      m.distilled = tid;                 // the moment remembers what it produced
+      drill.truthText = v;
+      drill.truthId = tid;
+      drill.step = "contra";
+      buzz(); save(); renderDrill();
+    } else {
+      state.truths.unshift({ id: uid(), text: v, created: Date.now(),
+                             kind: "contradiction", src: drill.truthId });
+      buzz(); save();
+      nextDrill();
+    }
+  }
+  function nextDrill() {
+    drill.step = "truth"; drill.truthText = ""; drill.truthId = null;
+    if (drill.i >= drill.deck.length - 1) { closeDrill(); toast("Deck finished."); return; }
+    drill.i++;
+    renderDrill();
+  }
+  function closeDrill() {
+    document.getElementById("truthOverlay").classList.remove("open");
+    render();
+  }
+  document.getElementById("truthBtn").onclick = function () {
+    if (!dealDrill()) toast("Nothing to distill yet \u2014 capture a few moments first.");
+  };
+  document.getElementById("truthClose").onclick = closeDrill;
+  document.getElementById("truthSkip").onclick = nextDrill;
+  document.getElementById("truthInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); commitDrill(); }
+  });
+
   document.getElementById("jabsBtn").onclick = function () {
     renderJabs();
     document.getElementById("jabsOverlay").classList.add("open");
@@ -2859,6 +2991,13 @@
 
       var card = el("div", "bone-card truth-card swipe-face" + (isOpen ? " open" : ""));
       if (t.prompt) card.appendChild(el("div", "card-prompt", t.prompt));
+      if (t.kind === "truth" || t.kind === "contradiction") {
+        var src = (state.truths || []).find(function (x) { return x.id === t.src; });
+        var lab = el("div", "card-kind " + t.kind);
+        lab.appendChild(el("span", "card-kind-tag", t.kind === "truth" ? "\u269c truth" : "\u269c contradiction"));
+        if (src) lab.appendChild(el("span", "card-kind-src", "  \u2190  " + src.text));
+        card.appendChild(lab);
+      }
       var p = el("p", null, t.text);
       p.style.cursor = "pointer";
       p.title = isOpen ? "Tap to collapse \u00b7 long-press to copy" : "Tap to open \u00b7 long-press to copy";
