@@ -557,6 +557,18 @@
     text-align: center; font-family: var(--serif); font-size: 25px; line-height: 1.4;
     color: var(--ink); padding: 8px 4px; overflow: hidden; min-width: 0; }
   @media (min-width: 700px) { .flip-entry { font-size: 30px; } }
+  .tl-row { padding: 13px 2px; border-bottom: 1px solid var(--rule); }
+  .tl-row:last-child { border-bottom: none; }
+  .tl-truth { font-family: var(--serif); font-size: 16.5px; line-height: 1.4; color: var(--ink); cursor: pointer; }
+  .tl-truth:hover { color: var(--accent); }
+  .tl-from { font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--faint);
+    margin-top: 4px; line-height: 1.35; }
+  .tl-contra { display: flex; gap: 8px; margin-top: 7px; padding-left: 2px; }
+  .tl-contra-tag { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent2); flex: 0 0 auto; padding-top: 3px; }
+  .tl-contra-txt { font-family: var(--serif); font-size: 14px; line-height: 1.45; color: var(--muted); }
+  .tl-orphan { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--faint); margin-top: 6px; }
   .truth-ask { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--muted);
     margin-bottom: 9px; line-height: 1.4; }
   .truth-steps { margin-top: 12px; }
@@ -967,6 +979,19 @@
       <button id="axeKeep" class="axe-keep">keep</button>
     </div>
   </div>
+  <div class="notes-overlay" id="truthLibOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Truths</h2>
+        <button class="notes-close" id="truthLibClose">done</button>
+      </div>
+      <button class="sb-start" id="truthLibStart">⚜  start drilling</button>
+      <p class="bone-note" id="truthLibNote"></p>
+      <div class="notes-index" style="margin-top:8px">
+        <div id="truthLibList"></div>
+      </div>
+    </div>
+  </div>
   <div class="flip-overlay" id="truthOverlay">
     <div class="flip-bar">
       <button class="flip-x" id="truthClose">&times;</button>
@@ -1102,7 +1127,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.3.2";
+  var APP_VERSION = "v1.3.3";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2820,10 +2845,67 @@
   }
   function closeDrill() {
     document.getElementById("truthOverlay").classList.remove("open");
+    renderTruthLib();
+    document.getElementById("truthLibOverlay").classList.add("open");
     render();
   }
+  // The library is the front door — see the truths you\'ve gathered, then drill.
+  function renderTruthLib() {
+    var list = document.getElementById("truthLibList");
+    var note = document.getElementById("truthLibNote");
+    list.innerHTML = "";
+    var all = state.truths || [];
+    var truths = all.filter(function (t) { return t.kind === "truth"; });
+    var contras = all.filter(function (t) { return t.kind === "contradiction"; });
+    if (!truths.length && !contras.length) {
+      note.textContent = "No truths yet. Drilling takes something you caught and asks what\u2019s always true because of it.";
+      return;
+    }
+    note.textContent = truths.length + (truths.length === 1 ? " truth" : " truths")
+      + "  \u00b7  " + contras.length + (contras.length === 1 ? " contradiction" : " contradictions");
+    truths.forEach(function (t) {
+      var row = el("div", "tl-row");
+      var head = el("div", "tl-truth", t.text);
+      head.title = "Open it in the gym";
+      head.onclick = function () {
+        document.getElementById("truthLibOverlay").classList.remove("open");
+        openWorkbench(t.id, "truth");
+      };
+      row.appendChild(head);
+      var from = all.find(function (x) { return x.id === t.src; });
+      if (from) row.appendChild(el("div", "tl-from", "\u2190 " + from.text));
+      contras.filter(function (c) { return c.src === t.id; }).forEach(function (c) {
+        var cr = el("div", "tl-contra");
+        cr.appendChild(el("span", "tl-contra-tag", "but"));
+        cr.appendChild(el("span", "tl-contra-txt", c.text));
+        row.appendChild(cr);
+      });
+      list.appendChild(row);
+    });
+    // contradictions whose truth was deleted still deserve to be visible
+    var orphans = contras.filter(function (c) {
+      return !truths.some(function (t) { return t.id === c.src; });
+    });
+    if (orphans.length) {
+      var head2 = el("div", "tl-orphan", "contradictions without a truth");
+      list.appendChild(head2);
+      orphans.forEach(function (c) {
+        var row2 = el("div", "tl-row");
+        row2.appendChild(el("div", "tl-contra-txt", c.text));
+        list.appendChild(row2);
+      });
+    }
+  }
   document.getElementById("truthBtn").onclick = function () {
-    if (!dealDrill()) toast("Nothing to distill yet \u2014 capture a few moments first.");
+    renderTruthLib();
+    document.getElementById("truthLibOverlay").classList.add("open");
+  };
+  document.getElementById("truthLibClose").onclick = function () {
+    document.getElementById("truthLibOverlay").classList.remove("open");
+  };
+  document.getElementById("truthLibStart").onclick = function () {
+    document.getElementById("truthLibOverlay").classList.remove("open");
+    if (!dealDrill()) toast("Nothing to distill yet \u2014 capture a few things first.");
   };
   document.getElementById("truthClose").onclick = closeDrill;
   document.getElementById("truthSkip").onclick = nextDrill;
