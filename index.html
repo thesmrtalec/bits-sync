@@ -290,15 +290,22 @@
   .time-chip-active { border-style: solid; border-color: var(--accent); color: var(--ink); }
   .empty { color: var(--faint); font-style: italic; font-size: 15px; padding: 14px 2px; }
 
-  .backup { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--rule); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .backup { margin-top: 40px; padding-top: 14px; border-top: 1px solid var(--rule);
+    display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
   /* two kinds of button were sharing one row: things you DO, and piles you
      LOOK AT. Splitting them lets the work read first and the shelves recede. */
-  .tool-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
-  .do-row .bone-key { font-size: 21px; opacity: .95; padding: 7px 9px; }
-  .do-row .bone-key:hover { opacity: 1; }
-  .look-row { gap: 6px; margin-top: 2px; opacity: .62; }
+  .tool-row { display: flex; align-items: center; gap: 8px; }
+  .tool-row .bone-key { font-size: 21px; padding: 7px 9px; opacity: .95; }
+  .tool-row .bone-key:hover { opacity: 1; }
+  /* the shelves are still a different kind of thing — separated by a gap and
+     a hairline, not by a second row, since there's room to spare */
+  .look-row { opacity: .55; margin-left: 6px; padding-left: 14px;
+    border-left: 1px solid var(--rule); }
   .look-row:hover { opacity: 1; }
-  .look-row .bone-key { font-size: 13px; padding: 3px 4px; }
+  @media (max-width: 560px) {
+    .tool-row .bone-key { font-size: 18px; padding: 5px 6px; }
+    .look-row { margin-left: 2px; padding-left: 8px; }
+  }
   .backup button { background: var(--card); border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 4px 12px; font-size: 11.5px; font-family: var(--mono); }
   .backup button:hover { border-color: var(--accent); color: var(--accent); }
   .backup-note { font-size: 11.5px; color: var(--faint); font-style: italic; }
@@ -1142,7 +1149,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.3.5";
+  var APP_VERSION = "v1.3.6";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
