@@ -590,6 +590,18 @@
     margin-top: 5px; }
   .tl-orphan { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
     color: var(--faint); margin-top: 6px; }
+  .truth-drill .flip-bottom { flex: 0 0 auto; }
+  .truth-moment-wrap { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex;
+    align-items: center; justify-content: center; padding: 8px 4px; }
+  .truth-moment { text-align: center; font-family: var(--serif); font-size: 24px; line-height: 1.4;
+    color: var(--ink); max-width: 90%; }
+  @media (min-width: 700px) { .truth-moment { font-size: 29px; } }
+  /* when the keyboard is up the screen is short — shrink the moment and pin it
+     to the top so the question and input stay put */
+  @media (max-height: 620px) {
+    .truth-moment-wrap { align-items: flex-start; padding-top: 4px; }
+    .truth-moment { font-size: 18px; line-height: 1.35; }
+  }
   .truth-ask { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--muted);
     margin-bottom: 9px; line-height: 1.4; }
   .truth-steps { margin-top: 12px; }
@@ -1017,13 +1029,13 @@
       </div>
     </div>
   </div>
-  <div class="flip-overlay" id="truthOverlay">
+  <div class="flip-overlay truth-drill" id="truthOverlay">
     <div class="flip-bar">
       <button class="flip-x" id="truthClose">&times;</button>
       <span class="flip-pos" id="truthPos"></span>
     </div>
-    <div class="flip-body">
-      <div class="flip-entry" id="truthMoment"></div>
+    <div class="truth-moment-wrap">
+      <div class="truth-moment" id="truthMoment"></div>
     </div>
     <div class="flip-bottom">
       <div class="truth-ask" id="truthAsk"></div>
@@ -1152,7 +1164,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.4.1";
+  var APP_VERSION = "v1.4.2";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
