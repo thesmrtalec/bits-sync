@@ -532,6 +532,7 @@
     font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink); white-space: pre-wrap; }
   .run-est { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--faint); margin-top: 22px; }
+  .truth-drill.kb-open { height: var(--vh, 100%); bottom: auto; }
   .flip-overlay { position: fixed; inset: 0; background: var(--page); z-index: 300;
     display: none; flex-direction: column; padding: 0 18px 18px; }
   .flip-overlay.open { display: flex; }
@@ -591,17 +592,13 @@
   .tl-orphan { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase;
     color: var(--faint); margin-top: 6px; }
   .truth-drill .flip-bottom { flex: 0 0 auto; }
+  /* The moment sits in a scrollable band pinned to the TOP, never vertically
+     centered — centering is what let the keyboard shove it off screen. */
   .truth-moment-wrap { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex;
-    align-items: center; justify-content: center; padding: 8px 4px; }
-  .truth-moment { text-align: center; font-family: var(--serif); font-size: 24px; line-height: 1.4;
-    color: var(--ink); max-width: 90%; }
-  @media (min-width: 700px) { .truth-moment { font-size: 29px; } }
-  /* when the keyboard is up the screen is short — shrink the moment and pin it
-     to the top so the question and input stay put */
-  @media (max-height: 620px) {
-    .truth-moment-wrap { align-items: flex-start; padding-top: 4px; }
-    .truth-moment { font-size: 18px; line-height: 1.35; }
-  }
+    align-items: flex-start; justify-content: center; padding: 12px 4px 4px; }
+  .truth-moment { text-align: center; font-family: var(--serif); font-size: 22px; line-height: 1.38;
+    color: var(--ink); max-width: 92%; }
+  @media (min-width: 700px) { .truth-moment { font-size: 28px; } }
   .truth-ask { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--muted);
     margin-bottom: 9px; line-height: 1.4; }
   .truth-steps { margin-top: 12px; }
@@ -708,6 +705,8 @@
     color: var(--faint); margin-top: 22px; }
   .form-row { display: flex; flex-wrap: wrap; gap: 9px; align-items: baseline; margin-top: 8px; }
   .cap-forms { margin: -4px 0 12px; }
+  .notice-word.notice-truth { border-color: var(--accent); color: var(--accent); }
+  .notice-word.notice-truth.on { background: var(--accent); color: var(--onaccent); }
   .notice-ask { font-family: var(--mono); font-size: 10px; letter-spacing: .16em;
     text-transform: uppercase; color: var(--faint); flex: 0 0 auto; }
   .notice-word { background: var(--tagbg); border: none; border-radius: 3px; cursor: pointer;
@@ -1164,7 +1163,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.4.2";
+  var APP_VERSION = "v1.4.4";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1283,7 +1282,7 @@
     state.notesPin = data.notesPin || null;
     // A stored list identical to a superseded default was never a choice —
     // it got written by the old formList() bug. Clear it so defaults apply.
-    var SUPERSEDED = ["setup,punchline,list", "feeling,moment,pattern,trait"];
+    var SUPERSEDED = ["setup,punchline,list", "feeling,moment,pattern,trait", "feeling,moment,pattern"];
     var incoming = (data.forms && data.forms.length) ? data.forms : null;
     if (incoming && SUPERSEDED.indexOf(incoming.join(",")) !== -1) incoming = null;
     state.forms = incoming;
@@ -1483,7 +1482,7 @@
   // point of view, a moment gives it specificity, a pattern gives it the
   // observation. The point isn't filing; it's that tagging as you capture
   // trains what you catch. Independent toggles — a thing is occasionally two.
-  var DEFAULT_FORMS = ["feeling", "moment", "pattern"];
+  var DEFAULT_FORMS = ["feeling", "moment", "truth"];
   // Never assign the defaults into state — doing that persisted them, so a
   // saved copy of an older default list would outlive every later change.
   // state.forms is set only when the user actually edits the list.
@@ -1509,8 +1508,11 @@
     if (lead !== false) row.appendChild(el("span", "notice-ask", "I noticed a"));
     formList().forEach(function (name) {
       var on = get(name);
-      var b = el("button", "notice-word" + (on ? " on" : ""), name);
-      b.title = on ? "Tap to unset" : "Mark as " + name;
+      var isTruth = name === "truth";
+      var b = el("button", "notice-word" + (on ? " on" : "") + (isTruth ? " notice-truth" : ""), name);
+      b.title = isTruth
+        ? (on ? "Tap to unset \u2014 also files a truth" : "Mark a truth \u2014 also lands in \ud83e\uddf1")
+        : (on ? "Tap to unset" : "Mark as " + name);
       b.onmousedown = function (ev) { ev.preventDefault(); };
       b.onclick = function (e) {
         e.stopPropagation();
@@ -1944,15 +1946,26 @@
     while (row.firstChild) host.appendChild(row.firstChild);
   }
 
+  // A cold truth: some truths you excavate in the drill, some you just know in
+  // the shower. Badging a capture "truth" saves it to stuff like everything
+  // else AND records a real distilled truth (auto-starred, in the 🧱 library),
+  // saved bare — no forced contradiction, that waits for a drill pass.
+  function spawnColdTruth(text) {
+    if (!state.truths) state.truths = [];
+    state.truths.unshift({ id: uid(), text: text, created: Date.now(),
+                           kind: "truth", flag: true });
+  }
   function addBit() {
     var text = draft.value.trim();
     if (!text) return;
     var forms = pendingForms.slice();
+    var isTruth = forms.indexOf("truth") !== -1;
     if (stageFilter === "pool" || stageFilter === "home") {
       if (!state.truths) state.truths = [];
       var t0 = { id: uid(), text: text, created: Date.now() };
       if (forms.length) t0.forms = forms;
       state.truths.unshift(t0);
+      if (isTruth) spawnColdTruth(text);
       draft.value = "";
       pendingForms = []; renderCapForms();
       save(); render();
@@ -1967,6 +1980,7 @@
     };
     if (forms.length) b0.forms = forms;
     state.bits.unshift(b0);
+    if (isTruth) spawnColdTruth(text);
     draft.value = "";
     pendingForms = []; renderCapForms();
     draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
@@ -2815,6 +2829,24 @@
     });
     return pool;
   }
+  // Track the visual viewport so the drill height follows the keyboard. iOS
+  // shrinks visualViewport (not innerHeight) when the keyboard opens.
+  var vvBound = false;
+  function syncDrillVH() {
+    var ov = document.getElementById("truthOverlay");
+    if (!ov || !ov.classList.contains("open")) return;
+    var vv = window.visualViewport;
+    var h = vv ? vv.height : window.innerHeight;
+    ov.style.setProperty("--vh", h + "px");
+    ov.classList.toggle("kb-open", vv ? (window.innerHeight - h > 120) : false);
+  }
+  function bindDrillVH() {
+    if (vvBound || !window.visualViewport) { syncDrillVH(); return; }
+    window.visualViewport.addEventListener("resize", syncDrillVH);
+    window.visualViewport.addEventListener("scroll", syncDrillVH);
+    vvBound = true;
+    syncDrillVH();
+  }
   function dealDrill() {
     var pool = drillPool();
     if (!pool.length) return false;
@@ -2828,6 +2860,7 @@
     drill = { deck: order, i: 0, step: "truth", truthText: "" };
     renderDrill();
     document.getElementById("truthOverlay").classList.add("open");
+    bindDrillVH();
     return true;
   }
   function drillCurrent() { return drill.deck[drill.i] || null; }
@@ -2885,6 +2918,8 @@
     renderDrill();
   }
   function closeDrill() {
+    var ov0 = document.getElementById("truthOverlay");
+    ov0.classList.remove("kb-open"); ov0.style.removeProperty("--vh");
     if (circuit.active && circuit.phase === "truth") { nextPhase(); return; }
     document.getElementById("truthOverlay").classList.remove("open");
     renderTruthLib();
@@ -2961,6 +2996,12 @@
   document.getElementById("truthSkip").onclick = nextDrill;
   document.getElementById("truthInput").addEventListener("keydown", function (e) {
     if (e.key === "Enter") { e.preventDefault(); commitDrill(); }
+  });
+  document.getElementById("truthInput").addEventListener("focus", function () {
+    setTimeout(syncDrillVH, 250);
+  });
+  document.getElementById("truthInput").addEventListener("blur", function () {
+    setTimeout(syncDrillVH, 250);
   });
 
   document.getElementById("jabsBtn").onclick = function () {
