@@ -131,6 +131,7 @@
   .day-fold::before { content: "▸"; font-size: 9px; }
   .day-fold.open::before { content: "▾"; }
   .day-fold::after { content: ""; flex: 1; height: 1px; background: var(--rule); }
+  .day-fold.month-fold { color: var(--muted); padding-top: 22px; }
   .bit { padding: 10px 12px; background: var(--card); border: 1px solid var(--rule); border-radius: 9px; margin-bottom: 9px; box-shadow: var(--cardshadow); position: relative; }
   /* Snug to the text, open or closed. Long ones cap and fade when collapsed;
      short ones stay short. No reserved corner space, no dead air. */
@@ -533,7 +534,7 @@
     font-size: clamp(28px, 5.2vw, 44px); line-height: 1.35; color: var(--ink); white-space: pre-wrap; }
   .run-est { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--faint); margin-top: 22px; }
-  .truth-drill.kb-open { height: var(--vh, 100%); bottom: auto; }
+  .truth-drill.kb-open, .flip-overlay.kb-open { height: var(--vh, 100%); bottom: auto; }
   .flip-overlay { position: fixed; inset: 0; background: var(--page); z-index: 300;
     display: none; flex-direction: column; padding: 0 18px 18px; }
   .flip-overlay.open { display: flex; }
@@ -562,22 +563,26 @@
     padding: 5px 12px; cursor: pointer; }
   .flip-pos { font-family: var(--mono); font-size: 10px; color: var(--faint);
     letter-spacing: .06em; margin-left: auto; }
-  /* the arrows are rails either side of the entry: big targets, quiet ink.
-     Flex rather than absolute so the text can never run underneath them. */
-  .flip-body { flex: 1 1 auto; display: flex; align-items: stretch; min-height: 0; }
-  .flip-arrow { flex: 0 0 auto; background: transparent; border: none; color: var(--faint);
-    font-size: 42px; line-height: 1; padding: 0 14px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; }
-  .flip-arrow:hover:not(:disabled) { color: var(--accent); }
-  .flip-arrow:active:not(:disabled) { color: var(--accent); }
-  .flip-arrow:disabled { opacity: .18; cursor: default; }
-  @media (min-width: 700px) { .flip-arrow { font-size: 56px; padding: 0 30px; } }
-  /* the entry gets the room it can, but yields to the keyboard rather than
-     pushing the jab line off screen */
-  .flip-entry { flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
-    text-align: center; font-family: var(--serif); font-size: 25px; line-height: 1.4;
-    color: var(--ink); padding: 8px 4px; overflow: hidden; min-width: 0; }
-  @media (min-width: 700px) { .flip-entry { font-size: 30px; } }
+  /* prev/next live in the top bar now, small, so the source can pin to the top */
+  .flip-navmini { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  .flip-arrow-mini { background: transparent; border: none; color: var(--faint); font-size: 26px;
+    line-height: 1; padding: 0 8px; cursor: pointer; }
+  .flip-arrow-mini:hover:not(:disabled) { color: var(--accent); }
+  .flip-arrow-mini:disabled { opacity: .2; cursor: default; }
+  /* source pinned to the TOP in a scrollable band — same fix as the drill, so
+     the keyboard can never push it off screen */
+  .flip-source-wrap { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex;
+    align-items: flex-start; justify-content: center; padding: 10px 4px 4px; }
+  .flip-entry { text-align: center; font-family: var(--serif); font-size: 22px; line-height: 1.38;
+    color: var(--ink); max-width: 94%; }
+  @media (min-width: 700px) { .flip-entry { font-size: 28px; } }
+  /* the lenses: push the line through hard / scary / weird / stupid */
+  .flip-lenses { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 9px; }
+  .flip-lens { background: transparent; border: 1px solid var(--rule); border-radius: 999px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); padding: 5px 11px; cursor: pointer; }
+  .flip-lens:hover { border-color: var(--accent); color: var(--accent); }
+  .flip-lens.on { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
   .tl-row { padding: 13px 2px; border-bottom: 1px solid var(--rule); }
   .tl-row:last-child { border-bottom: none; }
   .tl-truth { font-family: var(--serif); font-size: 16.5px; line-height: 1.4; color: var(--ink); cursor: pointer; }
@@ -617,11 +622,14 @@
   .flip-entry span { display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical;
     overflow: hidden; }
   .flip-bottom { flex: 0 0 auto; }
+  .flip-source-wrap + .flip-bottom { padding-top: 4px; }
   .flip-jab-input { width: 100%; box-sizing: border-box; background: var(--card); color: var(--ink);
     border: 1px solid var(--rule); border-radius: 9px; padding: 12px 14px;
     font-family: var(--serif); font-size: 16.5px; outline: none; }
   .flip-jab-input:focus { border-color: var(--accent); }
-  .flip-jabs { max-height: 30vh; overflow-y: auto; margin-top: 8px; }
+  .flip-jabs { max-height: 22vh; overflow-y: auto; margin-top: 8px; }
+  .flip-jab-lens { font-family: var(--mono); font-size: 8px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent); flex: 0 0 auto; padding-top: 3px; }
   .flip-jab { display: flex; gap: 9px; padding: 7px 2px; border-bottom: 1px solid var(--rule);
     font-family: var(--serif); font-size: 14.5px; line-height: 1.4; color: var(--muted); }
   .flip-jab:last-child { border-bottom: none; }
@@ -1050,14 +1058,17 @@
   <div class="flip-overlay" id="flipOverlay">
     <div class="flip-bar">
       <button class="flip-x" id="flipClose">&times;</button>
-      <span class="flip-pos" id="flipPos"></span>
+      <div class="flip-navmini">
+        <button class="flip-arrow-mini" id="flipPrev" aria-label="previous">‹</button>
+        <span class="flip-pos" id="flipPos"></span>
+        <button class="flip-arrow-mini" id="flipNext" aria-label="next">›</button>
+      </div>
     </div>
-    <div class="flip-body">
-      <button class="flip-arrow" id="flipPrev" aria-label="previous">‹</button>
+    <div class="flip-source-wrap">
       <div class="flip-entry" id="flipEntry"></div>
-      <button class="flip-arrow" id="flipNext" aria-label="next">›</button>
     </div>
     <div class="flip-bottom">
+      <div class="flip-lenses" id="flipLenses"></div>
       <input id="flipJab" class="flip-jab-input" placeholder="throw a jab… (enter to keep)" autocomplete="off" />
       <div class="flip-jabs" id="flipJabs"></div>
     </div>
@@ -1165,7 +1176,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.4.6";
+  var APP_VERSION = "v1.5.2";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1278,6 +1289,7 @@
     state.riffs = data.riffs || [];
     state.sb = data.sb || null;
     state.sbLog = data.sbLog || [];
+    state.workoutDays = data.workoutDays || [];
     state.planned = data.planned || [];
     state.notes = data.notes || [];
     state.theme = data.theme || "ember";
@@ -1290,6 +1302,31 @@
     state.forms = incoming;
     state.buried = data.buried || [];
     state.truths = data.truths || [];
+    // migrate old kind:"truth" entries to the badge model (a truth is now just
+    // a stuff entry wearing the truth badge; contradictions keep their kind)
+    (function migrateTruths() {
+      var norm = function (x) { return (x || "").trim().toLowerCase(); };
+      // a spawned dupe is a kind:"truth" entry with no src (drill truths have
+      // src and are legit); drop it if another entry already has the same text
+      var kept = [];
+      state.truths.forEach(function (t) {
+        var spawnedDupe = t.kind === "truth" && !t.src;
+        if (spawnedDupe) {
+          var twin = state.truths.some(function (o) {
+            return o !== t && norm(o.text) === norm(t.text) && !(o.kind === "truth" && !o.src);
+          });
+          if (twin) return;   // its original survives; drop this duplicate
+        }
+        if (t.kind === "truth") {
+          if (!t.forms) t.forms = [];
+          if (t.forms.indexOf("truth") === -1) t.forms.push("truth");
+          delete t.kind;
+        }
+        delete t.distilledCold;
+        kept.push(t);
+      });
+      state.truths = kept;
+    })();
     toPool.forEach(function (b) {
       state.truths.push({ id: b.id, text: b.text, created: b.created, workshop: b.workshop, mined: b.mined, tags: b.tags });
     });
@@ -1763,23 +1800,10 @@
     visible.sort(function (a, b2) { return b2.created - a.created; });
 
     var todayK = truthDayKey(Date.now());
-    var bGroups = [];
-    visible.forEach(function (b) {
-      var k = truthDayKey(b.created);
-      if (!bGroups.length || bGroups[bGroups.length - 1].key !== k) {
-        bGroups.push({ key: k, at: b.created, items: [] });
-      }
-      bGroups[bGroups.length - 1].items.push(b);
-    });
-    bGroups.forEach(function (g) {
-      var fk = "b:" + g.key;
-      var isOpen = (fk in openDays) ? openDays[fk] : g.key === todayK;
-      var hdr = el("button", "day-fold" + (isOpen ? " open" : ""), truthDayLabel(g.at) + " · " + g.items.length);
-      hdr.onclick = function () { openDays[fk] = !isOpen; render(); };
-      list.appendChild(hdr);
-      if (!isOpen) return;
-      g.items.forEach(function (b) { renderCard(b, list); });
-    });
+    // same time roll-up as the stuff list, namespaced so bit folds and stuff
+    // folds don't share open-state
+    renderRollup(rollupByTime(visible, function (b) { return b.created; }),
+                 list, renderCard, todayK, "b:");
 
     function renderCard(b, list) {
       var isOpen = expandedBit === b.id;
@@ -1953,22 +1977,28 @@
   // the shower. Badging a capture "truth" saves it to stuff like everything
   // else AND records a real distilled truth (auto-starred, in the 🧱 library),
   // saved bare — no forced contradiction, that waits for a drill pass.
-  function spawnColdTruth(text) {
-    if (!state.truths) state.truths = [];
-    state.truths.unshift({ id: uid(), text: text, created: Date.now(),
-                           kind: "truth", flag: true });
+  // A truth is just a stuff entry with the truth badge — no separate library
+  // row. isTruth() is the single source of the concept; the library is the
+  // filtered view of these.
+  function isTruth(x) { return !!x && hasForm(x, "truth"); }
+  function markTruth(x) {
+    if (!x) return;
+    if (!x.forms) x.forms = [];
+    if (x.forms.indexOf("truth") === -1) x.forms.push("truth");
+    x.flag = true;                 // truths auto-star, as before
+    x.touched = Date.now();
   }
   function addBit() {
     var text = draft.value.trim();
     if (!text) return;
     var forms = pendingForms.slice();
-    var isTruth = forms.indexOf("truth") !== -1;
+    var taggedTruth = forms.indexOf("truth") !== -1;
     if (stageFilter === "pool" || stageFilter === "home") {
       if (!state.truths) state.truths = [];
       var t0 = { id: uid(), text: text, created: Date.now() };
       if (forms.length) t0.forms = forms;
+      if (taggedTruth) t0.flag = true;   // a truth is a badged entry; auto-star it
       state.truths.unshift(t0);
-      if (isTruth) spawnColdTruth(text);
       draft.value = "";
       pendingForms = []; renderCapForms();
       save(); render();
@@ -1983,7 +2013,6 @@
     };
     if (forms.length) b0.forms = forms;
     state.bits.unshift(b0);
-    if (isTruth) spawnColdTruth(text);
     draft.value = "";
     pendingForms = []; renderCapForms();
     draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
@@ -1993,7 +2022,9 @@
   renderCapForms();
   document.getElementById("utilBtn").onclick = function () {
     var m = document.getElementById("utilMenu");
-    m.style.display = m.style.display === "none" ? "flex" : "none";
+    var opening = m.style.display === "none";
+    if (opening) refreshCircuitBtn();
+    m.style.display = opening ? "flex" : "none";
   };
   document.getElementById("formsEdit").onclick = function () {
     document.getElementById("utilMenu").style.display = "none";
@@ -2463,6 +2494,7 @@
     if (e.key === "Enter") { e.preventDefault(); commitFlipJab(); }
   });
   document.getElementById("flipJab").addEventListener("blur", commitFlipJab);
+  document.getElementById("flipJab").addEventListener("focus", function () { setTimeout(syncDrillVH, 250); });
   document.getElementById("wbAngleInput").addEventListener("keydown", function (e) {
     if (e.key === "Enter") { e.preventDefault(); commitAngle(); }
   });
@@ -2827,21 +2859,26 @@
     // you already thought was worth something
     var now = Date.now(), pool = [];
     (state.truths || []).forEach(function (t) {
-      if (t.kind === "truth" || t.kind === "contradiction") return;   // don't drill the output
+      if (isTruth(t) || t.kind === "contradiction") return;   // don't drill the output
       pool.push({ item: t, w: (t.flag ? 1000 : 1) * (1 + Math.floor((now - (t.created || now)) / DAY)) });
     });
     return pool;
   }
-  // Track the visual viewport so the drill height follows the keyboard. iOS
-  // shrinks visualViewport (not innerHeight) when the keyboard opens.
+  // Track the visual viewport so an open overlay's height follows the keyboard.
+  // iOS shrinks visualViewport (not innerHeight) when the keyboard opens, which
+  // is what lets us keep the source material pinned and visible while typing.
   var vvBound = false;
+  var VV_OVERLAYS = ["truthOverlay", "flipOverlay"];
   function syncDrillVH() {
-    var ov = document.getElementById("truthOverlay");
-    if (!ov || !ov.classList.contains("open")) return;
     var vv = window.visualViewport;
     var h = vv ? vv.height : window.innerHeight;
-    ov.style.setProperty("--vh", h + "px");
-    ov.classList.toggle("kb-open", vv ? (window.innerHeight - h > 120) : false);
+    var kb = vv ? (window.innerHeight - h > 120) : false;
+    VV_OVERLAYS.forEach(function (id) {
+      var ov = document.getElementById(id);
+      if (!ov || !ov.classList.contains("open")) return;
+      ov.style.setProperty("--vh", h + "px");
+      ov.classList.toggle("kb-open", kb);
+    });
   }
   function bindDrillVH() {
     if (vvBound || !window.visualViewport) { syncDrillVH(); return; }
@@ -2897,7 +2934,7 @@
     if (drill.step === "truth") {
       var tid = uid();
       state.truths.unshift({ id: tid, text: v, created: Date.now(),
-                             kind: "truth", src: m.id, flag: true });
+                             forms: ["truth"], src: m.id, flag: true });
       m.distilled = tid;                 // the moment remembers what it produced
       drill.truthText = v;
       drill.truthId = tid;
@@ -2935,7 +2972,7 @@
     var note = document.getElementById("truthLibNote");
     list.innerHTML = "";
     var all = state.truths || [];
-    var truths = all.filter(function (t) { return t.kind === "truth"; });
+    var truths = all.filter(function (t) { return isTruth(t); });
     var contras = all.filter(function (t) { return t.kind === "contradiction"; });
     if (!truths.length && !contras.length) {
       note.textContent = "No truths yet. Drilling takes something you caught and asks what\u2019s always true because of it.";
@@ -3035,6 +3072,61 @@
   // ——— stuff ———
   var expandedTruth = null;
   var openDays = {};
+  var openMonths = {};
+  var ROLLUP_DAYS = 14;   // keep this many days broken out; older rolls to months
+  // Group time-sorted items (newest first) into recent day-folds plus older
+  // month-folds. Returns [{kind:"day"|"month", key, at, items}]. `getTs` reads
+  // the timestamp off an item.
+  function rollupByTime(items, getTs) {
+    var cutoff = dayStart() - (ROLLUP_DAYS - 1) * DAY;
+    var groups = [], lastKey = null;
+    items.forEach(function (it) {
+      var ts = getTs(it) || 0;
+      var recent = ts >= cutoff;
+      var key = recent
+        ? "d:" + truthDayKey(ts)
+        : "m:" + new Date(ts).getFullYear() + "-" + new Date(ts).getMonth();
+      if (key !== lastKey) {
+        groups.push({ kind: recent ? "day" : "month", key: key, at: ts, items: [] });
+        lastKey = key;
+      }
+      groups[groups.length - 1].items.push(it);
+    });
+    return groups;
+  }
+  function monthLabel(ts) {
+    var d = new Date(ts || 0);
+    var now = new Date();
+    var sameYear = d.getFullYear() === now.getFullYear();
+    return d.toLocaleDateString("en-US", sameYear ? { month: "long" } : { month: "long", year: "numeric" });
+  }
+  // Render a set of rolled-up groups into `list`, calling renderItem(item, list)
+  // for each visible item. Day folds default open if recent; month folds
+  // default closed. openState maps key -> bool for taps.
+  function renderRollup(groups, list, renderItem, todayKey, ns) {
+    ns = ns || "";
+    groups.forEach(function (g) {
+      var fk = ns + g.key;
+      if (g.kind === "day") {
+        var dayOpen = (fk in openDays) ? openDays[fk] : ("d:" + todayKey) === g.key || isRecentOpen(g.at);
+        var dh = el("button", "day-fold" + (dayOpen ? " open" : ""), truthDayLabel(g.at) + " · " + g.items.length);
+        dh.onclick = function () { openDays[fk] = !dayOpen; render(); };
+        list.appendChild(dh);
+        if (dayOpen) g.items.forEach(function (it) { renderItem(it, list); });
+      } else {
+        var mOpen = !!openMonths[fk];
+        var mh = el("button", "day-fold month-fold" + (mOpen ? " open" : ""), monthLabel(g.at) + " · " + g.items.length);
+        mh.onclick = function () { openMonths[fk] = !mOpen; render(); };
+        list.appendChild(mh);
+        if (mOpen) g.items.forEach(function (it) { renderItem(it, list); });
+      }
+    });
+  }
+  // recent days (last few) default open; older recent days default closed so
+  // even the day-by-day window doesn't get too tall
+  function isRecentOpen(ts) {
+    return ts >= dayStart() - 3 * DAY;
+  }
   function truthDayKey(ts) {
     var d = new Date(ts || 0);
     return d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
@@ -3114,22 +3206,8 @@
     }
     truths = truths.slice().sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
     var todayKey = truthDayKey(Date.now());
-    var groups = [];
-    truths.forEach(function (t) {
-      var k = truthDayKey(t.created);
-      if (!groups.length || groups[groups.length - 1].key !== k) {
-        groups.push({ key: k, at: t.created || 0, items: [] });
-      }
-      groups[groups.length - 1].items.push(t);
-    });
-    groups.forEach(function (g) {
-      var isOpen = (g.key in openDays) ? openDays[g.key] : g.key === todayKey;
-      var hdr = el("button", "day-fold" + (isOpen ? " open" : ""), truthDayLabel(g.at) + " · " + g.items.length);
-      hdr.onclick = function () { openDays[g.key] = !isOpen; render(); };
-      list.appendChild(hdr);
-      if (!isOpen) return;
-      g.items.forEach(function (t) { renderTruthCard(t, list); });
-    });
+    var groups = rollupByTime(truths, function (t) { return t.created; });
+    renderRollup(groups, list, renderTruthCard, todayKey);
   }
   function renderTruthCard(t, list) {
       var isOpen = expandedTruth === t.id;
@@ -3167,12 +3245,20 @@
 
       var card = el("div", "bone-card truth-card swipe-face" + (isOpen ? " open" : ""));
       if (t.prompt) card.appendChild(el("div", "card-prompt", t.prompt));
-      if (t.kind === "truth" || t.kind === "contradiction") {
+      if (t.kind === "contradiction") {
         var src = (state.truths || []).find(function (x) { return x.id === t.src; });
-        var lab = el("div", "card-kind " + t.kind);
-        lab.appendChild(el("span", "card-kind-tag", t.kind === "truth" ? "\ud83e\uddf1 truth" : "\ud83e\uddf1 contradiction"));
+        var lab = el("div", "card-kind contradiction");
+        lab.appendChild(el("span", "card-kind-tag", "\ud83e\uddf1 contradiction"));
         if (src) lab.appendChild(el("span", "card-kind-src", "  \u2190  " + src.text));
         card.appendChild(lab);
+      } else if (isTruth(t) && t.src) {
+        // a distilled truth remembers the moment it came from
+        var src2 = (state.truths || []).find(function (x) { return x.id === t.src; });
+        if (src2) {
+          var lab2 = el("div", "card-kind truth");
+          lab2.appendChild(el("span", "card-kind-src", "\u2190  " + src2.text));
+          card.appendChild(lab2);
+        }
       }
       var p = el("p", null, t.text);
       p.style.cursor = "pointer";
@@ -3223,12 +3309,10 @@
           var wasTruth = hasForm(t, "truth");
           toggleForm(t, n);
           t.touched = Date.now();
-          // toggling truth ON after the fact distills it, same as at capture;
-          // only the first time, and never for an entry that's already a truth
-          if (n === "truth" && !wasTruth && hasForm(t, "truth")
-              && t.kind !== "truth" && !t.distilledCold) {
-            spawnColdTruth(t.text);
-            t.distilledCold = true;
+          // a truth is just this entry wearing the badge — auto-star on, and
+          // the 🧱 library picks it up by filter. No second entry.
+          if (n === "truth" && !wasTruth && hasForm(t, "truth")) {
+            t.flag = true;
             toast("Filed as a truth \ud83e\uddf1");
           }
           save();
@@ -3333,7 +3417,16 @@
   // The roll builds a whole deck rather than one card, so you can keep
   // flipping from inside the gym instead of closing and re-rolling.
   var browseDeck = null, browseIdx = 0, browseKind = "bit";
-  function clearBrowse() { browseDeck = null; browseIdx = 0; }
+  // the lenses push a line through a provocative angle — his ask: help put
+  // everything through the hard, scary, weird & stupid
+  var FLIP_LENSES = [
+    { k: "hard",   ask: "what\u2019s the hard version?" },
+    { k: "scary",  ask: "what\u2019s the scary version?" },
+    { k: "weird",  ask: "what\u2019s the weird version?" },
+    { k: "stupid", ask: "what\u2019s the stupid version?" }
+  ];
+  var flipLens = null;
+  function clearBrowse() { browseDeck = null; browseIdx = 0; flipLens = null; }
   // ——— the dice view ———
   // Entry up top, jab line underneath. Browsing on its own leaves nowhere to
   // put the thought that browsing produces, so the two live on one screen.
@@ -3355,12 +3448,29 @@
       (browseIdx + 1) + " / " + browseDeck.length;
     document.getElementById("flipPrev").disabled = browseIdx === 0;
     document.getElementById("flipNext").disabled = browseIdx === browseDeck.length - 1;
+    // lens chips
+    var lensRow = document.getElementById("flipLenses");
+    lensRow.innerHTML = "";
+    FLIP_LENSES.forEach(function (L) {
+      var on = flipLens === L.k;
+      var chip = el("button", "flip-lens" + (on ? " on" : ""), L.k);
+      chip.onclick = function () {
+        flipLens = on ? null : L.k;   // tap again to clear
+        renderFlip();
+        document.getElementById("flipJab").focus();
+      };
+      lensRow.appendChild(chip);
+    });
+    var inp = document.getElementById("flipJab");
+    var lens = flipLens && FLIP_LENSES.filter(function (L) { return L.k === flipLens; })[0];
+    inp.placeholder = lens ? lens.ask : "throw a jab\u2026 (enter to keep)";
     var list = document.getElementById("flipJabs");
     list.innerHTML = "";
     // newest at top
     entryAngles(e).slice().reverse().forEach(function (a) {
       var row = el("div", "flip-jab");
       row.appendChild(el("span", "flip-jab-when", shortWhen(a.at)));
+      if (a.lens) row.appendChild(el("span", "flip-jab-lens", a.lens));
       row.appendChild(el("span", null, a.t));
       list.appendChild(row);
     });
@@ -3379,7 +3489,9 @@
     var e = flipFind();
     if (!v || !e) return;
     if (!e.angles) e.angles = [];
-    e.angles.push({ t: v, at: Date.now() });
+    var jab = { t: v, at: Date.now() };
+    if (flipLens) jab.lens = flipLens;
+    e.angles.push(jab);
     e.touched = Date.now();   // a jab is real work — this drops down the axe deck
     inp.value = "";
     buzz();
@@ -3387,9 +3499,11 @@
     circuitProgress("hammer");
   }
   function closeFlip() {
+    var ov = document.getElementById("flipOverlay");
+    ov.classList.remove("kb-open"); ov.style.removeProperty("--vh");
     if (circuit.active && circuit.phase === "hammer") { nextPhase(); return; }
     clearBrowse();
-    document.getElementById("flipOverlay").classList.remove("open");
+    ov.classList.remove("open");
     render();
   }
   // ——— hammer: work the middle ———
@@ -3420,9 +3534,11 @@
       remaining.splice(k, 1); weights.splice(k, 1);
     }
     browseDeck = order; browseIdx = 0; browseKind = null;
+    flipLens = null;
     document.getElementById("flipJab").value = "";
     renderFlip();
     document.getElementById("flipOverlay").classList.add("open");
+    bindDrillVH();
     return true;
   }
 
@@ -3887,7 +4003,7 @@
     // so mining them happens inside the morning ritual rather than a 4th mode
     if (kind === "truth") {
       return (state.truths || [])
-        .filter(function (t) { return t.kind === "truth"; })
+        .filter(function (t) { return isTruth(t); })
         .map(function (t) { return { k: "truth", t: t.text, id: t.id }; });
     }
     return OPENERS.filter(function (o) { return o.k === kind; });
@@ -3998,11 +4114,7 @@
     if (batchStem && batchKind === "stem") entry.stem = batchStem;
     if (batchForms.length) {
       entry.forms = batchForms.slice();
-      // a truth badge fired in the writer distills like it does anywhere
-      if (entry.forms.indexOf("truth") !== -1 && entry.kind !== "truth" && !entry.distilledCold) {
-        spawnColdTruth(entry.text);
-        entry.distilledCold = true;
-      }
+      if (entry.forms.indexOf("truth") !== -1) entry.flag = true;   // truths auto-star
     }
     if (sbSession) { entry.sb = sbSession.id; sbSession.lineIds.push(lineId); }
     state.truths.unshift(entry);
@@ -4121,9 +4233,45 @@
   function finishCircuit() {
     var t = circuit.tally || { shadow: 0, hammer: 0, axe: 0 };
     circuit.active = false; circuit.phase = null;
+    recordWorkout();
     circuitBanner();
     render();
-    toast(t.shadow + " written \u00b7 " + t.truth + " truths \u00b7 " + t.hammer + " worked \u00b7 " + t.axe + " culled");
+    var st = workoutStreak();
+    var chain = st.current > 1 ? "  \u00b7  \ud83d\udd25 " + st.current : "";
+    toast(t.shadow + " written \u00b7 " + t.truth + " truths \u00b7 " + t.hammer + " worked \u00b7 " + t.axe + " culled" + chain);
+  }
+
+  // ——— the chain: don't break it ———
+  // A workout is the link (his call, not a shadowbox session). We store the day
+  // keys workouts happened on; the streak is consecutive days up to today. No
+  // guilt on a miss — a break just starts a new count. The ritual is how he
+  // lives deeply, so this encourages, never scolds.
+  function recordWorkout() {
+    if (!state.workoutDays) state.workoutDays = [];
+    var k = truthDayKey(Date.now());
+    if (state.workoutDays.indexOf(k) === -1) state.workoutDays.push(k);
+    save();
+  }
+  function workoutStreak() {
+    var days = (state.workoutDays || []).slice();
+    if (!days.length) return { current: 0, longest: 0 };
+    var set = {};
+    days.forEach(function (k) { set[k] = true; });
+    // current: walk back from today (or yesterday) while days are present
+    var cur = 0, d = new Date(); d.setHours(0, 0, 0, 0);
+    if (!set[truthDayKey(d.getTime())]) d = new Date(d.getTime() - DAY); // grace: today not done yet
+    while (set[truthDayKey(d.getTime())]) { cur++; d = new Date(d.getTime() - DAY); }
+    // longest: scan all keys as timestamps
+    var stamps = days.map(function (k) {
+      var p2 = k.split("-"); return new Date(+p2[0], +p2[1], +p2[2]).getTime();
+    }).sort(function (a, b) { return a - b; });
+    var longest = 1, run = 1;
+    for (var i = 1; i < stamps.length; i++) {
+      var gap = Math.round((stamps[i] - stamps[i - 1]) / DAY);
+      if (gap === 1) { run++; longest = Math.max(longest, run); }
+      else if (gap > 1) { run = 1; }
+    }
+    return { current: cur, longest: Math.max(longest, cur) };
   }
   function quitCircuit() {
     var was = circuit.phase;
@@ -4146,6 +4294,12 @@
       b.onclick = function () { startCircuit(k); };
       host.appendChild(b);
     });
+  }
+  function refreshCircuitBtn() {
+    var btn = document.getElementById("circuitBtn");
+    if (!btn) return;
+    var st = workoutStreak();
+    btn.textContent = "Run a workout" + (st.current > 0 ? "   \ud83d\udd25 " + st.current : "");
   }
   document.getElementById("circuitBtn").onclick = function () {
     document.getElementById("utilMenu").style.display = "none";
