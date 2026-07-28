@@ -1163,7 +1163,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.4.4";
+  var APP_VERSION = "v1.4.5";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3216,7 +3216,20 @@
       card.appendChild(foot);
       card.appendChild(buildFormRow(
         function (n) { return hasForm(t, n); },
-        function (n) { toggleForm(t, n); t.touched = Date.now(); save(); },
+        function (n) {
+          var wasTruth = hasForm(t, "truth");
+          toggleForm(t, n);
+          t.touched = Date.now();
+          // toggling truth ON after the fact distills it, same as at capture;
+          // only the first time, and never for an entry that's already a truth
+          if (n === "truth" && !wasTruth && hasForm(t, "truth")
+              && t.kind !== "truth" && !t.distilledCold) {
+            spawnColdTruth(t.text);
+            t.distilledCold = true;
+            toast("Filed as a truth \ud83e\uddf1");
+          }
+          save();
+        },
         function () { render(); },
         false
       ));
