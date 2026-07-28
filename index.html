@@ -394,6 +394,7 @@
   #batchInput:focus { border-color: var(--accent); }
   .batch-hint { font-family: var(--mono); font-size: 10px; letter-spacing: .12em;
     text-transform: uppercase; color: var(--faint); margin: 8px 0 0; }
+  .batch-forms { margin-top: 10px; opacity: .9; }
   .batch-recent { margin-top: 26px; border-top: 1px solid var(--rule); padding-top: 14px; }
   .batch-line { font-family: var(--serif); font-size: 15px; color: var(--muted); margin: 0 0 7px;
     line-height: 1.4; }
@@ -974,6 +975,7 @@
           <button class="batch-reroll batch-next" id="batchNext" style="display:none">next →</button>
           <button class="batch-reroll" id="batchReroll">another ↻</button>
         </div>
+        <div class="form-row batch-forms" id="batchForms"></div>
         <div class="batch-recent" id="batchRecent"></div>
       </div>
     </div>
@@ -1163,7 +1165,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.4.5";
+  var APP_VERSION = "v1.4.6";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1932,6 +1934,7 @@
   draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
   var pendingForms = [];
+  var batchForms = [];   // noticing badges armed for the next fired line
   function renderCapForms() {
     var host = document.getElementById("capForms");
     host.innerHTML = "";
@@ -3806,7 +3809,17 @@
     { k: "stem", t: "Nobody talks about" },
     { k: "prompt", t: "What did you believe at a specific age?" },
     { k: "prompt", t: "Where do people behave worse than they admit?" },
-    { k: "prompt", t: "What are you good at that doesn\u2019t count as being smart?" }
+    { k: "prompt", t: "What are you good at that doesn\u2019t count as being smart?" },
+    { k: "prompt", t: "What do you do differently when no one\u2019s watching?" },
+    { k: "prompt", t: "What did you get in trouble for as a kid that you still do?" },
+    { k: "prompt", t: "What\u2019s a rule everyone follows that makes no sense?" },
+    { k: "prompt", t: "What do you defend that you know is indefensible?" },
+    { k: "prompt", t: "When were you the villain in someone else\u2019s story?" },
+    { k: "prompt", t: "What did your parents do that you swore you never would?" },
+    { k: "prompt", t: "What\u2019s something you\u2019re weirdly good at faking?" },
+    { k: "prompt", t: "What do you pretend to understand?" },
+    { k: "prompt", t: "What did you want so badly it embarrasses you now?" },
+    { k: "prompt", t: "What\u2019s the pettiest hill you\u2019d actually die on?" }
   ];
   var REROLLS = 3;        // rerolls before it locks
   var EARN_EVERY = 3;     // lines written to buy another
@@ -3924,7 +3937,23 @@
     inp.placeholder = pick.k === "stem" ? "\u2026"
       : pick.k === "truth" ? "where else is this true?" : "answer it";
     renderReroll();
+    renderBatchForms();
     setTimeout(function () { inp.focus(); }, 50);
+  }
+  function renderBatchForms() {
+    var host = document.getElementById("batchForms");
+    if (!host) return;
+    host.innerHTML = "";
+    var row = buildFormRow(
+      function (n) { return batchForms.indexOf(n) !== -1; },
+      function (n) {
+        var i = batchForms.indexOf(n);
+        if (i === -1) batchForms.push(n); else batchForms.splice(i, 1);
+      },
+      renderBatchForms,
+      false
+    );
+    while (row.firstChild) host.appendChild(row.firstChild);
   }
   function renderReroll() {
     var sb = sbToday();
@@ -3967,10 +3996,20 @@
     if (batchStem && batchKind === "prompt") entry.prompt = batchStem;
     if (batchKind === "truth" && batchTruthId) { entry.src = batchTruthId; entry.prompt = batchStem; }
     if (batchStem && batchKind === "stem") entry.stem = batchStem;
+    if (batchForms.length) {
+      entry.forms = batchForms.slice();
+      // a truth badge fired in the writer distills like it does anywhere
+      if (entry.forms.indexOf("truth") !== -1 && entry.kind !== "truth" && !entry.distilledCold) {
+        spawnColdTruth(entry.text);
+        entry.distilledCold = true;
+      }
+    }
     if (sbSession) { entry.sb = sbSession.id; sbSession.lineIds.push(lineId); }
     state.truths.unshift(entry);
     batchWritten.push(text);
     wroteThisOpener++;
+    batchForms = [];
+    renderBatchForms();
     circuitProgress("shadow");
     inp.value = "";
     buzz();
