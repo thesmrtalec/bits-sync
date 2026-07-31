@@ -335,7 +335,21 @@
   .batch-sessions { background: transparent; border: none; color: var(--faint); font-size: 15px;
     cursor: pointer; padding: 2px 8px; margin-right: auto; }
   .batch-sessions:hover { color: var(--accent); }
-  .circuit-sizes { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+  .circuit-sizes { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+  .circuit-head { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--faint); margin: 12px 0 2px; }
+  .circuit-head:first-child { margin-top: 0; }
+  .circuit-size-row { display: flex; align-items: baseline; gap: 9px; }
+  .circuit-size-sub { font-family: var(--serif); font-style: italic; font-size: 12.5px; color: var(--muted); }
+  .circuit-size-seq { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .04em;
+    color: var(--faint); margin-top: 5px; text-transform: uppercase; }
+  .circuit-drills { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .circuit-drill { text-align: left; background: var(--card); border: 1px solid var(--rule);
+    border-radius: 10px; padding: 11px 12px; cursor: pointer; }
+  .circuit-drill:hover { border-color: var(--accent); }
+  .circuit-drill b { font-family: var(--serif); font-size: 15px; color: var(--ink); }
+  .circuit-drill span { display: block; font-family: var(--mono); font-size: 8.5px; letter-spacing: .03em;
+    color: var(--faint); margin-top: 3px; text-transform: uppercase; }
   .circuit-size { text-align: left; background: var(--card); border: 1px solid var(--rule);
     border-radius: 12px; padding: 14px 16px; cursor: pointer; }
   .circuit-size:hover { border-color: var(--accent); }
@@ -542,6 +556,15 @@
   .flip-x { background: transparent; border: none; color: var(--muted); font-size: 26px;
     line-height: 1; padding: 2px 8px; cursor: pointer; }
   .notes-actions { display: flex; align-items: center; gap: 10px; }
+  .mirror-head { font-family: var(--mono); font-size: 9.5px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--faint); margin: 20px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); }
+  .mirror-head:first-child { margin-top: 4px; }
+  .mirror-row { display: flex; align-items: baseline; gap: 10px; padding: 4px 0; }
+  .mirror-big { font-family: var(--serif); font-size: 17px; color: var(--ink); }
+  .mirror-small { font-family: var(--mono); font-size: 10px; letter-spacing: .04em; color: var(--faint);
+    margin-left: auto; }
+  .mirror-note { font-family: var(--serif); font-style: italic; font-size: 13.5px; line-height: 1.5;
+    color: var(--muted); margin: 7px 0 2px; }
   .notes-week { background: transparent; border: 1px solid var(--rule); border-radius: 8px;
     font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
     color: var(--muted); padding: 7px 12px; cursor: pointer; }
@@ -829,6 +852,7 @@
     <div class="util-menu" id="utilMenu" style="display:none">
       <div class="theme-picker" id="themePicker"></div>
       <button id="circuitBtn">Run a workout</button>
+      <button id="mirrorBtn">State of the notebook</button>
       <button id="notesLockBtn">Notes lock</button>
       <button id="formsEdit">Noticing tags</button>
       <button id="tourReplay">Replay tutorial</button>
@@ -987,6 +1011,15 @@
         <div class="form-row batch-forms" id="batchForms"></div>
         <div class="batch-recent" id="batchRecent"></div>
       </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="mirrorOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>State of the notebook</h2>
+        <button class="notes-close" id="mirrorClose">done</button>
+      </div>
+      <div id="mirrorBody"></div>
     </div>
   </div>
   <div class="notes-overlay" id="circuitOverlay">
@@ -1177,7 +1210,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.5.3";
+  var APP_VERSION = "v1.5.5";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2686,6 +2719,103 @@
     body += "\nWhat did you learn about comedy this week?\n\n";
     return body;
   }
+  function isTruthE(x) { return (x.forms || []).indexOf("truth") !== -1; }
+  function renderMirror() {
+    var host = document.getElementById("mirrorBody");
+    host.innerHTML = "";
+    var stuff = state.truths || [], bits = state.bits || [];
+    var now = Date.now();
+    var section = function (title) { host.appendChild(el("div", "mirror-head", title)); };
+    var line = function (big, small) {
+      var row = el("div", "mirror-row");
+      row.appendChild(el("span", "mirror-big", big));
+      if (small) row.appendChild(el("span", "mirror-small", small));
+      host.appendChild(row);
+    };
+    var note = function (txt) { host.appendChild(el("p", "mirror-note", txt)); };
+
+    // ——— the pile ———
+    var truths = stuff.filter(isTruthE);
+    var flagged = stuff.concat(bits).filter(function (x) { return x.flag; });
+    var buried = (state.buried || []).length;
+    section("The pile");
+    line(stuff.length + " stuff", bits.length + " bits \u00b7 " + truths.length + " truths");
+    line(flagged.length + " flagged", buried + " buried");
+    // culling health: burying is good — it means you're judging, not hoarding
+    var kept = stuff.length + bits.length;
+    if (buried > 0 && kept > 0) {
+      var ratio = buried / (buried + kept);
+      if (ratio > 0.3) note("You bury more than you keep. That's a working axe \u2014 judgment, not hoarding.");
+    }
+
+    // ——— cadence ———
+    var ts = stuff.map(function (e) { return e.created || 0; }).filter(Boolean).sort();
+    if (ts.length > 1) {
+      var days = Math.max(1, Math.round((ts[ts.length - 1] - ts[0]) / DAY));
+      var perDay = (stuff.length / days).toFixed(1);
+      var last7 = stuff.filter(function (e) { return (e.created || 0) >= now - 7 * DAY; }).length;
+      section("Cadence");
+      line("~" + perDay + " a day", "over " + days + " days");
+      line(last7 + " this week", last7 >= 7 ? "steady" : last7 > 0 ? "lighter than usual" : "quiet");
+    }
+
+    // ——— what's producing ———
+    // a truth's yield = lines written against it + jabs on it
+    if (truths.length) {
+      section("Your veins");
+      var scored = truths.map(function (t) {
+        var lines = stuff.filter(function (x) { return x.src === t.id; }).length;
+        var jabs = (t.angles || []).length;
+        return { t: t, yield: lines + jabs };
+      }).sort(function (a, b) { return b.yield - a.yield; });
+      // strongest producing
+      var top = scored.filter(function (x) { return x.yield > 0; }).slice(0, 3);
+      top.forEach(function (x) {
+        line(x.t.text.length > 46 ? x.t.text.slice(0, 44) + "\u2026" : x.t.text,
+             x.yield + (x.yield === 1 ? " off it" : " off it"));
+      });
+      // dormant: a truth with material that you haven't touched lately
+      var coldest = null, coldAt = now;
+      truths.forEach(function (t) {
+        var last = t.touched || t.created || 0;
+        if (last < coldAt && (stuff.some(function (x) { return x.src === t.id; }) || (t.angles || []).length)) {
+          coldAt = last; coldest = t;
+        }
+      });
+      if (coldest) {
+        var weeks = Math.round((now - coldAt) / (7 * DAY));
+        if (weeks >= 2) note("You haven't worked \u201c" + (coldest.text.length > 40 ? coldest.text.slice(0,38)+"\u2026" : coldest.text) + "\u201d in " + weeks + " weeks. There's material there.");
+      }
+    }
+
+    // ——— the weak leg: seeing ———
+    var moments = stuff.filter(function (e) { return (e.forms || []).indexOf("moment") !== -1; });
+    var scenes = stuff.filter(function (e) { return (e.forms || []).indexOf("moment") !== -1 && e.prompt; });
+    section("Learning to see");
+    line(moments.length + " moments", scenes.length + " from scene work");
+    if (scenes.length === 0) {
+      note("Scenes are how you train perspective \u2014 the bits only you can see. Run a SEE drill and watch this grow.");
+    } else if (scenes.length < moments.length) {
+      note("The scene work is landing. Keep pulling moments from other people's side of the room.");
+    }
+
+    // ——— the chain ———
+    var st = workoutStreak();
+    section("The chain");
+    if (st.current > 0) {
+      line("\ud83d\udd25 " + st.current + (st.current === 1 ? " day" : " days"), st.longest > st.current ? "best: " + st.longest : "your best yet");
+    } else {
+      line("no streak yet", "a full workout starts it");
+    }
+  }
+  document.getElementById("mirrorBtn").onclick = function () {
+    document.getElementById("utilMenu").style.display = "none";
+    renderMirror();
+    document.getElementById("mirrorOverlay").classList.add("open");
+  };
+  document.getElementById("mirrorClose").onclick = function () {
+    document.getElementById("mirrorOverlay").classList.remove("open");
+  };
   document.getElementById("weekReview").onclick = function () {
     var box = document.getElementById("notesCanvas");
     var cur = box.value;
@@ -4037,6 +4167,15 @@
     }
     return pick;
   }
+  function dealSceneOpener() {
+    if (!openersOfKind("scene").length) return false;
+    var pick = drawFromBag("scene");
+    if (!pick) return false;
+    sbToday().cur = { k: pick.k, t: pick.t, id: pick.id || null };
+    save();
+    showOpener(pick);
+    return true;
+  }
   function dealOpener() {
     var kinds = ["stem", "prompt", "truth", "scene"].filter(function (k) {
       return openersOfKind(k).length > 0;
@@ -4174,50 +4313,81 @@
   // count; when the cap is hit (or you skip) it advances to the next. The three
   // phase-close handlers check `circuit.active` and call nextPhase() instead of
   // returning home. Quitting or finishing tears the banner down.
-  var SIZES = {
-    light:  { shadow: 3, truth: 3, hammer: 2, axe: 3, label: "Light",
-              note: "3 warm-up \u00b7 3 truths \u00b7 2 worked \u00b7 3 culled" },
-    normal: { shadow: 5, truth: 3, hammer: 3, axe: 5, label: "Normal",
-              note: "5 warm-up \u00b7 3 truths \u00b7 3 worked \u00b7 5 culled" },
-    long:   { shadow: 8, truth: 5, hammer: 5, axe: 8, label: "Long",
-              note: "8 warm-up \u00b7 5 truths \u00b7 5 worked \u00b7 8 culled" }
+  // each phase: the principle it trains + how to open/what counts
+  var PHASE_META = {
+    scene:  { name: "SEE",     principle: "learn to see",       word: "scenes" },
+    shadow: { name: "WARM UP", principle: "write to understand", word: "warm-up" },
+    truth:  { name: "DISTILL", principle: "write to understand", word: "truths" },
+    hammer: { name: "WORK IT", principle: "edit with humility",  word: "worked" },
+    axe:    { name: "CULL",    principle: "edit with humility",  word: "culled" }
   };
-  var circuit = { active: false, phase: null, plan: null, done: 0, target: 0, tally: null };
+  var FULL_ORDER = ["scene", "shadow", "truth", "hammer", "axe"];
+  // full-workout sizes: counts per phase, in FULL_ORDER
+  var SIZES = {
+    light:  { label: "Light",  sub: "a quick loop",        counts: { scene: 2, shadow: 3, truth: 2, hammer: 2, axe: 3 } },
+    normal: { label: "Normal", sub: "the daily discipline", counts: { scene: 3, shadow: 5, truth: 3, hammer: 3, axe: 5 } },
+    long:   { label: "Long",   sub: "when you\u2019ve got the morning", counts: { scene: 5, shadow: 8, truth: 5, hammer: 5, axe: 8 } }
+  };
+  // single-drill defaults: run one phase on its own
+  var DRILLS = [
+    { phase: "scene",  label: "See",     sub: "scenes \u2014 what others see", count: 5 },
+    { phase: "shadow", label: "Write",   sub: "shadowbox openers",              count: 8 },
+    { phase: "truth",  label: "Distill", sub: "truth & contradiction",          count: 5 },
+    { phase: "hammer", label: "Work it", sub: "throw jabs, find the angle",     count: 5 },
+    { phase: "axe",    label: "Cull",    sub: "keep the gold, axe the rest",    count: 8 }
+  ];
+  var circuit = { active: false, phase: null, order: [], counts: null,
+                  idx: 0, done: 0, target: 0, tally: null };
+
+  function blankTally() { return { scene: 0, shadow: 0, truth: 0, hammer: 0, axe: 0 }; }
 
   function startCircuit(sizeKey) {
     var plan = SIZES[sizeKey];
     if (!plan) return;
-    circuit = { active: true, phase: null, plan: plan, done: 0, target: 0,
-                tally: { shadow: 0, truth: 0, hammer: 0, axe: 0 } };
+    var order = FULL_ORDER.filter(function (ph) { return (plan.counts[ph] || 0) > 0; });
+    circuit = { active: true, phase: null, order: order, counts: plan.counts,
+                idx: 0, done: 0, target: 0, tally: blankTally(), single: false };
     document.getElementById("circuitOverlay").classList.remove("open");
     document.getElementById("utilMenu").style.display = "none";
-    beginPhase("shadow");
+    beginPhase(order[0]);
+  }
+  function startDrill(phase, count) {
+    var counts = {}; counts[phase] = count;
+    circuit = { active: true, phase: null, order: [phase], counts: counts,
+                idx: 0, done: 0, target: 0, tally: blankTally(), single: true };
+    document.getElementById("circuitOverlay").classList.remove("open");
+    document.getElementById("utilMenu").style.display = "none";
+    beginPhase(phase);
   }
   function circuitBanner() {
     var b = document.getElementById("circuitPhase");
     if (!circuit.active) { b.classList.remove("show"); return; }
-    var names = { shadow: "WARM UP", truth: "DISTILL", hammer: "WORK IT", axe: "CULL" };
+    var meta = PHASE_META[circuit.phase] || { name: circuit.phase };
+    var pos = circuit.single ? "" : "   " + (circuit.idx + 1) + "/" + circuit.order.length;
     document.getElementById("circuitPhaseText").textContent =
-      names[circuit.phase] + "  \u00b7  " + circuit.done + " / " + circuit.target;
+      meta.name + "  \u00b7  " + circuit.done + " / " + circuit.target + pos;
     b.classList.add("show");
   }
   function beginPhase(phase) {
     circuit.phase = phase;
     circuit.done = 0;
-    circuit.target = phase === "shadow" ? circuit.plan.shadow
-                   : phase === "truth"  ? circuit.plan.truth
-                   : phase === "hammer" ? circuit.plan.hammer
-                   : circuit.plan.axe;
-    if (phase === "shadow") {
+    circuit.target = circuit.counts[phase] || 0;
+    if (phase === "scene") {
+      // force a scene opener so SEE trains perspective, not a random stem
+      batchStem = null; batchWritten = [];
+      sbToday(); startSession(); updateBatchCount();
+      document.getElementById("batchOverlay").classList.add("open");
+      if (!dealSceneOpener()) { nextPhase(); return; }
+    } else if (phase === "shadow") {
       batchStem = null; batchWritten = [];
       sbToday(); startSession(); updateBatchCount();
       document.getElementById("batchOverlay").classList.add("open");
       var sb = sbToday();
       if (sb.cur) { showOpener(sb.cur); renderReroll(); } else dealOpener();
     } else if (phase === "truth") {
-      if (!dealDrill()) { nextPhase(); return; }    // nothing to distill -> skip ahead
+      if (!dealDrill()) { nextPhase(); return; }
     } else if (phase === "hammer") {
-      if (!dealHammer()) { nextPhase(); return; }   // nothing flagged/available -> skip ahead
+      if (!dealHammer()) { nextPhase(); return; }
     } else if (phase === "axe") {
       buildAxeDeck(); renderAxe(); renderAxeControls();
       document.getElementById("axeOverlay").classList.add("open");
@@ -4225,40 +4395,61 @@
     circuitBanner();
   }
   function circuitProgress(phase) {
-    // called when the active phase produces one unit of work
-    if (!circuit.active || circuit.phase !== phase) return;
+    // called when the active phase produces one unit of work. Scene and shadow
+    // both fire through the batch writer, so map by which phase is live.
+    if (!circuit.active) return;
+    if (phase === "shadow" && circuit.phase === "scene") phase = "scene";
+    if (circuit.phase !== phase) return;
     circuit.done++;
     if (circuit.tally) circuit.tally[phase]++;
     circuitBanner();
     if (circuit.done >= circuit.target) nextPhase();
   }
-  function nextPhase() {
-    // close whatever's open, then advance
-    if (circuit.phase === "shadow") {
+  function closePhase(phase) {
+    if (phase === "scene" || phase === "shadow") {
       endSession();
       document.getElementById("batchOverlay").classList.remove("open");
-      beginPhase("truth");
-    } else if (circuit.phase === "truth") {
+    } else if (phase === "truth") {
       document.getElementById("truthOverlay").classList.remove("open");
-      beginPhase("hammer");
-    } else if (circuit.phase === "hammer") {
+    } else if (phase === "hammer") {
       clearBrowse();
       document.getElementById("flipOverlay").classList.remove("open");
-      beginPhase("axe");
-    } else {
+    } else if (phase === "axe") {
       document.getElementById("axeOverlay").classList.remove("open", "dimmed");
-      finishCircuit();
     }
   }
+  function nextPhase() {
+    closePhase(circuit.phase);
+    circuit.idx++;
+    if (circuit.idx >= circuit.order.length) { finishCircuit(); return; }
+    beginPhase(circuit.order[circuit.idx]);
+  }
   function finishCircuit() {
-    var t = circuit.tally || { shadow: 0, hammer: 0, axe: 0 };
+    var t = circuit.tally || blankTally();
+    var single = circuit.single;
     circuit.active = false; circuit.phase = null;
-    recordWorkout();
     circuitBanner();
     render();
+    if (single) {
+      // a single drill doesn't count as the daily workout — only the full loop
+      // keeps the chain honest
+      var parts = [];
+      Object.keys(t).forEach(function (k) {
+        if (t[k]) parts.push(t[k] + " " + PHASE_META[k].word);
+      });
+      toast(parts.join(" \u00b7 ") || "done");
+      return;
+    }
+    recordWorkout();
     var st = workoutStreak();
     var chain = st.current > 1 ? "  \u00b7  \ud83d\udd25 " + st.current : "";
-    toast(t.shadow + " written \u00b7 " + t.truth + " truths \u00b7 " + t.hammer + " worked \u00b7 " + t.axe + " culled" + chain);
+    var bits2 = [];
+    if (t.scene) bits2.push(t.scene + " seen");
+    if (t.shadow) bits2.push(t.shadow + " written");
+    if (t.truth) bits2.push(t.truth + " truths");
+    if (t.hammer) bits2.push(t.hammer + " worked");
+    if (t.axe) bits2.push(t.axe + " culled");
+    toast(bits2.join(" \u00b7 ") + chain);
   }
 
   // ——— the chain: don't break it ———
@@ -4294,26 +4485,42 @@
     return { current: cur, longest: Math.max(longest, cur) };
   }
   function quitCircuit() {
-    var was = circuit.phase;
+    closePhase(circuit.phase);
     circuit.active = false; circuit.phase = null;
-    if (was === "shadow") { endSession(); document.getElementById("batchOverlay").classList.remove("open"); }
-    else if (was === "truth") { document.getElementById("truthOverlay").classList.remove("open"); }
-    else if (was === "hammer") { clearBrowse(); document.getElementById("flipOverlay").classList.remove("open"); }
-    else if (was === "axe") { document.getElementById("axeOverlay").classList.remove("open", "dimmed"); }
     circuitBanner();
     render();
   }
   function renderCircuitSizes() {
     var host = document.getElementById("circuitSizes");
     host.innerHTML = "";
+
+    host.appendChild(el("div", "circuit-head", "The full workout"));
     ["light", "normal", "long"].forEach(function (k) {
       var s2 = SIZES[k];
       var b = el("button", "circuit-size");
-      b.appendChild(el("b", null, s2.label));
-      b.appendChild(el("span", null, s2.note));
+      var row = el("div", "circuit-size-row");
+      row.appendChild(el("b", null, s2.label));
+      row.appendChild(el("span", "circuit-size-sub", s2.sub));
+      b.appendChild(row);
+      // the phase counts, in order, as a quiet line
+      var seq = FULL_ORDER.filter(function (ph) { return s2.counts[ph]; })
+        .map(function (ph) { return s2.counts[ph] + " " + PHASE_META[ph].name.toLowerCase(); })
+        .join("  \u00b7  ");
+      b.appendChild(el("span", "circuit-size-seq", seq));
       b.onclick = function () { startCircuit(k); };
       host.appendChild(b);
     });
+
+    host.appendChild(el("div", "circuit-head", "Or drill one thing"));
+    var drillWrap = el("div", "circuit-drills");
+    DRILLS.forEach(function (d) {
+      var b = el("button", "circuit-drill");
+      b.appendChild(el("b", null, d.label));
+      b.appendChild(el("span", null, d.sub));
+      b.onclick = function () { startDrill(d.phase, d.count); };
+      drillWrap.appendChild(b);
+    });
+    host.appendChild(drillWrap);
   }
   function refreshCircuitBtn() {
     var btn = document.getElementById("circuitBtn");
