@@ -548,6 +548,7 @@
   .notes-week:hover { border-color: var(--accent); color: var(--accent); }
   .batch-stem-live.is-truth { font-style: normal; font-size: 21px; color: var(--accent); }
   .batch-stem-live.is-prompt { font-style: italic; opacity: .85; font-size: 19px; }
+  .batch-stem-live.is-scene { font-style: italic; font-size: 18px; color: var(--accent2); line-height: 1.4; }
   .batch-hint { display: flex; align-items: center; gap: 12px; }
   .batch-reroll { margin-left: auto; background: transparent; border: 1px solid var(--rule);
     border-radius: 7px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
@@ -1176,7 +1177,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.5.2";
+  var APP_VERSION = "v1.5.3";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3935,7 +3936,17 @@
     { k: "prompt", t: "What\u2019s something you\u2019re weirdly good at faking?" },
     { k: "prompt", t: "What do you pretend to understand?" },
     { k: "prompt", t: "What did you want so badly it embarrasses you now?" },
-    { k: "prompt", t: "What\u2019s the pettiest hill you\u2019d actually die on?" }
+    { k: "prompt", t: "What\u2019s the pettiest hill you\u2019d actually die on?" },
+    { k: "scene", t: "Rewind to one moment today. Describe only what a camera would see." },
+    { k: "scene", t: "Who \u2014 or what \u2014 was in the room? Give it a voice. What\u2019s it thinking?" },
+    { k: "scene", t: "What did someone say today that you\u2019d never say? Quote them exactly." },
+    { k: "scene", t: "Something had a worse day than you \u2014 a person, an object, a place. Play it from their side." },
+    { k: "scene", t: "Who or what did you annoy today without meaning to? Be them for a second." },
+    { k: "scene", t: "What did you deal with today that couldn\u2019t talk back? Let it talk now." },
+    { k: "scene", t: "Freeze on a face that wasn\u2019t yours. What was it doing?" },
+    { k: "scene", t: "Whose day was harder than yours, and how could you tell?" },
+    { k: "scene", t: "If the room could describe you right then, what would it say?" },
+    { k: "scene", t: "Something small and human happened today. Who did it, and what exactly did they do?" }
   ];
   var REROLLS = 3;        // rerolls before it locks
   var EARN_EVERY = 3;     // lines written to buy another
@@ -3997,7 +4008,7 @@
   // then deal from a shuffled bag of that kind — every opener appears once per
   // cycle before any repeats, which kills the "same few over and over" feel
   // that pure random produces.
-  var sbBags = { stem: [], prompt: [], truth: [] };
+  var sbBags = { stem: [], prompt: [], truth: [], scene: [] };
   function openersOfKind(kind) {
     // truths aren't a fixed list — they're whatever he's distilled so far,
     // so mining them happens inside the morning ritual rather than a 4th mode
@@ -4027,7 +4038,7 @@
     return pick;
   }
   function dealOpener() {
-    var kinds = ["stem", "prompt", "truth"].filter(function (k) {
+    var kinds = ["stem", "prompt", "truth", "scene"].filter(function (k) {
       return openersOfKind(k).length > 0;
     });
     if (!kinds.length) return;
@@ -4047,11 +4058,14 @@
     live.textContent = pick.k === "stem" ? pick.t + "\u2026" : pick.t;
     live.className = "batch-stem-live"
       + (pick.k === "prompt" ? " is-prompt" : "")
-      + (pick.k === "truth" ? " is-truth" : "");
+      + (pick.k === "truth" ? " is-truth" : "")
+      + (pick.k === "scene" ? " is-scene" : "");
     var inp = document.getElementById("batchInput");
     inp.value = "";
     inp.placeholder = pick.k === "stem" ? "\u2026"
-      : pick.k === "truth" ? "where else is this true?" : "answer it";
+      : pick.k === "truth" ? "where else is this true?"
+      : pick.k === "scene" ? "put us in the room \u2014 play it, don\u2019t tell it"
+      : "answer it";
     renderReroll();
     renderBatchForms();
     setTimeout(function () { inp.focus(); }, 50);
@@ -4110,6 +4124,12 @@
     var lineId = uid();
     var entry = { id: lineId, text: text, created: Date.now() };
     if (batchStem && batchKind === "prompt") entry.prompt = batchStem;
+    if (batchKind === "scene") {
+      entry.prompt = batchStem;
+      // the exercise produces the moment tag rather than hoping he applies it
+      if (!entry.forms) entry.forms = [];
+      if (entry.forms.indexOf("moment") === -1) entry.forms.push("moment");
+    }
     if (batchKind === "truth" && batchTruthId) { entry.src = batchTruthId; entry.prompt = batchStem; }
     if (batchStem && batchKind === "stem") entry.stem = batchStem;
     if (batchForms.length) {
