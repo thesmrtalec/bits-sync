@@ -561,6 +561,9 @@
   .interpret-run-count { font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
     color: var(--faint); margin-right: auto; align-self: center; }
   .interpret-run-mid { flex: 1 1 auto; display: flex; flex-direction: column; padding: 8px 4px 0; min-height: 0; }
+  .idrill-label { display: block; font-family: var(--mono); font-size: 10px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 10px; }
+  .idrill-ask { display: block; }
   .interpret-run-prompt { font-family: var(--serif); font-size: 20px; line-height: 1.4; color: var(--accent);
     padding: 14px 2px 16px; }
   #interpretRunInput { width: 100%; border: none; background: transparent; resize: none;
@@ -1288,7 +1291,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.6.0";
+  var APP_VERSION = "v1.6.1";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2894,11 +2897,81 @@
   };
   // ——— interpreter lane: its own drill surface, separate from shadowbox ———
   var iRun = { prompt: null, kept: 0 };
+  // seed pools, leaning into his world so even the "generic" targets sound like him
+  var ISEEDS = {
+    // things to rename / recategorize / find the real game in
+    thing: ["a wedding", "customer service", "networking", "a baby shower", "small talk",
+            "tithing", "a testimony meeting", "home teaching", "a temple recommend interview",
+            "family home evening", "a missionary farewell", "youth camp", "a ward potluck",
+            "a mortgage", "a warranty", "a estimate", "a change order", "a punch list",
+            "a performance review", "a group text", "a class reunion", "a gender reveal",
+            "the nursery", "sacrament", "a bishop\u2019s interview", "ministering",
+            "a marriage counseling session", "date night", "a family vacation", "potty training",
+            "a parent-teacher conference", "a sleepover", "allowance", "chores"],
+    // tired verbs to replace with the truer action
+    verb: ["praying", "networking", "scrolling", "venting", "sharing", "checking in",
+           "catching up", "reaching out", "circling back", "parenting", "disciplining",
+           "budgeting", "dieting", "worshipping", "repenting", "forgiving", "serving",
+           "volunteering", "dating", "flirting", "arguing", "apologizing", "negotiating",
+           "bidding a job", "closing a sale", "following up", "managing", "leading",
+           "teaching", "listening", "resting", "celebrating"],
+    // sayings to translate until they\u2019re undeniably true
+    saying: ["everything happens for a reason", "God has a plan", "love the sinner hate the sin",
+             "just be yourself", "hard work pays off", "the customer is always right",
+             "honesty is the best policy", "family first", "it is what it is",
+             "money can\u2019t buy happiness", "time heals all wounds", "you get what you pay for",
+             "let go and let God", "everything in moderation", "fake it till you make it",
+             "happy wife happy life", "boys will be boys", "it takes a village"],
+    // fill-in-the-blank subjects (we\u2019ve been calling ___ / why do we pretend ___)
+    pretend: ["church is relaxing", "we like the people we serve with", "the potluck food is good",
+              "we read the manual", "we\u2019re fine", "the kids are listening", "we\u2019ll finish the basement",
+              "we don\u2019t have favorites", "we\u2019re not keeping score", "we forgive and forget",
+              "we\u2019ll use the leftovers", "date night is spontaneous", "we\u2019re not tired",
+              "the estimate is accurate", "the timeline is real"]
+  };
+  var iBags = {};
+  function drawSeed(kind) {
+    if (!iBags[kind] || !iBags[kind].length) {
+      iBags[kind] = ISEEDS[kind].slice();
+      for (var i = iBags[kind].length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = iBags[kind][i]; iBags[kind][i] = iBags[kind][j]; iBags[kind][j] = t;
+      }
+    }
+    return iBags[kind].shift();
+  }
+  // each drill: a template that takes a seed and builds a concrete prompt.
+  // {label} is the drill name, {ask} the concrete instruction with the seed in it.
+  var IDRILLS = [
+    { seed: "thing",   build: function (x) { return { label: "RENAME", ask: "Rename \u201c" + x + "\u201d so the name says what it actually is." }; } },
+    { seed: "thing",   build: function (x) { return { label: "WE\u2019VE BEEN CALLING IT", ask: "We\u2019ve been calling \u201c" + x + "\u201d the wrong thing. What is it really?" }; } },
+    { seed: "verb",    build: function (x) { return { label: "BETTER VERB", ask: "\u201c" + cap(x) + "\u201d \u2014 what\u2019s the truer verb for what\u2019s actually happening?" }; } },
+    { seed: "thing",   build: function (x) { return { label: "WHAT GAME", ask: "What game are people actually playing at \u201c" + x + "\u201d?" }; } },
+    { seed: "thing",   build: function (x) { return { label: "BETTER CATEGORY", ask: "\u201c" + cap(x) + "\u201d \u2014 what kind of thing is it, really? Put it in a truer folder." }; } },
+    { seed: "saying",  build: function (x) { return { label: "TRANSLATION", ask: "\u201c" + cap(x) + "\u201d \u2014 rewrite it until it\u2019s actually true." }; } },
+    { seed: "pretend", build: function (x) { return { label: "WHY DO WE PRETEND", ask: "Why do we pretend " + x + "?" }; } },
+    { seed: "thing",   build: function (x) { return { label: "CHANGE THE LENS", ask: "Describe \u201c" + x + "\u201d as a courtroom. Or a marketplace. Or a sport. What changes?" }; } },
+    { seed: "thing",   build: function (x) { return { label: "ONE LAYER DEEPER", ask: "\u201c" + cap(x) + "\u201d \u2014 what\u2019s really going on? Then ask it again. And again." }; } },
+    { seed: "verb",    build: function (x) { return { label: "EVIDENCE OF", ask: "Someone \u201c" + x + "\u201d today. Evidence of what, really?" }; } }
+  ];
+  function cap(str) { return str.charAt(0).toUpperCase() + str.slice(1); }
+  var iDrillBag = [];
   function dealInterpretDrill() {
-    var pick = drawFromBag("interpret");
-    if (!pick) return;
-    iRun.prompt = pick.t;
-    document.getElementById("interpretRunPrompt").textContent = pick.t;
+    if (!iDrillBag.length) {
+      iDrillBag = IDRILLS.slice();
+      for (var i = iDrillBag.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var t = iDrillBag[i]; iDrillBag[i] = iDrillBag[j]; iDrillBag[j] = t;
+      }
+    }
+    var drill = iDrillBag.shift();
+    var seed = drawSeed(drill.seed);
+    var built = drill.build(seed);
+    iRun.prompt = built.ask;
+    var host = document.getElementById("interpretRunPrompt");
+    host.innerHTML = "";
+    host.appendChild(el("span", "idrill-label", built.label));
+    host.appendChild(el("span", "idrill-ask", built.ask));
     document.getElementById("interpretRunInput").value = "";
     document.getElementById("interpretRunInput").focus();
   }
