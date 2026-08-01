@@ -556,6 +556,14 @@
   .flip-x { background: transparent; border: none; color: var(--muted); font-size: 26px;
     line-height: 1; padding: 2px 8px; cursor: pointer; }
   .notes-actions { display: flex; align-items: center; gap: 10px; }
+  .interpret-frame { font-family: var(--serif); font-size: 15.5px; line-height: 1.6; color: var(--ink);
+    margin: 6px 0 20px; }
+  .interpret-foot { font-family: var(--serif); font-style: italic; font-size: 13px; line-height: 1.5;
+    color: var(--muted); margin: 20px 0 0; }
+  .interpret-manifesto-link { background: transparent; border: none; color: var(--faint);
+    font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+    padding: 14px 0 0; cursor: pointer; }
+  .interpret-manifesto-link:hover { color: var(--accent); }
   .manifesto-body { font-family: var(--serif); font-size: 15.5px; line-height: 1.65; color: var(--ink); }
   .manifesto-body p { margin: 0 0 15px; }
   .man-h { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
@@ -842,6 +850,7 @@
     <div class="tool-row do-row">
       <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: morning writing, deal an opener" title="Shadowbox — morning writing">🙏</button>
       <button class="notes-tab bone-key" id="truthBtn" aria-label="truth drill" title="Truths — what’s always true, and what shouldn’t be">🧱</button>
+      <button class="notes-tab bone-key" id="interpretBtn" aria-label="interpreter drills" title="The Interpreter — describe it more faithfully">👀</button>
       <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it: deal a line with more in it" title="Work it — deal a line with more in it">🔨</button>
       <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
     </div>
@@ -1019,6 +1028,18 @@
         <div class="form-row batch-forms" id="batchForms"></div>
         <div class="batch-recent" id="batchRecent"></div>
       </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="interpretOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>The Interpreter</h2>
+        <button class="notes-close" id="interpretClose">done</button>
+      </div>
+      <p class="interpret-frame">The first description of a thing is usually wrong. The work is the truer one \u2014 not inventing new truths, but describing old ones more faithfully.</p>
+      <button class="sb-start" id="interpretStart">\ud83d\udc40 start a drill</button>
+      <p class="interpret-foot">A good interpretation isn\u2019t the cleverest one. It\u2019s the one that, once seen, becomes difficult to unsee.</p>
+      <button class="interpret-manifesto-link" id="interpretManifestoLink">read the whole thing \u2192</button>
     </div>
   </div>
   <div class="notes-overlay" id="manifestoOverlay">
@@ -1240,7 +1261,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.5.6";
+  var APP_VERSION = "v1.5.7";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2838,6 +2859,23 @@
       line("no streak yet", "a full workout starts it");
     }
   }
+  document.getElementById("interpretBtn").onclick = function () {
+    document.getElementById("interpretOverlay").classList.add("open");
+  };
+  document.getElementById("interpretClose").onclick = function () {
+    document.getElementById("interpretOverlay").classList.remove("open");
+  };
+  document.getElementById("interpretStart").onclick = function () {
+    document.getElementById("interpretOverlay").classList.remove("open");
+    batchStem = null; batchWritten = [];
+    sbToday(); startSession(); updateBatchCount();
+    document.getElementById("batchOverlay").classList.add("open");
+    dealInterpretOpener();
+  };
+  document.getElementById("interpretManifestoLink").onclick = function () {
+    document.getElementById("interpretOverlay").classList.remove("open");
+    document.getElementById("manifestoOverlay").classList.add("open");
+  };
   document.getElementById("manifestoBtn").onclick = function () {
     document.getElementById("utilMenu").style.display = "none";
     document.getElementById("manifestoOverlay").classList.add("open");
