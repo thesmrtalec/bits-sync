@@ -862,7 +862,7 @@
     <div class="tool-row do-row">
       <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: morning writing, deal an opener" title="Shadowbox — morning writing">🙏</button>
       <button class="notes-tab bone-key" id="truthBtn" aria-label="truth drill" title="Truths — what’s always true, and what shouldn’t be">🧱</button>
-      <button class="notes-tab bone-key" id="interpretBtn" aria-label="interpreter drills" title="The Interpreter — describe it more faithfully">👀</button>
+      <button class="notes-tab bone-key" id="interpretBtn" aria-label="interpreter drills" title="The Interpreter — say what it actually is">👀</button>
       <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it: deal a line with more in it" title="Work it — deal a line with more in it">🔨</button>
       <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
     </div>
@@ -1049,7 +1049,7 @@
     </div>
     <div class="interpret-run-mid">
       <div class="interpret-run-prompt" id="interpretRunPrompt"></div>
-      <textarea id="interpretRunInput" rows="3" placeholder="describe it more faithfully"></textarea>
+      <textarea id="interpretRunInput" rows="3" placeholder="say what it actually is"></textarea>
       <div class="interpret-run-hint">
         <span id="interpretRunKept"></span>
         <button class="batch-reroll" id="interpretRunNext">next drill →</button>
@@ -1063,7 +1063,7 @@
         <h2>The Interpreter</h2>
         <button class="notes-close" id="interpretClose">done</button>
       </div>
-      <p class="interpret-frame">The first description of a thing is usually wrong. The work is the truer one — not inventing new truths, but describing old ones more faithfully.</p>
+      <p class="interpret-frame">The first way you describe something is usually wrong. The work is finding the truer version.</p>
       <button class="sb-start" id="interpretStart">👀 start a drill</button>
       <p class="interpret-foot">A good interpretation isn’t the cleverest one. It’s the one that, once seen, becomes difficult to unsee.</p>
       <button class="interpret-manifesto-link" id="interpretManifestoLink">read the whole thing →</button>
@@ -1288,7 +1288,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.5.9";
+  var APP_VERSION = "v1.6.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -4372,7 +4372,7 @@
     inp.placeholder = pick.k === "stem" ? "\u2026"
       : pick.k === "truth" ? "where else is this true?"
       : pick.k === "scene" ? "put us in the room — play it, don’t tell it"
-      : pick.k === "interpret" ? "describe it more faithfully"
+      : pick.k === "interpret" ? "say what it actually is"
       : "answer it";
     renderReroll();
     renderBatchForms();
@@ -4490,7 +4490,7 @@
   // each phase: the principle it trains + how to open/what counts
   var PHASE_META = {
     scene:     { name: "SEE",       principle: "learn to see",       word: "scenes" },
-    interpret: { name: "INTERPRET", principle: "describe faithfully", word: "read truer" },
+    interpret: { name: "INTERPRET", principle: "say what it is",       word: "read truer" },
     shadow:    { name: "WARM UP",   principle: "write to understand", word: "warm-up" },
     truth:     { name: "DISTILL",   principle: "write to understand", word: "truths" },
     hammer:    { name: "WORK IT",   principle: "edit with humility",  word: "worked" },
@@ -4505,7 +4505,7 @@
   };
   var DRILLS = [
     { phase: "scene",     label: "See",       sub: "scenes — what others see",  count: 5 },
-    { phase: "interpret", label: "Interpret", sub: "describe it more faithfully",     count: 5 },
+    { phase: "interpret", label: "Interpret", sub: "say what it actually is",          count: 5 },
     { phase: "shadow",    label: "Write",     sub: "shadowbox openers",               count: 8 },
     { phase: "truth",     label: "Distill",   sub: "truth & contradiction",           count: 5 },
     { phase: "hammer",    label: "Work it",   sub: "throw jabs, find the angle",      count: 5 },
