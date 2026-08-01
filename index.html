@@ -1036,10 +1036,10 @@
         <h2>The Interpreter</h2>
         <button class="notes-close" id="interpretClose">done</button>
       </div>
-      <p class="interpret-frame">The first description of a thing is usually wrong. The work is the truer one \u2014 not inventing new truths, but describing old ones more faithfully.</p>
-      <button class="sb-start" id="interpretStart">\ud83d\udc40 start a drill</button>
-      <p class="interpret-foot">A good interpretation isn\u2019t the cleverest one. It\u2019s the one that, once seen, becomes difficult to unsee.</p>
-      <button class="interpret-manifesto-link" id="interpretManifestoLink">read the whole thing \u2192</button>
+      <p class="interpret-frame">The first description of a thing is usually wrong. The work is the truer one — not inventing new truths, but describing old ones more faithfully.</p>
+      <button class="sb-start" id="interpretStart">👀 start a drill</button>
+      <p class="interpret-foot">A good interpretation isn’t the cleverest one. It’s the one that, once seen, becomes difficult to unsee.</p>
+      <button class="interpret-manifesto-link" id="interpretManifestoLink">read the whole thing →</button>
     </div>
   </div>
   <div class="notes-overlay" id="manifestoOverlay">
@@ -1056,11 +1056,11 @@
            We mistake performance for growth.<br>
            We mistake information for transformation.</p>
         <p>Reality is often kinder, stranger, and more beautiful than our first description of it.</p>
-        <p>My work is to help people see reality a little more clearly \u2014 not by inventing new truths, but by describing old ones more faithfully.</p>
+        <p>My work is to help people see reality a little more clearly — not by inventing new truths, but by describing old ones more faithfully.</p>
         <p>Whether through comedy, conversation, leadership, or teaching, my goal is the same: to help people stop apologizing for being human and start discovering what their humanity is actually for.</p>
         <p>That begins with me. Every day I want to become a more careful observer, a more faithful interpreter, and a more truthful describer of reality.</p>
         <p>These drills exist to train that muscle.</p>
-        <p class="man-rule">A good interpretation isn\u2019t the cleverest one. It\u2019s the one that, once seen, becomes difficult to unsee.</p>
+        <p class="man-rule">A good interpretation isn’t the cleverest one. It’s the one that, once seen, becomes difficult to unsee.</p>
       </div>
     </div>
   </div>
@@ -1079,7 +1079,7 @@
         <h2>Workout</h2>
         <button class="notes-close" id="circuitClose">done</button>
       </div>
-      <p class="bone-note">Warm up, work the middle, clear the deck \u2014 one pass through all three. Pick a size:</p>
+      <p class="bone-note">Warm up, work the middle, clear the deck — one pass through all three. Pick a size:</p>
       <div class="circuit-sizes" id="circuitSizes"></div>
     </div>
   </div>
@@ -1261,7 +1261,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.5.7";
+  var APP_VERSION = "v1.5.8";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1531,7 +1531,7 @@
   function starToggle(item) {
     var on = !!item.flag;
     var b = el("button", "foot-btn star-btn" + (on ? " on" : ""), on ? "\u2605" : "\u2606");
-    b.title = on ? "Flagged to work \u2014 tap to clear" : "Flag to work";
+    b.title = on ? "Flagged to work — tap to clear" : "Flag to work";
     b.setAttribute("aria-label", on ? "flagged" : "flag to work");
     b.onclick = function (e) {
       e.stopPropagation();
@@ -1635,7 +1635,7 @@
       var isTruth = name === "truth";
       var b = el("button", "notice-word" + (on ? " on" : "") + (isTruth ? " notice-truth" : ""), name);
       b.title = isTruth
-        ? (on ? "Tap to unset \u2014 also files a truth" : "Mark a truth \u2014 also lands in \ud83e\uddf1")
+        ? (on ? "Tap to unset — also files a truth" : "Mark a truth — also lands in \ud83e\uddf1")
         : (on ? "Tap to unset" : "Mark as " + name);
       b.onmousedown = function (ev) { ev.preventDefault(); };
       b.onclick = function (e) {
@@ -1896,7 +1896,7 @@
       // swipe shell: kill left, workbench right (matches the stuff cards)
       var shell = el("div", "swipe-shell");
       var actL = el("button", "swipe-act swipe-kill", "\uD83D\uDD2B");
-      actL.title = "Kill it \u2014 to the boneyard";
+      actL.title = "Kill it — to the boneyard";
       actL.onclick = function (e) {
         e.stopPropagation();
         if (!state.buried) state.buried = [];
@@ -1908,7 +1908,7 @@
       // Swipe right = move it across. Consistent everywhere: on stuff it
       // promotes to a bit, on a bit it sends it back to the stuff pool.
       var actR = el("button", "swipe-act swipe-promote", "\u2190 stuff");
-      actR.title = "Not a bit after all \u2014 send it back to the stuff pool";
+      actR.title = "Not a bit after all — send it back to the stuff pool";
       actR.onclick = function (e) {
         e.stopPropagation();
         state.bits = state.bits.filter(function (x) { return x.id !== b.id; });
@@ -2002,7 +2002,7 @@
       var sd = staleDays(b);
       if (sd > 0) {
         var st = el("span", "foot-mark stale", "\u23F3 " + sd + "d");
-        st.title = "Stale \u2014 advance it or kill it";
+        st.title = "Stale — advance it or kill it";
         footR.appendChild(st);
       }
       var REACTS = ["", "\uD83D\uDE12", "\uD83D\uDE06", "\uD83D\uDE02"];
@@ -2409,10 +2409,10 @@
     renderWbTags();
     // move it across: stuff that's become a bit, or a bit that isn't one yet
     var mv = document.getElementById("wbMove");
-    mv.textContent = isTruth ? "\u2192 make it a bit" : "\u2190 back to stuff";
+    mv.textContent = isTruth ? "→ make it a bit" : "\u2190 back to stuff";
     mv.title = isTruth
-      ? "This is a bit now \u2014 move it to bits"
-      : "Not a bit after all \u2014 move it back to the stuff pool";
+      ? "This is a bit now — move it to bits"
+      : "Not a bit after all — move it back to the stuff pool";
     mv.onclick = wbMoveAcross;
     document.getElementById("workbenchOverlay").classList.add("open");
     setTimeout(function () { document.getElementById("wbBit").focus(); }, 0);
@@ -2505,7 +2505,7 @@
         row.appendChild(el("span", "wb-angle-act done", "\u2713 landed"));
       } else {
         var mk = el("button", "wb-angle-act", "landed");
-        mk.title = "It connected \u2014 make this a bit";
+        mk.title = "It connected — make this a bit";
         mk.onclick = function () {
           state.bits.unshift({
             id: uid(),
@@ -2558,7 +2558,7 @@
     if (b.mined) bits.push(b.mined + " landed");
     if (b.touched) bits.push("worked " + shortWhen(b.touched));
     m.textContent = bits.length ? bits.join("  \u00b7  ")
-      : (workbenchKind === "truth" ? "" : "Working notes live here \u2014 separate from the line.");
+      : (workbenchKind === "truth" ? "" : "Working notes live here — separate from the line.");
   }
 
   function saveWorkbench() {
@@ -2760,7 +2760,7 @@
     if (lines) out.push(lines + (lines === 1 ? " line written" : " lines written"));
     if (jabs) out.push(jabs + (jabs === 1 ? " jab" : " jabs"));
     if (bitsMade) out.push(bitsMade + (bitsMade === 1 ? " bit made" : " bits made"));
-    var head = out.length ? out.join("  \u00b7  ") : "a quiet week \u2014 nothing logged";
+    var head = out.length ? out.join("  \u00b7  ") : "a quiet week — nothing logged";
     var body = "THIS WEEK\n" + head + "\n";
     if (best) {
       var t = best.text.replace(/\s+/g, " ").trim();
@@ -2796,7 +2796,7 @@
     var kept = stuff.length + bits.length;
     if (buried > 0 && kept > 0) {
       var ratio = buried / (buried + kept);
-      if (ratio > 0.3) note("You bury more than you keep. That's a working axe \u2014 judgment, not hoarding.");
+      if (ratio > 0.3) note("You bury more than you keep. That's a working axe — judgment, not hoarding.");
     }
 
     // ——— cadence ———
@@ -2845,7 +2845,7 @@
     section("Learning to see");
     line(moments.length + " moments", scenes.length + " from scene work");
     if (scenes.length === 0) {
-      note("Scenes are how you train perspective \u2014 the bits only you can see. Run a SEE drill and watch this grow.");
+      note("Scenes are how you train perspective — the bits only you can see. Run a SEE drill and watch this grow.");
     } else if (scenes.length < moments.length) {
       note("The scene work is landing. Keep pulling moments from other people's side of the room.");
     }
@@ -2961,7 +2961,7 @@
     (state.truths || []).forEach(function (t) { if (t.flag) flagged.push({ item: t, kind: "truth" }); });
     (state.bits || []).forEach(function (b) { if (b.flag) flagged.push({ item: b, kind: "bit" }); });
     if (!flagged.length) {
-      note.textContent = "Nothing flagged. Tap the \u2606 on any stuff or bit to send it here \u2014 hammer works these first.";
+      note.textContent = "Nothing flagged. Tap the \u2606 on any stuff or bit to send it here — hammer works these first.";
       return;
     }
     note.textContent = flagged.length + " flagged. Hammer (\ud83d\udd28) deals these first. Tap one to work it; tap \u2605 to clear.";
@@ -3003,7 +3003,7 @@
     collect(state.bits, "bit");
     all.sort(function (x, y) { return (y.a.at || 0) - (x.a.at || 0); });
     if (!all.length) {
-      note.textContent = "No jabs yet. Throw one from the gym\u2019s speed bag or while working an entry with \ud83d\udd28.";
+      note.textContent = "No jabs yet. Throw one from the gym’s speed bag or while working an entry with \ud83d\udd28.";
       return;
     }
     var landed = all.filter(function (x) { return x.a.promoted; }).length;
@@ -3027,7 +3027,7 @@
         acts.appendChild(el("span", "jab-act done", "\u2713 landed"));
       } else {
         var mk = el("button", "jab-act", "landed");
-        mk.title = "It connected \u2014 make this a bit";
+        mk.title = "It connected — make this a bit";
         mk.onclick = function () {
           state.bits.unshift({
             id: uid(), text: rec.a.t, tags: (rec.item.tags || []).slice(),
@@ -3056,8 +3056,8 @@
   // The drill behind his best material: take a moment you already caught and
   // ask what's ALWAYS true because of it, then ask what shouldn't be true.
   // Not funny, just true — the joke is downstream. Two reps, one card.
-  var TRUTH_Q = "What\u2019s always true because of this?";
-  var CONTRA_Q = "And what shouldn\u2019t be true?";
+  var TRUTH_Q = "What’s always true because of this?";
+  var CONTRA_Q = "And what shouldn’t be true?";
   var drill = { deck: [], i: 0, step: "truth", truthText: "" };
 
   function drillPool() {
@@ -3121,7 +3121,7 @@
       drill.step === "truth" ? TRUTH_Q : CONTRA_Q;
     var inp = document.getElementById("truthInput");
     inp.value = "";
-    inp.placeholder = drill.step === "truth" ? "not funny \u2014 just true" : "the thing that undercuts it";
+    inp.placeholder = drill.step === "truth" ? "not funny — just true" : "the thing that undercuts it";
     var steps = document.getElementById("truthSteps");
     steps.innerHTML = "";
     if (drill.step === "contra" && drill.truthText) {
@@ -3181,7 +3181,7 @@
     var truths = all.filter(function (t) { return isTruth(t); });
     var contras = all.filter(function (t) { return t.kind === "contradiction"; });
     if (!truths.length && !contras.length) {
-      note.textContent = "No truths yet. Drilling takes something you caught and asks what\u2019s always true because of it.";
+      note.textContent = "No truths yet. Drilling takes something you caught and asks what’s always true because of it.";
       return;
     }
     note.textContent = truths.length + (truths.length === 1 ? " truth" : " truths")
@@ -3236,7 +3236,7 @@
   };
   document.getElementById("truthLibStart").onclick = function () {
     document.getElementById("truthLibOverlay").classList.remove("open");
-    if (!dealDrill()) toast("Nothing to distill yet \u2014 capture a few things first.");
+    if (!dealDrill()) toast("Nothing to distill yet — capture a few things first.");
   };
   document.getElementById("truthClose").onclick = closeDrill;
   document.getElementById("truthSkip").onclick = nextDrill;
@@ -3421,7 +3421,7 @@
       // shell holds the swipe actions; face is what slides
       var shell = el("div", "swipe-shell");
       var actL = el("button", "swipe-act swipe-kill", "\uD83D\uDD2B");
-      actL.title = "Kill it \u2014 to the boneyard";
+      actL.title = "Kill it — to the boneyard";
       actL.onclick = function (e) {
         e.stopPropagation();
         if (!state.buried) state.buried = [];
@@ -3431,7 +3431,7 @@
         closeSwipe(); save(); render();
       };
       var actR = el("button", "swipe-act swipe-promote", "+ bit");
-      actR.title = "Promote into bits \u2014 it stays here too";
+      actR.title = "Promote into bits — it stays here too";
       actR.onclick = function (e) {
         e.stopPropagation();
         state.bits.unshift({
@@ -3626,10 +3626,10 @@
   // the lenses push a line through a provocative angle — his ask: help put
   // everything through the hard, scary, weird & stupid
   var FLIP_LENSES = [
-    { k: "hard",   ask: "what\u2019s the hard version?" },
-    { k: "scary",  ask: "what\u2019s the scary version?" },
-    { k: "weird",  ask: "what\u2019s the weird version?" },
-    { k: "stupid", ask: "what\u2019s the stupid version?" }
+    { k: "hard",   ask: "what’s the hard version?" },
+    { k: "scary",  ask: "what’s the scary version?" },
+    { k: "weird",  ask: "what’s the weird version?" },
+    { k: "stupid", ask: "what’s the stupid version?" }
   ];
   var flipLens = null;
   function clearBrowse() { browseDeck = null; browseIdx = 0; flipLens = null; }
@@ -3926,7 +3926,7 @@
     { q: "I don't deserve this, but I have arthritis and I don't deserve that either.", by: "Jack Benny" },
     { q: "Brevity is the soul of lingerie.", by: "Dorothy Parker" },
     { q: "The only honest art form is laughter.", by: "Lenny Bruce" },
-    { q: "A sense of humor is the ability to understand a joke \u2014 and that the joke is oneself.", by: "Clifton Fadiman" },
+    { q: "A sense of humor is the ability to understand a joke — and that the joke is oneself.", by: "Clifton Fadiman" },
     { q: "The world is a comedy to those that think, a tragedy to those that feel.", by: "Horace Walpole" },
     { q: "Total absence of humor renders life impossible.", by: "Colette" },
     { q: "Humor is mankind's greatest blessing.", by: "Mark Twain" },
@@ -4003,8 +4003,8 @@
       verdicts.style.display = "none";
       var done = el("div", "run-card axe-done");
       done.appendChild(el("p", null, axeQueue.length
-        ? (axeLens ? "That\u2019s every " + (axeLens === "__none" ? "untyped one" : axeLens) + ". Switch the lens for more."
-                   : "That\u2019s everything. The basement thanks you.")
+        ? (axeLens ? "That’s every " + (axeLens === "__none" ? "untyped one" : axeLens) + ". Switch the lens for more."
+                   : "That’s everything. The basement thanks you.")
         : (axeLens ? "Nothing of that shape to judge." : "Nothing to judge.")));
       card.appendChild(done);
       return;
@@ -4131,37 +4131,37 @@
     { k: "stem", t: "Nobody talks about" },
     { k: "prompt", t: "What did you believe at a specific age?" },
     { k: "prompt", t: "Where do people behave worse than they admit?" },
-    { k: "prompt", t: "What are you good at that doesn\u2019t count as being smart?" },
-    { k: "prompt", t: "What do you do differently when no one\u2019s watching?" },
+    { k: "prompt", t: "What are you good at that doesn’t count as being smart?" },
+    { k: "prompt", t: "What do you do differently when no one’s watching?" },
     { k: "prompt", t: "What did you get in trouble for as a kid that you still do?" },
-    { k: "prompt", t: "What\u2019s a rule everyone follows that makes no sense?" },
+    { k: "prompt", t: "What’s a rule everyone follows that makes no sense?" },
     { k: "prompt", t: "What do you defend that you know is indefensible?" },
-    { k: "prompt", t: "When were you the villain in someone else\u2019s story?" },
+    { k: "prompt", t: "When were you the villain in someone else’s story?" },
     { k: "prompt", t: "What did your parents do that you swore you never would?" },
-    { k: "prompt", t: "What\u2019s something you\u2019re weirdly good at faking?" },
+    { k: "prompt", t: "What’s something you’re weirdly good at faking?" },
     { k: "prompt", t: "What do you pretend to understand?" },
     { k: "prompt", t: "What did you want so badly it embarrasses you now?" },
-    { k: "prompt", t: "What\u2019s the pettiest hill you\u2019d actually die on?" },
+    { k: "prompt", t: "What’s the pettiest hill you’d actually die on?" },
     { k: "scene", t: "Rewind to one moment today. Describe only what a camera would see." },
-    { k: "scene", t: "Who \u2014 or what \u2014 was in the room? Give it a voice. What\u2019s it thinking?" },
-    { k: "scene", t: "What did someone say today that you\u2019d never say? Quote them exactly." },
-    { k: "scene", t: "Something had a worse day than you \u2014 a person, an object, a place. Play it from their side." },
+    { k: "scene", t: "Who — or what — was in the room? Give it a voice. What’s it thinking?" },
+    { k: "scene", t: "What did someone say today that you’d never say? Quote them exactly." },
+    { k: "scene", t: "Something had a worse day than you — a person, an object, a place. Play it from their side." },
     { k: "scene", t: "Who or what did you annoy today without meaning to? Be them for a second." },
-    { k: "scene", t: "What did you deal with today that couldn\u2019t talk back? Let it talk now." },
-    { k: "scene", t: "Freeze on a face that wasn\u2019t yours. What was it doing?" },
+    { k: "scene", t: "What did you deal with today that couldn’t talk back? Let it talk now." },
+    { k: "scene", t: "Freeze on a face that wasn’t yours. What was it doing?" },
     { k: "scene", t: "Whose day was harder than yours, and how could you tell?" },
     { k: "scene", t: "If the room could describe you right then, what would it say?" },
     { k: "scene", t: "Something small and human happened today. Who did it, and what exactly did they do?" },
     { k: "interpret", t: "RENAME. Rename a person, place, object, event, or norm so the name reveals what it actually is." },
-    { k: "interpret", t: "We\u2019ve been calling ______ the wrong thing." },
-    { k: "interpret", t: "BETTER VERB. Replace the obvious verb with one that captures what\u2019s really happening." },
+    { k: "interpret", t: "We’ve been calling ______ the wrong thing." },
+    { k: "interpret", t: "BETTER VERB. Replace the obvious verb with one that captures what’s really happening." },
     { k: "interpret", t: "What game are people actually playing here?" },
     { k: "interpret", t: "Treat one thing you saw today as evidence. Evidence of what?" },
     { k: "interpret", t: "BETTER CATEGORY. What kind of thing is this, really? Put it in a truer folder." },
     { k: "interpret", t: "TRANSLATION. Take a common saying and rewrite it until it feels undeniably true." },
     { k: "interpret", t: "Why do we pretend ______?" },
     { k: "interpret", t: "CHANGE THE LENS. Describe the same thing as a game \u00b7 ritual \u00b7 performance \u00b7 marketplace \u00b7 courtroom \u00b7 church \u00b7 sport \u00b7 family. What changes?" },
-    { k: "interpret", t: "ONE LAYER DEEPER. What\u2019s really going on? Ask it three times, each answer feeding the next." },
+    { k: "interpret", t: "ONE LAYER DEEPER. What’s really going on? Ask it three times, each answer feeding the next." },
     { k: "interpret", t: "INTERPRETER. Finish four lines: Everyone says\u2026 / I think\u2026 / More precisely\u2026 / Which explains why\u2026" }
   ];
   var REROLLS = 3;        // rerolls before it locks
@@ -4299,7 +4299,7 @@
     inp.value = "";
     inp.placeholder = pick.k === "stem" ? "\u2026"
       : pick.k === "truth" ? "where else is this true?"
-      : pick.k === "scene" ? "put us in the room \u2014 play it, don\u2019t tell it"
+      : pick.k === "scene" ? "put us in the room — play it, don’t tell it"
       : pick.k === "interpret" ? "describe it more faithfully"
       : "answer it";
     renderReroll();
@@ -4410,7 +4410,7 @@
     document.getElementById("batchCount").textContent =
       batchWritten.length ? batchWritten.length + (batchWritten.length === 1 ? " down" : " down") : "";
   }
-  // ——— the workout: warm up \u2192 work \u2192 cull, one guided pass ———
+  // ——— the workout: warm up → work → cull, one guided pass ———
   // A tiny state machine. Each phase launches the tool it owns, capped at a
   // count; when the cap is hit (or you skip) it advances to the next. The three
   // phase-close handlers check `circuit.active` and call nextPhase() instead of
@@ -4429,10 +4429,10 @@
   var SIZES = {
     light:  { label: "Light",  sub: "a quick loop",        counts: { scene: 2, interpret: 2, shadow: 3, truth: 2, hammer: 2, axe: 3 } },
     normal: { label: "Normal", sub: "the daily discipline", counts: { scene: 3, interpret: 3, shadow: 5, truth: 3, hammer: 3, axe: 5 } },
-    long:   { label: "Long",   sub: "when you\u2019ve got the morning", counts: { scene: 5, interpret: 4, shadow: 8, truth: 5, hammer: 5, axe: 8 } }
+    long:   { label: "Long",   sub: "when you’ve got the morning", counts: { scene: 5, interpret: 4, shadow: 8, truth: 5, hammer: 5, axe: 8 } }
   };
   var DRILLS = [
-    { phase: "scene",     label: "See",       sub: "scenes \u2014 what others see",  count: 5 },
+    { phase: "scene",     label: "See",       sub: "scenes — what others see",  count: 5 },
     { phase: "interpret", label: "Interpret", sub: "describe it more faithfully",     count: 5 },
     { phase: "shadow",    label: "Write",     sub: "shadowbox openers",               count: 8 },
     { phase: "truth",     label: "Distill",   sub: "truth & contradiction",           count: 5 },
@@ -4705,7 +4705,7 @@
     list.innerHTML = "";
     var log = state.sbLog || [];
     if (!log.length) {
-      note.textContent = "No sessions yet. Every \ud83d\ude4f you close with lines written lands here \u2014 the morning\'s bundle, kept whole.";
+      note.textContent = "No sessions yet. Every \ud83d\ude4f you close with lines written lands here — the morning\'s bundle, kept whole.";
       return;
     }
     var totalLines = log.reduce(function (n, s2) { return n + s2.lineIds.length; }, 0);
@@ -4734,7 +4734,7 @@
             var t2 = (state.truths || []).find(function (x) { return x.id === id; });
             if (t2 && t2.prompt) {
               var wrap2 = el("div", "sb-log-line");
-              wrap2.appendChild(el("span", "sb-log-prompt", t2.prompt + " \u2014 "));
+              wrap2.appendChild(el("span", "sb-log-prompt", t2.prompt + " — "));
               wrap2.appendChild(document.createTextNode(txt));
               lines.appendChild(wrap2);
             } else {
@@ -4890,7 +4890,7 @@
       var shell = el("div", "swipe-shell");
 
       var actL = el("button", "swipe-act swipe-kill", "\uD83D\uDD2B");
-      actL.title = "Kill it \u2014 to the boneyard";
+      actL.title = "Kill it — to the boneyard";
       actL.onclick = function (e) {
         e.stopPropagation();
         if (!state.buried) state.buried = [];
@@ -4963,7 +4963,7 @@
   };
 
   document.getElementById("shuffleBtn").onclick = function () {
-    if (!dealHammer()) toast("Nothing to work yet \u2014 star an entry to send it here.");
+    if (!dealHammer()) toast("Nothing to work yet — star an entry to send it here.");
   };
 
   // ——— sets ———
@@ -5210,9 +5210,9 @@
     return s;
   }
   async function exportSetPdf(s) {
-    if (!window.jspdf) { alert("PDF tools still loading \u2014 try again in a second."); return; }
+    if (!window.jspdf) { alert("PDF tools still loading — try again in a second."); return; }
     var bits = s.bitIds.map(findBitAnywhere).filter(Boolean).map(function (f) { return f.bit; });
-    if (!bits.length) { alert("Nothing to share \u2014 add some bits first."); return; }
+    if (!bits.length) { alert("Nothing to share — add some bits first."); return; }
 
     var jsPDF = window.jspdf.jsPDF;
     var pdf = new jsPDF({ unit: "pt", format: "letter" });
@@ -5410,7 +5410,7 @@
         s.bitIds.length + (s.bitIds.length === 1 ? " bit" : " bits") + " · runs " + fmtSec(total) + (untimed ? " · " + untimed + " untimed" : "")));
       if (s.bitIds.length) {
         var row = el("div", "set-actions");
-        var runBtn = el("button", "run-again", "\u25B6 run it \u2014 practice");
+        var runBtn = el("button", "run-again", "\u25B6 run it — practice");
         runBtn.style.margin = "0";
         runBtn.onclick = function () { openRun(s); };
         row.appendChild(runBtn);
@@ -5507,7 +5507,7 @@
         if (avail.length === 0) {
           availWrap.appendChild(el("p", "empty", needle
             ? "Nothing matches \u201c" + setFilter.trim() + "\u201d."
-            : "No bits left to add \u2014 work something up in the bits tab."));
+            : "No bits left to add — work something up in the bits tab."));
           return;
         }
         avail.forEach(function (b) {
