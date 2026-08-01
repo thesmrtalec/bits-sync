@@ -556,6 +556,18 @@
   .flip-x { background: transparent; border: none; color: var(--muted); font-size: 26px;
     line-height: 1; padding: 2px 8px; cursor: pointer; }
   .notes-actions { display: flex; align-items: center; gap: 10px; }
+  .interpret-run { display: none; flex-direction: column; }
+  .interpret-run.open { display: flex; }
+  .interpret-run-count { font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    color: var(--faint); margin-right: auto; align-self: center; }
+  .interpret-run-mid { flex: 1 1 auto; display: flex; flex-direction: column; padding: 8px 4px 0; min-height: 0; }
+  .interpret-run-prompt { font-family: var(--serif); font-size: 20px; line-height: 1.4; color: var(--accent);
+    padding: 14px 2px 16px; }
+  #interpretRunInput { width: 100%; border: none; background: transparent; resize: none;
+    font-family: var(--serif); font-size: 19px; line-height: 1.5; color: var(--ink); outline: none; }
+  .interpret-run-hint { display: flex; align-items: center; gap: 12px; padding: 8px 2px;
+    font-family: var(--mono); font-size: 10px; letter-spacing: .08em; color: var(--faint); }
+  #interpretRunKept { margin-right: auto; }
   .interpret-frame { font-family: var(--serif); font-size: 15.5px; line-height: 1.6; color: var(--ink);
     margin: 6px 0 20px; }
   .interpret-foot { font-family: var(--serif); font-style: italic; font-size: 13px; line-height: 1.5;
@@ -1030,6 +1042,21 @@
       </div>
     </div>
   </div>
+  <div class="run-overlay interpret-run" id="interpretRun">
+    <div class="batch-top">
+      <span class="interpret-run-count" id="interpretRunCount"></span>
+      <button class="batch-done" id="interpretRunDone">done</button>
+    </div>
+    <div class="interpret-run-mid">
+      <div class="interpret-run-prompt" id="interpretRunPrompt"></div>
+      <textarea id="interpretRunInput" rows="3" placeholder="describe it more faithfully"></textarea>
+      <div class="interpret-run-hint">
+        <span id="interpretRunKept"></span>
+        <button class="batch-reroll" id="interpretRunNext">next drill →</button>
+      </div>
+      <div class="batch-recent" id="interpretRunRecent"></div>
+    </div>
+  </div>
   <div class="notes-overlay" id="interpretOverlay">
     <div class="notes-inner">
       <div class="notes-head">
@@ -1261,7 +1288,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.5.8";
+  var APP_VERSION = "v1.5.9";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2865,12 +2892,57 @@
   document.getElementById("interpretClose").onclick = function () {
     document.getElementById("interpretOverlay").classList.remove("open");
   };
+  // ——— interpreter lane: its own drill surface, separate from shadowbox ———
+  var iRun = { prompt: null, kept: 0 };
+  function dealInterpretDrill() {
+    var pick = drawFromBag("interpret");
+    if (!pick) return;
+    iRun.prompt = pick.t;
+    document.getElementById("interpretRunPrompt").textContent = pick.t;
+    document.getElementById("interpretRunInput").value = "";
+    document.getElementById("interpretRunInput").focus();
+  }
+  function renderInterpretRun() {
+    document.getElementById("interpretRunCount").textContent =
+      iRun.kept === 0 ? "interpreter" : iRun.kept + (iRun.kept === 1 ? " kept" : " kept");
+    var recent = document.getElementById("interpretRunRecent");
+    recent.innerHTML = "";
+    (iRun.recent || []).slice(-3).reverse().forEach(function (t) {
+      recent.appendChild(el("div", "batch-recent-line", t));
+    });
+  }
+  function commitInterpretDrill(advance) {
+    var inp = document.getElementById("interpretRunInput");
+    var v = inp.value.trim();
+    if (v) {
+      var entry = { id: uid(), text: v, created: Date.now(),
+                    prompt: iRun.prompt, forms: ["interpret"] };
+      state.truths.unshift(entry);
+      iRun.kept++;
+      (iRun.recent = iRun.recent || []).push(v);
+      buzz(); save(); renderInterpretRun();
+    }
+    if (advance) dealInterpretDrill();
+  }
   document.getElementById("interpretStart").onclick = function () {
     document.getElementById("interpretOverlay").classList.remove("open");
-    batchStem = null; batchWritten = [];
-    sbToday(); startSession(); updateBatchCount();
-    document.getElementById("batchOverlay").classList.add("open");
-    dealInterpretOpener();
+    iRun = { prompt: null, kept: 0, recent: [] };
+    document.getElementById("interpretRun").classList.add("open");
+    renderInterpretRun();
+    dealInterpretDrill();
+  };
+  document.getElementById("interpretRunNext").onclick = function () {
+    commitInterpretDrill(true);
+  };
+  document.getElementById("interpretRunInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); commitInterpretDrill(true); }
+  });
+  document.getElementById("interpretRunDone").onclick = function () {
+    commitInterpretDrill(false);
+    document.getElementById("interpretRun").classList.remove("open");
+    var n = iRun.kept;
+    if (n) toast(n + (n === 1 ? " interpretation kept" : " interpretations kept"));
+    render();
   };
   document.getElementById("interpretManifestoLink").onclick = function () {
     document.getElementById("interpretOverlay").classList.remove("open");
@@ -4272,7 +4344,7 @@
     return true;
   }
   function dealOpener() {
-    var kinds = ["stem", "prompt", "truth", "scene", "interpret"].filter(function (k) {
+    var kinds = ["stem", "prompt", "truth", "scene"].filter(function (k) {
       return openersOfKind(k).length > 0;
     });
     if (!kinds.length) return;

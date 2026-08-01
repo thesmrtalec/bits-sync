@@ -14,7 +14,7 @@
  * Bump CACHE on each release. Nothing else needs touching.
  */
 
-var CACHE = "jtb-v1.5.8";
+var CACHE = "jtb-v1.5.9";
 
 self.addEventListener("install", function (e) {
   // don't sit in "waiting" behind the old worker
