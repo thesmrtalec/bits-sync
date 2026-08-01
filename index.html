@@ -419,6 +419,24 @@
   .notes-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .notes-head h2 { font-family: var(--serif); font-style: italic; font-size: 22px; margin: 0; color: var(--ink); }
   .notes-close { margin-left: auto; background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 5px 14px; font-family: var(--mono); font-size: 12px; }
+  .tradecraft { margin-bottom: 22px; }
+  .tradecraft-head { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px; }
+  .tradecraft-sub { color: var(--faint); text-transform: none; letter-spacing: .01em; font-style: normal; }
+  .tc-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--rule); }
+  .tc-item .dot { color: var(--accent); font-size: 15px; line-height: 1.5; flex: 0 0 auto; }
+  .tc-item .txt { flex: 1 1 auto; font-family: var(--serif); font-size: 15.5px; line-height: 1.5; color: var(--ink); }
+  .tc-item .tc-del { background: transparent; border: none; color: var(--faint); font-size: 15px; cursor: pointer;
+    flex: 0 0 auto; opacity: 0; transition: opacity .15s; }
+  .tc-item:hover .tc-del { opacity: 1; }
+  .tradecraft-add { display: flex; gap: 8px; margin-top: 12px; }
+  .tradecraft-input { flex: 1 1 auto; border: none; border-bottom: 1.5px solid var(--rule); background: transparent;
+    font-family: var(--serif); font-size: 15px; color: var(--ink); outline: none; padding: 6px 0; }
+  .tradecraft-input:focus { border-bottom-color: var(--accent); }
+  .tradecraft-addbtn { background: transparent; border: 1px solid var(--rule); border-radius: 8px; color: var(--muted);
+    font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; }
+  .tradecraft-addbtn:hover { border-color: var(--accent); color: var(--accent); }
+  .tradecraft-empty { font-family: var(--serif); font-style: italic; font-size: 13.5px; color: var(--faint); padding: 4px 0 2px; }
   .notes-canvas { width: 100%; border: 1px solid var(--rule); border-radius: 10px; padding: 14px; font-size: 16px; font-family: var(--serif); line-height: 1.6; background: var(--card); color: var(--ink); resize: none; min-height: 220px; box-shadow: inset 0 1px 4px rgba(0,0,0,.10); }
   .notes-save { align-self: flex-start; margin-top: 10px; background: var(--accent); color: var(--onaccent); border: none; border-radius: 8px; padding: 8px 20px; font-family: var(--mono); font-size: 12px; letter-spacing: .07em; text-transform: uppercase; font-weight: 700; }
   .notes-save:hover { background: var(--accent2); }
@@ -587,6 +605,17 @@
     font-family: var(--mono); font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
     padding: 8px 14px; margin: 16px 0 24px; cursor: pointer; }
   .map-start-btn { background: var(--accent2, var(--accent)); margin-top: 10px; }
+  .mapcard { border: 1px solid var(--rule); border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    background: var(--card); cursor: pointer; }
+  .mapcard:hover { border-color: var(--accent); }
+  .mapcard-head { font-family: var(--serif); font-size: 16px; color: var(--ink); margin-bottom: 10px; }
+  .mapcard-head b { color: var(--accent); font-style: italic; }
+  .mapcard-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .mapcard-col { font-family: var(--serif); font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+  .mapcard-col .h { font-family: var(--mono); font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--faint); display: block; margin-bottom: 4px; }
+  .mapcard-when { font-family: var(--mono); font-size: 9px; color: var(--faint); margin-top: 10px; text-transform: uppercase; letter-spacing: .05em; }
+  .mapcard-del { float: right; background: transparent; border: none; color: var(--faint); font-size: 14px; cursor: pointer; padding: 0 0 0 8px; }
   .interpret-run { display: none; flex-direction: column; }
   .interpret-run.open { display: flex; }
   .interpret-run-count { font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
@@ -1076,6 +1105,15 @@
       </div>
     </div>
   </div>
+  <div class="notes-overlay" id="mapViewOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Your maps</h2>
+        <button class="notes-close" id="mapViewClose">done</button>
+      </div>
+      <div id="mapViewList"></div>
+    </div>
+  </div>
   <div class="run-overlay map-run" id="mapRun">
     <div class="batch-top">
       <span class="interpret-run-count">map</span>
@@ -1131,6 +1169,7 @@
       <p class="interpret-frame">The first way you describe something is usually wrong. The work is finding the truer version.</p>
       <button class="sb-start" id="interpretStart">👀 start a drill</button>
       <button class="sb-start map-start-btn" id="mapStart">🗺️ map two things</button>
+      <button class="interpret-manifesto-link" id="mapViewLink" style="display:none">your maps →</button>
       <p class="interpret-foot">A good interpretation isn’t the cleverest one. It’s the one that, once seen, becomes difficult to unsee.</p>
       <button class="interpret-manifesto-link" id="interpretManifestoLink">read the whole thing →</button>
     </div>
@@ -1309,6 +1348,14 @@
         </div>
       </div>
       <div id="notesBody">
+        <div class="tradecraft">
+          <div class="tradecraft-head">Tradecraft <span class="tradecraft-sub">— what you’ve learned that stays true</span></div>
+          <div id="tradecraftList"></div>
+          <div class="tradecraft-add">
+            <input id="tradecraftInput" class="tradecraft-input" placeholder="a lesson you’ve earned…" autocomplete="off" />
+            <button id="tradecraftAdd" class="tradecraft-addbtn">keep</button>
+          </div>
+        </div>
         <textarea class="notes-canvas" id="notesCanvas" placeholder="Free writing, workshop, set lists…"></textarea>
         <div class="notes-actions">
           <button class="notes-save" id="notesSave">Save note</button>
@@ -1354,7 +1401,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.6.2";
+  var APP_VERSION = "v1.6.4";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1469,6 +1516,7 @@
     state.sbLog = data.sbLog || [];
     state.workoutDays = data.workoutDays || [];
     state.maps = data.maps || [];
+    state.tradecraft = data.tradecraft || [];
     state.planned = data.planned || [];
     state.notes = data.notes || [];
     state.theme = data.theme || "ember";
@@ -2700,7 +2748,39 @@
 
   // ——— notes drawer ———
   var noteEditing = null;
+  function renderTradecraft() {
+    var host = document.getElementById("tradecraftList");
+    if (!host) return;
+    host.innerHTML = "";
+    var tc = state.tradecraft || [];
+    if (!tc.length) {
+      host.appendChild(el("p", "tradecraft-empty", "The lessons you earn go here \u2014 the craft you don\u2019t want to lose."));
+      return;
+    }
+    tc.forEach(function (item) {
+      var row = el("div", "tc-item");
+      row.appendChild(el("span", "dot", "\u25c6"));
+      row.appendChild(el("span", "txt", item.text));
+      var del = el("button", "tc-del", "\u00d7");
+      del.onclick = function () {
+        state.tradecraft = state.tradecraft.filter(function (x) { return x.id !== item.id; });
+        save(); renderTradecraft();
+      };
+      row.appendChild(del);
+      host.appendChild(row);
+    });
+  }
+  function addTradecraft() {
+    var inp = document.getElementById("tradecraftInput");
+    var v = inp.value.trim();
+    if (!v) return;
+    if (!state.tradecraft) state.tradecraft = [];
+    state.tradecraft.unshift({ id: uid(), text: v, created: Date.now() });
+    inp.value = "";
+    save(); renderTradecraft();
+  }
   function renderNotes() {
+    renderTradecraft();
     var list = document.getElementById("notesList");
     list.innerHTML = "";
     var notes = (state.notes || []).slice().sort(function (a, b) { return b.updated - a.updated; });
@@ -2806,6 +2886,10 @@
     // only shown in "set" mode = skip
     notesUnlocked = true; showNotesBody();
   };
+  document.getElementById("tradecraftAdd").onclick = addTradecraft;
+  document.getElementById("tradecraftInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); addTradecraft(); }
+  });
   document.getElementById("notesOpen").onclick = function () {
     document.getElementById("notesOverlay").classList.add("open");
     if (state.notesPin) {
@@ -2954,6 +3038,8 @@
     }
   }
   document.getElementById("interpretBtn").onclick = function () {
+    var link = document.getElementById("mapViewLink");
+    link.style.display = (state.maps && state.maps.length) ? "" : "none";
     document.getElementById("interpretOverlay").classList.add("open");
   };
   document.getElementById("interpretClose").onclick = function () {
@@ -3125,15 +3211,76 @@
     var b = mapState.b.filter(function (x) { return x.trim(); });
     if (!mapState.subject || (!a.length && !b.length)) return false;
     if (!state.maps) state.maps = [];
-    state.maps.unshift({ id: uid(), created: Date.now(),
-                         subject: mapState.subject, template: mapState.template,
-                         a: a, b: b });
+    if (mapState.editing) {
+      var m = state.maps.filter(function (x) { return x.id === mapState.editing; })[0];
+      if (m) { m.subject = mapState.subject; m.template = mapState.template; m.a = a; m.b = b; }
+      else state.maps.unshift({ id: uid(), created: Date.now(), subject: mapState.subject, template: mapState.template, a: a, b: b });
+    } else {
+      state.maps.unshift({ id: uid(), created: Date.now(),
+                           subject: mapState.subject, template: mapState.template,
+                           a: a, b: b });
+    }
     save();
     return true;
   }
+  function renderMapView() {
+    var host = document.getElementById("mapViewList");
+    host.innerHTML = "";
+    var maps = state.maps || [];
+    if (!maps.length) { host.appendChild(el("p", "mirror-note", "No maps yet.")); return; }
+    maps.forEach(function (m) {
+      var card = el("div", "mapcard");
+      var head = el("div", "mapcard-head");
+      head.appendChild(document.createTextNode(cap(m.subject) + " is secretly "));
+      head.appendChild(el("b", null, m.template));
+      var del = el("button", "mapcard-del", "\u00d7");
+      del.onclick = function (e) {
+        e.stopPropagation();
+        state.maps = state.maps.filter(function (x) { return x.id !== m.id; });
+        save(); renderMapView();
+      };
+      head.appendChild(del);
+      card.appendChild(head);
+      var cols = el("div", "mapcard-cols");
+      [["a", m.subject], ["b", m.template]].forEach(function (pair) {
+        var col = el("div", "mapcard-col");
+        col.appendChild(el("span", "h", pair[1]));
+        (m[pair[0]] || []).forEach(function (t) { col.appendChild(el("div", null, t)); });
+        cols.appendChild(col);
+      });
+      card.appendChild(cols);
+      card.appendChild(el("div", "mapcard-when", shortWhen(m.created)));
+      // tap to reopen in the editor, keeping its columns
+      card.onclick = function () {
+        mapState = { subject: m.subject, template: m.template,
+                     a: (m.a || []).concat([""]), b: (m.b || []).concat([""]), editing: m.id };
+        document.getElementById("mapViewOverlay").classList.remove("open");
+        document.getElementById("mapSetup").style.display = "none";
+        document.getElementById("mapWork").style.display = "";
+        var h = document.getElementById("mapHeadline");
+        h.innerHTML = "";
+        h.appendChild(document.createTextNode(cap(m.subject) + " is secretly "));
+        h.appendChild(el("b", null, m.template));
+        h.appendChild(document.createTextNode("."));
+        document.getElementById("mapColA").textContent = m.subject;
+        document.getElementById("mapColB").textContent = m.template;
+        renderMapRows();
+        document.getElementById("mapRun").classList.add("open");
+      };
+      host.appendChild(card);
+    });
+  }
+  document.getElementById("mapViewLink").onclick = function () {
+    document.getElementById("interpretOverlay").classList.remove("open");
+    renderMapView();
+    document.getElementById("mapViewOverlay").classList.add("open");
+  };
+  document.getElementById("mapViewClose").onclick = function () {
+    document.getElementById("mapViewOverlay").classList.remove("open");
+  };
   document.getElementById("mapStart").onclick = function () {
     document.getElementById("interpretOverlay").classList.remove("open");
-    mapState = { subject: "", template: "", a: [""], b: [""] };
+    mapState = { subject: "", template: "", a: [""], b: [""], editing: null };
     document.getElementById("mapSubject").value = "";
     document.getElementById("mapSetup").style.display = "";
     document.getElementById("mapWork").style.display = "none";
