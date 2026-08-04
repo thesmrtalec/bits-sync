@@ -419,6 +419,14 @@
   .notes-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .notes-head h2 { font-family: var(--serif); font-style: italic; font-size: 22px; margin: 0; color: var(--ink); }
   .notes-close { margin-left: auto; background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 5px 14px; font-family: var(--mono); font-size: 12px; }
+  .q-add { display: flex; gap: 8px; margin-bottom: 6px; }
+  .qcard { padding: 12px 0; border-bottom: 1px solid var(--rule); display: flex; align-items: flex-start; gap: 10px; }
+  .qcard .qtext { flex: 1 1 auto; font-family: var(--serif); font-size: 16.5px; line-height: 1.5; color: var(--ink); }
+  .qcard .qsrc { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .04em; color: var(--faint);
+    margin-top: 5px; text-transform: uppercase; }
+  .qcard .tc-del { background: transparent; border: none; color: var(--faint); font-size: 15px; cursor: pointer;
+    flex: 0 0 auto; opacity: 0; transition: opacity .15s; }
+  .qcard:hover .tc-del { opacity: 1; }
   .tradecraft { margin-bottom: 22px; }
   .tradecraft-head { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--muted); margin-bottom: 12px; }
@@ -926,6 +934,7 @@
       <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: morning writing, deal an opener" title="Shadowbox — morning writing">🙏</button>
       <button class="notes-tab bone-key" id="truthBtn" aria-label="truth drill" title="Truths — what’s always true, and what shouldn’t be">🧱</button>
       <button class="notes-tab bone-key" id="interpretBtn" aria-label="interpreter drills" title="The Interpreter — say what it actually is">👀</button>
+      <button class="notes-tab bone-key" id="questionBtn" aria-label="questions" title="Questions — keys for the room">📮</button>
       <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it: deal a line with more in it" title="Work it — deal a line with more in it">🔨</button>
       <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
     </div>
@@ -1242,6 +1251,22 @@
       <button id="axeKeep" class="axe-keep">keep</button>
     </div>
   </div>
+  <div class="notes-overlay" id="questionLibOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Questions</h2>
+        <button class="notes-close" id="questionLibClose">done</button>
+      </div>
+      <div class="q-add">
+        <input id="questionInput" class="tradecraft-input" placeholder="a question worth keeping…" autocomplete="off" />
+        <button id="questionAdd" class="tradecraft-addbtn">keep</button>
+      </div>
+      <p class="bone-note">Keys for the room — crowd work, openers, a way in.</p>
+      <div class="notes-index" style="margin-top:8px">
+        <div id="questionLibList"></div>
+      </div>
+    </div>
+  </div>
   <div class="notes-overlay" id="truthLibOverlay">
     <div class="notes-inner">
       <div class="notes-head">
@@ -1401,7 +1426,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.6.4";
+  var APP_VERSION = "v1.6.5";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1748,7 +1773,7 @@
   // point of view, a moment gives it specificity, a pattern gives it the
   // observation. The point isn't filing; it's that tagging as you capture
   // trains what you catch. Independent toggles — a thing is occasionally two.
-  var DEFAULT_FORMS = ["feeling", "moment", "truth"];
+  var DEFAULT_FORMS = ["feeling", "moment", "truth", "question"];
   // Never assign the defaults into state — doing that persisted them, so a
   // saved copy of an older default list would outlive every later change.
   // state.forms is set only when the user actually edits the list.
@@ -2208,6 +2233,7 @@
   // row. isTruth() is the single source of the concept; the library is the
   // filtered view of these.
   function isTruth(x) { return !!x && hasForm(x, "truth"); }
+  function isQuestion(x) { return !!x && hasForm(x, "question"); }
   function markTruth(x) {
     if (!x) return;
     if (!x.forms) x.forms = [];
@@ -3682,6 +3708,51 @@
       });
     }
   }
+  function renderQuestionLib() {
+    var host = document.getElementById("questionLibList");
+    host.innerHTML = "";
+    var qs = (state.truths || []).filter(isQuestion)
+      .sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
+    if (!qs.length) {
+      host.appendChild(el("p", "tradecraft-empty", "No questions yet. Catch the ones that open a room."));
+      return;
+    }
+    qs.forEach(function (q) {
+      var row = el("div", "qcard");
+      var body = el("div", "qtext");
+      body.appendChild(document.createTextNode(q.text));
+      if (q.prompt) body.appendChild(el("span", "qsrc", q.prompt));
+      row.appendChild(body);
+      var del = el("button", "tc-del", "\u00d7");
+      del.onclick = function () {
+        // just drop the question badge; if that leaves the entry bare, remove it
+        toggleForm(q, "question");
+        if (!entryForms(q).length && !q.text) {}
+        save(); renderQuestionLib(); render();
+      };
+      row.appendChild(del);
+      host.appendChild(row);
+    });
+  }
+  function addQuestion() {
+    var inp = document.getElementById("questionInput");
+    var v = inp.value.trim();
+    if (!v) return;
+    state.truths.unshift({ id: uid(), text: v, created: Date.now(), forms: ["question"] });
+    inp.value = "";
+    save(); renderQuestionLib(); render();
+  }
+  document.getElementById("questionBtn").onclick = function () {
+    renderQuestionLib();
+    document.getElementById("questionLibOverlay").classList.add("open");
+  };
+  document.getElementById("questionLibClose").onclick = function () {
+    document.getElementById("questionLibOverlay").classList.remove("open");
+  };
+  document.getElementById("questionAdd").onclick = addQuestion;
+  document.getElementById("questionInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); addQuestion(); }
+  });
   document.getElementById("truthBtn").onclick = function () {
     renderTruthLib();
     document.getElementById("truthLibOverlay").classList.add("open");
