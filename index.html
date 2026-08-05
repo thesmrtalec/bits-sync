@@ -456,6 +456,19 @@
     color: var(--faint); display: block; margin-top: 2px; }
   .hub-tile b, .hub-tile span:last-child { margin: 0; }
   .hub-tile > div { flex: 1 1 auto; }
+  .sort-run { display: none; flex-direction: column; }
+  .sort-run.open { display: flex; }
+  .sort-mid { flex: 1 1 auto; display: flex; flex-direction: column; padding: 12px 6px 0; min-height: 0; overflow-y: auto; }
+  .sort-line { font-family: var(--serif); font-size: 22px; line-height: 1.4; color: var(--ink); padding: 24px 4px 20px; }
+  .sort-ask { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin: 0 0 12px; }
+  .sort-buckets { display: flex; flex-direction: column; gap: 8px; }
+  .sort-bucket { text-align: left; background: var(--card); border: 1px solid var(--rule); border-radius: 12px;
+    padding: 15px 16px; cursor: pointer; font-family: var(--serif); font-size: 16.5px; color: var(--ink); }
+  .sort-bucket.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--card)); }
+  .sort-bucket:hover { border-color: var(--accent); }
+  .sort-bucket .sb-note { display: block; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .sort-skip { align-self: flex-start; background: transparent; border: none; color: var(--faint);
+    font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 16px 2px 24px; cursor: pointer; }
   .theme-row { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
   .theme-row .tinfo { flex: 1 1 auto; }
   .theme-row .tname { font-family: var(--serif); font-size: 16.5px; color: var(--ink); }
@@ -1242,6 +1255,18 @@
       </div>
     </div>
   </div>
+  <div class="run-overlay sort-run" id="sortRun">
+    <div class="batch-top">
+      <span class="interpret-run-count" id="sortCount"></span>
+      <button class="batch-done" id="sortDone">done</button>
+    </div>
+    <div class="sort-mid">
+      <div class="sort-line" id="sortLine"></div>
+      <p class="sort-ask">which bucket?</p>
+      <div class="sort-buckets" id="sortBuckets"></div>
+      <button class="sort-skip" id="sortSkip">skip \u2192</button>
+    </div>
+  </div>
   <div class="notes-overlay" id="themesOverlay">
     <div class="notes-inner">
       <div class="notes-head">
@@ -1249,6 +1274,7 @@
         <button class="notes-close" id="themesClose">done</button>
       </div>
       <p class="bone-note">The human mechanisms your sets orbit \u2014 not topics, throughlines. Tag any line with one, then pull a set by its spine.</p>
+      <button class="sb-start" id="sortStart" style="margin-bottom:16px">\ud83d\uddc2\ufe0f sort your flagged lines into buckets</button>
       <div id="themesList"></div>
       <div class="q-add" style="margin-top:14px">
         <input id="themeAddInput" class="tradecraft-input" placeholder="a new throughline\u2026" autocomplete="off" />
@@ -1593,7 +1619,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.8.2";
+  var APP_VERSION = "v1.8.3";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3431,6 +3457,9 @@
     if (!lines.length) {
       host.appendChild(el("p", "tradecraft-empty", "Nothing tagged to this spine yet. Tag lines with it as you write, then pull them here into a set."));
     } else {
+      var build = el("button", "sb-start", "\ud83c\udfad build a set from these " + lines.length + " lines");
+      build.onclick = function () { buildSetFromTheme(th, lines); };
+      host.appendChild(build);
       lines.forEach(function (x) {
         var row = el("div", "qcard");
         row.appendChild(el("div", "qtext", x.text));
@@ -3439,6 +3468,98 @@
     }
     document.getElementById("themeViewOverlay").classList.add("open");
   }
+  function buildSetFromTheme(th, lines) {
+    if (!state.bits) state.bits = [];
+    if (!state.sets) state.sets = [];
+    var bitIds = [];
+    lines.forEach(function (x) {
+      var isBit = (state.bits || []).some(function (b) { return b.id === x.id; });
+      if (isBit) {
+        bitIds.push(x.id);
+      } else {
+        // promote the stuff line into a bit, carrying its text + theme tags
+        var nb = { id: uid(), text: x.text, created: Date.now(),
+                   themes: (x.themes || []).slice(), fromStuff: x.id };
+        state.bits.unshift(nb);
+        bitIds.push(nb.id);
+      }
+    });
+    var id = uid();
+    state.sets.unshift({ id: id, name: th.name, bitIds: bitIds, created: Date.now(), updated: Date.now() });
+    setOpen = id;
+    save();
+    document.getElementById("themeViewOverlay").classList.remove("open");
+    document.getElementById("themesOverlay").classList.remove("open");
+    // jump to the sets view so the new set is right there
+    stageFilter = "sets";
+    render();
+    toast("Set \u201c" + th.name + "\u201d built \u2014 " + bitIds.length + " bits");
+  }
+  // ——— the sorting lane: file flagged lines into theme buckets ———
+  var sortQueue = [], sortIdx = 0, sortFiled = 0;
+  function buildSortQueue() {
+    // flagged lines (stuff + bits) — the gold worth sorting into sets
+    var q = [];
+    (state.truths || []).forEach(function (x) { if (x.flag) q.push({ item: x, kind: "stuff" }); });
+    (state.bits || []).forEach(function (x) { if (x.flag) q.push({ item: x, kind: "bit" }); });
+    // untagged first — those are the ones that still need a home
+    q.sort(function (a, b) {
+      var au = (a.item.themes || []).length ? 1 : 0, bu = (b.item.themes || []).length ? 1 : 0;
+      if (au !== bu) return au - bu;
+      return (b.item.created || 0) - (a.item.created || 0);
+    });
+    return q;
+  }
+  function renderSort() {
+    var cur = sortQueue[sortIdx];
+    var countEl = document.getElementById("sortCount");
+    if (!cur) {
+      document.getElementById("sortLine").textContent = "";
+      document.getElementById("sortBuckets").innerHTML = "";
+      document.getElementById("sortLine").innerHTML = '<p class="tradecraft-empty">All sorted. Every flagged line has a home.</p>';
+      document.querySelector("#sortRun .sort-ask").style.display = "none";
+      document.getElementById("sortSkip").style.display = "none";
+      countEl.textContent = sortFiled ? sortFiled + " filed" : "";
+      return;
+    }
+    document.querySelector("#sortRun .sort-ask").style.display = "";
+    document.getElementById("sortSkip").style.display = "";
+    countEl.textContent = (sortIdx + 1) + "/" + sortQueue.length;
+    document.getElementById("sortLine").textContent = cur.item.text;
+    var host = document.getElementById("sortBuckets");
+    host.innerHTML = "";
+    (state.themes || []).forEach(function (th) {
+      var on = (cur.item.themes || []).indexOf(th.id) !== -1;
+      var b = el("button", "sort-bucket" + (on ? " on" : ""));
+      b.appendChild(document.createTextNode(th.name));
+      if (th.note) b.appendChild(el("span", "sb-note", th.note));
+      b.onclick = function () {
+        if (!cur.item.themes) cur.item.themes = [];
+        var i = cur.item.themes.indexOf(th.id);
+        if (i === -1) cur.item.themes.push(th.id); else cur.item.themes.splice(i, 1);
+        if (!cur.item.themes.length) delete cur.item.themes;
+        if (i === -1) sortFiled++;
+        save(); renderSort();
+      };
+      host.appendChild(b);
+    });
+  }
+  document.getElementById("sortStart").onclick = function () {
+    sortQueue = buildSortQueue(); sortIdx = 0; sortFiled = 0;
+    if (!sortQueue.length) { toast("Nothing flagged to sort — star your keepers first."); return; }
+    document.getElementById("themesOverlay").classList.remove("open");
+    document.getElementById("sortRun").classList.add("open");
+    renderSort();
+  };
+  document.getElementById("sortSkip").onclick = function () {
+    sortIdx++;
+    if (sortIdx >= sortQueue.length) sortIdx = sortQueue.length;   // lands on the done state
+    renderSort();
+  };
+  document.getElementById("sortDone").onclick = function () {
+    document.getElementById("sortRun").classList.remove("open");
+    render();
+  };
   document.getElementById("drawerThemes").onclick = function () {
     document.getElementById("drawerOverlay").classList.remove("open");
     renderThemes();
