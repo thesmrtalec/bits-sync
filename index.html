@@ -317,6 +317,8 @@
   .util-menu button { text-align: left; background: transparent; border: none; padding: 8px 6px; font-size: 14px; color: var(--ink); border-radius: 6px; }
   .util-menu button:hover { background: var(--page); }
   .util-menu .util-signout { color: var(--accent2, #b4452f); }
+  .util-menu .util-danger { color: var(--accent2, #b4452f); opacity: .7; font-size: 13px; }
+  .util-menu .util-danger:hover { opacity: 1; }
 
   /* ——— notes drawer ——— */
   .notes-tab { display: inline-flex; align-items: center; gap: 5px; background: transparent; border: none; color: var(--faint); font-family: var(--mono); font-size: 11.5px; padding: 4px 6px; }
@@ -420,6 +422,11 @@
   .notes-head h2 { font-family: var(--serif); font-style: italic; font-size: 22px; margin: 0; color: var(--ink); }
   .notes-close { margin-left: auto; background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 5px 14px; font-family: var(--mono); font-size: 12px; }
   .q-add { display: flex; gap: 8px; margin-bottom: 6px; }
+  .hosp-acts { display: flex; gap: 8px; margin-top: 10px; }
+  .hosp-act { background: transparent; border: 1px solid var(--rule); border-radius: 8px; color: var(--muted);
+    font-family: var(--mono); font-size: 10px; letter-spacing: .04em; text-transform: uppercase; padding: 6px 11px; cursor: pointer; }
+  .hosp-act:hover { border-color: var(--accent); color: var(--accent); }
+  .hosp-bury:hover { border-color: var(--accent2, #b4452f); color: var(--accent2, #b4452f); }
   .q-kindrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
   .q-kindlabel { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
   .q-kindpick { background: transparent; border: 1px solid var(--rule); border-radius: 999px; color: var(--muted);
@@ -449,6 +456,17 @@
     color: var(--faint); display: block; margin-top: 2px; }
   .hub-tile b, .hub-tile span:last-child { margin: 0; }
   .hub-tile > div { flex: 1 1 auto; }
+  .theme-row { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+  .theme-row .tinfo { flex: 1 1 auto; }
+  .theme-row .tname { font-family: var(--serif); font-size: 16.5px; color: var(--ink); }
+  .theme-row .tnote { font-family: var(--serif); font-style: italic; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .theme-row .tyield { font-family: var(--mono); font-size: 10px; color: var(--faint); flex: 0 0 auto; }
+  .theme-row .tc-del { background: transparent; border: none; color: var(--faint); font-size: 15px; cursor: pointer; opacity: 0; flex: 0 0 auto; }
+  .theme-row:hover .tc-del { opacity: 1; }
+  .theme-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 2px; }
+  .theme-chip { background: transparent; border: 1px solid var(--rule); border-radius: 999px; color: var(--muted);
+    font-family: var(--mono); font-size: 9px; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; cursor: pointer; }
+  .theme-chip.on { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
   .drawer-list { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
   .drawer-item { display: flex; align-items: center; gap: 14px; text-align: left; background: transparent;
     border: none; border-bottom: 1px solid var(--rule); padding: 16px 4px; cursor: pointer;
@@ -905,6 +923,8 @@
   .axe-verdicts button { flex: 1; border-radius: 12px; padding: 16px 0; font-family: var(--mono); font-size: 14px; cursor: pointer; }
   .axe-kill { background: transparent; border: 1.5px solid var(--accent2); color: var(--accent2); }
   .axe-keep { background: var(--accent); border: 1.5px solid var(--accent); color: var(--onaccent); }
+  .axe-hospital { background: transparent; border: 1.5px solid var(--rule); color: var(--muted); font-size: 17px; }
+  .axe-hospital.on { border-color: var(--accent); color: var(--accent); }
   .axe-done { text-align: center; }
   .axe-done p { font-family: 'Caveat', cursive; font-size: 30px; color: var(--muted); }
 
@@ -998,6 +1018,8 @@
       <button id="exportBtn">Export backup</button>
       <button id="importBtn">Import</button>
       <input type="file" id="importFile" accept=".json" style="display:none" />
+      <button id="clearPileBtn" class="util-danger">Clear the pile…</button>
+      <button id="freshStartBtn" class="util-danger">Start completely over…</button>
       <button id="signOut" class="util-signout">Sign out</button>
     </div>
   </div>
@@ -1220,6 +1242,40 @@
       </div>
     </div>
   </div>
+  <div class="notes-overlay" id="themesOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Themes</h2>
+        <button class="notes-close" id="themesClose">done</button>
+      </div>
+      <p class="bone-note">The human mechanisms your sets orbit \u2014 not topics, throughlines. Tag any line with one, then pull a set by its spine.</p>
+      <div id="themesList"></div>
+      <div class="q-add" style="margin-top:14px">
+        <input id="themeAddInput" class="tradecraft-input" placeholder="a new throughline\u2026" autocomplete="off" />
+        <button id="themeAdd" class="tradecraft-addbtn">add</button>
+      </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="themeViewOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2 id="themeViewName">Theme</h2>
+        <button class="notes-close" id="themeViewClose">back</button>
+      </div>
+      <p class="bone-note" id="themeViewNote"></p>
+      <div id="themeViewList"></div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="hospitalOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>The hospital</h2>
+        <button class="notes-close" id="hospitalClose">done</button>
+      </div>
+      <p class="bone-note">Not dead \u2014 on life support. Lines with something in them you couldn\u2019t crack yet. Discharge one back to the pile when you\u2019re ready, or send it to the boneyard.</p>
+      <div id="hospitalList" style="margin-top:10px"></div>
+    </div>
+  </div>
   <div class="notes-overlay" id="drawerOverlay">
     <div class="notes-inner">
       <div class="notes-head">
@@ -1228,9 +1284,11 @@
       </div>
       <div class="drawer-list">
         <button class="drawer-item" id="drawerJabs"><span>🥊</span> The jab stack</button>
+        <button class="drawer-item" id="drawerHospital"><span>🏥</span> The hospital</button>
         <button class="drawer-item" id="drawerBone"><span>🪦</span> The boneyard</button>
         <button class="drawer-item" id="drawerNotes"><span>📒</span> Notes &amp; tradecraft</button>
         <button class="drawer-item" id="drawerSched"><span>📅</span> Mic schedule</button>
+        <button class="drawer-item" id="drawerThemes"><span>🧵</span> Themes &mdash; set spines</button>
         <button class="drawer-item" id="drawerSettings"><span>⚙️</span> Settings</button>
       </div>
     </div>
@@ -1323,6 +1381,7 @@
     <div class="axe-controls" id="axeControls"></div>
     <div class="axe-verdicts" id="axeVerdicts">
       <button id="axeKill" class="axe-kill">&#129683; axe</button>
+      <button id="axeHospital" class="axe-hospital" title="There's something here — put it on life support">&#127973;</button>
       <button id="axeStar" class="axe-star" title="Gold — flag it and move on">&#9734;</button>
       <button id="axeKeep" class="axe-keep">keep</button>
     </div>
@@ -1534,7 +1593,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.7.5";
+  var APP_VERSION = "v1.8.2";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1650,6 +1709,25 @@
     state.workoutDays = data.workoutDays || [];
     state.maps = data.maps || [];
     state.tradecraft = data.tradecraft || [];
+    // themes = the human mechanisms his sets orbit (editable spine). Seed once.
+    if (!data.themes && !data.themesSeeded) {
+      state.themes = [
+        { id: uid(), name: "Trying to be normal", note: "everyone\u2019s performing adulthood" },
+        { id: uid(), name: "Private versions of ourselves", note: "who you are when no one\u2019s watching" },
+        { id: uid(), name: "Married people are feral", note: "love destroys social boundaries" },
+        { id: uid(), name: "Men want to matter", note: "not toxic — recognition" },
+        { id: uid(), name: "Everyone is pretending", note: "taxes, directions, art, football\u2026" },
+        { id: uid(), name: "Unspoken social contracts", note: "why do we all just\u2026" },
+        { id: uid(), name: "Secret selfishness", note: "the thoughts everyone has" },
+        { id: uid(), name: "Our imaginary selves", note: "who we think we\u2019d be" },
+        { id: uid(), name: "Hidden games", note: "find the real game being played" },
+        { id: uid(), name: "Misnamed experiences", note: "rename it truer" }
+      ];
+      state.themesSeeded = true;
+    } else {
+      state.themes = data.themes || [];
+      state.themesSeeded = data.themesSeeded || (data.themes && data.themes.length > 0);
+    }
     state.planned = data.planned || [];
     state.notes = data.notes || [];
     state.theme = data.theme || "ember";
@@ -2506,13 +2584,59 @@
     }
   };
 
-  document.getElementById("exportBtn").onclick = function () {
+  function downloadBackup() {
     var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = "bits-backup-" + new Date().toISOString().slice(0, 10) + ".json";
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+  document.getElementById("exportBtn").onclick = downloadBackup;
+
+  // ——— start over: always export first, then type-to-confirm ———
+  // "Clear the pile" keeps the earned spine (truths, questions, themes,
+  // tradecraft, manifesto, principles). "Start completely over" wipes all.
+  document.getElementById("clearPileBtn").onclick = function () {
+    if (demoLive) { alert("Exit demo mode first."); return; }
+    if (!confirm("This clears your stuff, bits, sets, jabs and boneyard — but KEEPS your truths, questions, themes and tradecraft.\n\nFirst it'll download a full backup. Continue?")) return;
+    downloadBackup();
+    var typed = prompt("Backup downloaded. To clear the pile, type:  CLEAR");
+    if (typed == null) return;
+    if (typed.trim().toUpperCase() !== "CLEAR") { alert("Didn't match — nothing was cleared."); return; }
+    // keep the earned material: truths/questions are badged entries in state.truths;
+    // drop only the UN-badged raw pile, and clear bits/sets/jabs/boneyard.
+    state.truths = (state.truths || []).filter(function (x) {
+      return isTruth(x) || hasForm(x, "question") || x.kind === "truth" || x.kind === "contradiction";
+    });
+    state.bits = [];
+    state.sets = [];
+    state.sbLog = [];
+    // themes, tradecraft, maps, manifesto text, forms all persist untouched
+    save();
+    alert("The pile is clear. Your truths, questions, themes and tradecraft are still here.");
+    location.reload();
+  };
+  document.getElementById("freshStartBtn").onclick = function () {
+    if (demoLive) { alert("Exit demo mode first."); return; }
+    if (!confirm("This erases EVERYTHING — all stuff, bits, sets, truths, questions, themes, tradecraft. A blank notebook.\n\nFirst it'll download a full backup. Continue?")) return;
+    downloadBackup();
+    var typed = prompt("Backup downloaded. This cannot be undone.\nTo erase everything, type:  ERASE");
+    if (typed == null) return;
+    if (typed.trim().toUpperCase() !== "ERASE") { alert("Didn't match — nothing was erased."); return; }
+    // wipe every material field but keep his color theme + notes lock
+    state.truths = [];
+    state.bits = [];
+    state.sets = [];
+    state.sbLog = [];
+    state.maps = [];
+    state.tradecraft = [];
+    state.themes = [];
+    state.themesSeeded = false;   // let the spine re-seed fresh
+    state.sb = null;
+    save();
+    alert("Blank notebook. Fresh start.");
+    location.reload();
   };
   document.getElementById("demoBtn").onclick = function () {
     document.getElementById("utilMenu").style.display = "none";
@@ -3204,9 +3328,141 @@
   }
   drawerRoute("drawerJabs", "jabsBtn");
   drawerRoute("drawerBone", "boneOpen");
+
+  // ——— the hospital: lines on life support (notNow set) ———
+  function hospitalPatients() {
+    var out = [];
+    (state.truths || []).forEach(function (x) { if (x.notNow) out.push({ item: x, kind: "stuff" }); });
+    (state.bits || []).forEach(function (x) { if (x.notNow) out.push({ item: x, kind: "bit" }); });
+    out.sort(function (a, b) { return (b.item.notNow || 0) - (a.item.notNow || 0); });
+    return out;
+  }
+  function renderHospital() {
+    var host = document.getElementById("hospitalList");
+    host.innerHTML = "";
+    var pts = hospitalPatients();
+    if (!pts.length) {
+      host.appendChild(el("p", "tradecraft-empty", "Empty ward. Nothing on life support."));
+      return;
+    }
+    pts.forEach(function (p) {
+      var row = el("div", "qcard");
+      var body = el("div", "qtext");
+      body.appendChild(document.createTextNode(p.item.text));
+      var acts = el("div", "hosp-acts");
+      var discharge = el("button", "hosp-act", "discharge \u2192 pile");
+      discharge.onclick = function () {
+        delete p.item.notNow;
+        save(); renderHospital();
+      };
+      var bury = el("button", "hosp-act hosp-bury", "\ud83e\udea6 boneyard");
+      bury.onclick = function () {
+        if (!state.buried) state.buried = [];
+        delete p.item.notNow;
+        p.item.buriedAt = Date.now();
+        p.item.from = p.kind;
+        state.buried.unshift(p.item);
+        if (p.kind === "stuff") state.truths = state.truths.filter(function (x) { return x.id !== p.item.id; });
+        else state.bits = state.bits.filter(function (x) { return x.id !== p.item.id; });
+        save(); renderHospital();
+      };
+      acts.appendChild(discharge);
+      acts.appendChild(bury);
+      body.appendChild(acts);
+      row.appendChild(body);
+      host.appendChild(row);
+    });
+  }
+  document.getElementById("drawerHospital").onclick = function () {
+    document.getElementById("drawerOverlay").classList.remove("open");
+    renderHospital();
+    document.getElementById("hospitalOverlay").classList.add("open");
+  };
+  document.getElementById("hospitalClose").onclick = function () {
+    document.getElementById("hospitalOverlay").classList.remove("open");
+  };
   drawerRoute("drawerNotes", "notesOpen");
   drawerRoute("drawerSched", "schedOpen");
   drawerRoute("drawerSettings", "utilBtn");
+
+  // ——— themes: the human-mechanism spines a set orbits ———
+  function lineThemes(x) { return x.themes || []; }
+  function themeYield(themeId) {
+    var n = 0;
+    (state.truths || []).forEach(function (x) { if (lineThemes(x).indexOf(themeId) !== -1) n++; });
+    (state.bits || []).forEach(function (x) { if (lineThemes(x).indexOf(themeId) !== -1) n++; });
+    return n;
+  }
+  function renderThemes() {
+    var host = document.getElementById("themesList");
+    host.innerHTML = "";
+    (state.themes || []).forEach(function (th) {
+      var row = el("div", "theme-row");
+      var info = el("div", "tinfo");
+      info.appendChild(el("div", "tname", th.name));
+      if (th.note) info.appendChild(el("div", "tnote", th.note));
+      row.appendChild(info);
+      var y = themeYield(th.id);
+      row.appendChild(el("span", "tyield", y ? y + (y === 1 ? " line" : " lines") : ""));
+      var del = el("button", "tc-del", "\u00d7");
+      del.onclick = function (e) {
+        e.stopPropagation();
+        // remove the theme and untag every line
+        state.themes = state.themes.filter(function (t) { return t.id !== th.id; });
+        (state.truths || []).concat(state.bits || []).forEach(function (x) {
+          if (x.themes) { x.themes = x.themes.filter(function (id) { return id !== th.id; }); if (!x.themes.length) delete x.themes; }
+        });
+        save(); renderThemes();
+      };
+      row.appendChild(del);
+      row.onclick = function () { openThemeView(th); };
+      host.appendChild(row);
+    });
+  }
+  function openThemeView(th) {
+    document.getElementById("themeViewName").textContent = th.name;
+    document.getElementById("themeViewNote").textContent = th.note || "";
+    var host = document.getElementById("themeViewList");
+    host.innerHTML = "";
+    var lines = [];
+    (state.truths || []).forEach(function (x) { if (lineThemes(x).indexOf(th.id) !== -1) lines.push(x); });
+    (state.bits || []).forEach(function (x) { if (lineThemes(x).indexOf(th.id) !== -1) lines.push(x); });
+    lines.sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
+    if (!lines.length) {
+      host.appendChild(el("p", "tradecraft-empty", "Nothing tagged to this spine yet. Tag lines with it as you write, then pull them here into a set."));
+    } else {
+      lines.forEach(function (x) {
+        var row = el("div", "qcard");
+        row.appendChild(el("div", "qtext", x.text));
+        host.appendChild(row);
+      });
+    }
+    document.getElementById("themeViewOverlay").classList.add("open");
+  }
+  document.getElementById("drawerThemes").onclick = function () {
+    document.getElementById("drawerOverlay").classList.remove("open");
+    renderThemes();
+    document.getElementById("themesOverlay").classList.add("open");
+  };
+  document.getElementById("themesClose").onclick = function () {
+    document.getElementById("themesOverlay").classList.remove("open");
+  };
+  document.getElementById("themeViewClose").onclick = function () {
+    document.getElementById("themeViewOverlay").classList.remove("open");
+  };
+  function addTheme() {
+    var inp = document.getElementById("themeAddInput");
+    var v = inp.value.trim();
+    if (!v) return;
+    if (!state.themes) state.themes = [];
+    state.themes.push({ id: uid(), name: v, note: "" });
+    inp.value = "";
+    save(); renderThemes();
+  }
+  document.getElementById("themeAdd").onclick = addTheme;
+  document.getElementById("themeAddInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); addTheme(); }
+  });
   document.getElementById("interpretBtn").onclick = function () {
     var link = document.getElementById("mapViewLink");
     link.style.display = (state.maps && state.maps.length) ? "" : "none";
@@ -4742,6 +4998,8 @@
     verdicts.style.display = "";
     var cur = axeQueue[axeIdx];
     prog.textContent = (axeIdx + 1) + "/" + axeQueue.length;
+    var hospBtn = document.getElementById("axeHospital");
+    if (hospBtn) hospBtn.classList.toggle("on", !!cur.item.notNow);
     var starBtn = document.getElementById("axeStar");
     if (starBtn) {
       var already = !!cur.item.flag;
@@ -4761,6 +5019,24 @@
     var ts = seenAt(cur.item);
     var age = ts ? "untouched " + Math.max(0, Math.floor((Date.now() - ts) / DAY)) + "d" : "no timestamp";
     wrap.appendChild(el("div", "axe-meta", cur.kind + " \u00b7 " + age));
+    // tag this line to a theme-spine (only shown if he has themes)
+    if ((state.themes || []).length) {
+      var tp = el("div", "theme-pick");
+      state.themes.forEach(function (th) {
+        var on = (cur.item.themes || []).indexOf(th.id) !== -1;
+        var chip = el("button", "theme-chip" + (on ? " on" : ""), th.name);
+        chip.onclick = function (e) {
+          e.stopPropagation();
+          if (!cur.item.themes) cur.item.themes = [];
+          var i = cur.item.themes.indexOf(th.id);
+          if (i === -1) cur.item.themes.push(th.id); else cur.item.themes.splice(i, 1);
+          if (!cur.item.themes.length) delete cur.item.themes;
+          save(); renderAxe();
+        };
+        tp.appendChild(chip);
+      });
+      wrap.appendChild(tp);
+    }
     card.appendChild(wrap);
 
     // progress dots (capped so a long queue doesn't wrap into a wall)
@@ -5529,7 +5805,19 @@
     var cur = axeQueue[axeIdx];
     if (!cur) return;
     cur.item.flag = true;         // straight into the hammer/⭐ pile
+    if (cur.item.notNow) delete cur.item.notNow;   // resolved — discharge from the ward
     markSeen(cur.item);
+    buzz();
+    axeIdx++;
+    save();
+    renderAxe();
+    circuitProgress("axe");
+  };
+  document.getElementById("axeHospital").onclick = function () {
+    var cur = axeQueue[axeIdx];
+    if (!cur) return;
+    cur.item.notNow = Date.now();   // on life support — there's something here
+    markSeen(cur.item);             // drops down the deck so it's out of the way
     buzz();
     axeIdx++;
     save();
@@ -5549,6 +5837,7 @@
     if (!state.buried) state.buried = [];
     cur.item.buriedAt = Date.now();
     cur.item.from = cur.kind;
+    if (cur.item.notNow) delete cur.item.notNow;
     state.buried.unshift(cur.item);
     if (cur.kind === "stuff") {
       state.truths = state.truths.filter(function (x) { return x.id !== cur.item.id; });
