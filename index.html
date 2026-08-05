@@ -420,6 +420,18 @@
   .notes-head h2 { font-family: var(--serif); font-style: italic; font-size: 22px; margin: 0; color: var(--ink); }
   .notes-close { margin-left: auto; background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 5px 14px; font-family: var(--mono); font-size: 12px; }
   .q-add { display: flex; gap: 8px; margin-bottom: 6px; }
+  .q-kindrow { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .q-kindlabel { font-family: var(--mono); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  .q-kindpick { background: transparent; border: 1px solid var(--rule); border-radius: 999px; color: var(--muted);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase; padding: 4px 11px; cursor: pointer; }
+  .q-kindpick.on { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
+  .q-filter { display: flex; gap: 7px; margin: 4px 0 12px; }
+  .q-filter button { background: transparent; border: 1px solid var(--rule); border-radius: 999px; color: var(--muted);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase; padding: 5px 12px; cursor: pointer; }
+  .q-filter button.on { background: var(--ink); color: var(--page); border-color: var(--ink); }
+  .qcard-kind { display: inline-block; font-family: var(--mono); font-size: 8px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 1px 5px; margin-top: 6px; opacity: .8; }
+  .qcard-kind.observation { color: var(--accent2, var(--muted)); border-color: var(--accent2, var(--rule)); }
   .qcard { padding: 12px 0; border-bottom: 1px solid var(--rule); display: flex; align-items: flex-start; gap: 10px; }
   .qcard .qtext { flex: 1 1 auto; font-family: var(--serif); font-size: 16.5px; line-height: 1.5; color: var(--ink); }
   .qcard .qsrc { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .04em; color: var(--faint);
@@ -1261,6 +1273,11 @@
         <input id="questionInput" class="tradecraft-input" placeholder="a question worth keeping…" autocomplete="off" />
         <button id="questionAdd" class="tradecraft-addbtn">keep</button>
       </div>
+      <div class="q-kindrow" id="qKindRow">
+        <span class="q-kindlabel">points at:</span>
+        <button class="q-kindpick on" data-k="confession">confession</button>
+        <button class="q-kindpick" data-k="observation">observation</button>
+      </div>
       <p class="bone-note">Keys for the room — crowd work, openers, a way in.</p>
       <div class="notes-index" style="margin-top:8px">
         <div id="questionLibList"></div>
@@ -1274,6 +1291,10 @@
         <button class="notes-close" id="truthLibClose">done</button>
       </div>
       <button class="sb-start" id="truthLibStart">🧱  start drilling</button>
+      <div class="q-add" style="margin-top:12px">
+        <input id="truthDirectInput" class="tradecraft-input" placeholder="a truth that arrived whole…" autocomplete="off" />
+        <button id="truthDirectAdd" class="tradecraft-addbtn">keep</button>
+      </div>
       <p class="bone-note" id="truthLibNote"></p>
       <div class="notes-index" style="margin-top:8px">
         <div id="truthLibList"></div>
@@ -1426,7 +1447,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.6.5";
+  var APP_VERSION = "v1.6.7";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3708,13 +3729,27 @@
       });
     }
   }
+  var qFilter = "all";
   function renderQuestionLib() {
     var host = document.getElementById("questionLibList");
     host.innerHTML = "";
-    var qs = (state.truths || []).filter(isQuestion)
+    var all = (state.truths || []).filter(isQuestion)
       .sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
+    // filter chips — only worth showing once there's a mix to sort
+    var haveKinds = all.some(function (q) { return q.qkind; });
+    if (haveKinds && all.length > 1) {
+      var fr = el("div", "q-filter");
+      [["all", "all"], ["confession", "confession"], ["observation", "observation"]].forEach(function (pair) {
+        var b2 = el("button", qFilter === pair[0] ? "on" : "", pair[1]);
+        b2.onclick = function () { qFilter = pair[0]; renderQuestionLib(); };
+        fr.appendChild(b2);
+      });
+      host.appendChild(fr);
+    }
+    var qs = all.filter(function (q) { return qFilter === "all" || q.qkind === qFilter; });
     if (!qs.length) {
-      host.appendChild(el("p", "tradecraft-empty", "No questions yet. Catch the ones that open a room."));
+      host.appendChild(el("p", "tradecraft-empty",
+        all.length ? "None of that kind yet." : "No questions yet. Catch the ones that open a room."));
       return;
     }
     qs.forEach(function (q) {
@@ -3722,23 +3757,33 @@
       var body = el("div", "qtext");
       body.appendChild(document.createTextNode(q.text));
       if (q.prompt) body.appendChild(el("span", "qsrc", q.prompt));
+      if (q.qkind) {
+        var tag = el("span", "qcard-kind" + (q.qkind === "observation" ? " observation" : ""), q.qkind);
+        // tap the tag to flip the kind
+        tag.style.cursor = "pointer";
+        tag.onclick = function () {
+          q.qkind = q.qkind === "confession" ? "observation" : "confession";
+          save(); renderQuestionLib();
+        };
+        body.appendChild(document.createElement("br"));
+        body.appendChild(tag);
+      }
       row.appendChild(body);
       var del = el("button", "tc-del", "\u00d7");
       del.onclick = function () {
-        // just drop the question badge; if that leaves the entry bare, remove it
         toggleForm(q, "question");
-        if (!entryForms(q).length && !q.text) {}
         save(); renderQuestionLib(); render();
       };
       row.appendChild(del);
       host.appendChild(row);
     });
   }
+  var qAddKind = "confession";
   function addQuestion() {
     var inp = document.getElementById("questionInput");
     var v = inp.value.trim();
     if (!v) return;
-    state.truths.unshift({ id: uid(), text: v, created: Date.now(), forms: ["question"] });
+    state.truths.unshift({ id: uid(), text: v, created: Date.now(), forms: ["question"], qkind: qAddKind });
     inp.value = "";
     save(); renderQuestionLib(); render();
   }
@@ -3749,6 +3794,14 @@
   document.getElementById("questionLibClose").onclick = function () {
     document.getElementById("questionLibOverlay").classList.remove("open");
   };
+  Array.prototype.forEach.call(document.querySelectorAll("#qKindRow .q-kindpick"), function (btn) {
+    btn.onclick = function () {
+      qAddKind = btn.getAttribute("data-k");
+      Array.prototype.forEach.call(document.querySelectorAll("#qKindRow .q-kindpick"), function (b) {
+        b.classList.toggle("on", b === btn);
+      });
+    };
+  });
   document.getElementById("questionAdd").onclick = addQuestion;
   document.getElementById("questionInput").addEventListener("keydown", function (e) {
     if (e.key === "Enter") { e.preventDefault(); addQuestion(); }
@@ -3760,6 +3813,18 @@
   document.getElementById("truthLibClose").onclick = function () {
     document.getElementById("truthLibOverlay").classList.remove("open");
   };
+  function addTruthDirect() {
+    var inp = document.getElementById("truthDirectInput");
+    var v = inp.value.trim();
+    if (!v) return;
+    state.truths.unshift({ id: uid(), text: v, created: Date.now(), forms: ["truth"], flag: true });
+    inp.value = "";
+    save(); renderTruthLib(); render();
+  }
+  document.getElementById("truthDirectAdd").onclick = addTruthDirect;
+  document.getElementById("truthDirectInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); addTruthDirect(); }
+  });
   document.getElementById("truthLibStart").onclick = function () {
     document.getElementById("truthLibOverlay").classList.remove("open");
     if (!dealDrill()) toast("Nothing to distill yet — capture a few things first.");
