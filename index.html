@@ -1389,8 +1389,12 @@
         <button class="notes-close" id="riffClose">done</button>
       </div>
       <p class="bone-note">Deal one of your own lines and build new off it.</p>
+      <div class="q-add" style="margin-bottom:14px">
+        <input id="riffSeedInput" class="tradecraft-input" placeholder="got one in mind? type it — e.g. handshakes" autocomplete="off" />
+        <button id="riffSeedGo" class="tradecraft-addbtn">riff</button>
+      </div>
       <div class="lane-pick">
-        <span class="lane-label">riff from:</span>
+        <span class="lane-label">or deal from:</span>
         <div class="lane-chips">
           <button class="lane-chip on" data-src="truth">truths</button>
           <button class="lane-chip" data-src="question">questions</button>
@@ -1530,7 +1534,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.7.4";
+  var APP_VERSION = "v1.7.5";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -5721,6 +5725,32 @@
         c.classList.toggle("on", c === chip);
       });
     };
+  });
+  function riffOnSeed(word) {
+    word = (word || "").trim();
+    if (!word) return;
+    // a typed subject becomes a real captured entry so riffs attach to it
+    var seed = { id: uid(), text: word, created: Date.now(), seed: true };
+    state.truths.unshift(seed);
+    save();
+    document.getElementById("riffOverlay").classList.remove("open");
+    browseDeck = [{ id: seed.id, kind: "truth", at: seed.created, flag: false }];
+    browseIdx = 0; browseKind = null; flipLens = null;
+    document.getElementById("flipJab").value = "";
+    renderFlip();
+    document.getElementById("flipOverlay").classList.add("open");
+    bindDrillVH();
+  }
+  document.getElementById("riffSeedGo").onclick = function () {
+    riffOnSeed(document.getElementById("riffSeedInput").value);
+    document.getElementById("riffSeedInput").value = "";
+  };
+  document.getElementById("riffSeedInput").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      riffOnSeed(this.value);
+      this.value = "";
+    }
   });
   document.getElementById("riffStart").onclick = function () {
     document.getElementById("riffOverlay").classList.remove("open");
