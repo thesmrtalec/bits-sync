@@ -439,6 +439,22 @@
   .qcard .tc-del { background: transparent; border: none; color: var(--faint); font-size: 15px; cursor: pointer;
     flex: 0 0 auto; opacity: 0; transition: opacity .15s; }
   .qcard:hover .tc-del { opacity: 1; }
+  .hub-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 14px; }
+  .hub-tile { display: flex; align-items: center; gap: 14px; text-align: left; background: var(--card);
+    border: 1px solid var(--rule); border-radius: 14px; padding: 16px 18px; cursor: pointer; }
+  .hub-tile:hover { border-color: var(--accent); }
+  .hub-emoji { font-size: 26px; flex: 0 0 auto; }
+  .hub-tile b { font-family: var(--serif); font-size: 18px; color: var(--ink); display: block; }
+  .hub-tile span:last-child { font-family: var(--mono); font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--faint); display: block; margin-top: 2px; }
+  .hub-tile b, .hub-tile span:last-child { margin: 0; }
+  .hub-tile > div { flex: 1 1 auto; }
+  .drawer-list { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; }
+  .drawer-item { display: flex; align-items: center; gap: 14px; text-align: left; background: transparent;
+    border: none; border-bottom: 1px solid var(--rule); padding: 16px 4px; cursor: pointer;
+    font-family: var(--serif); font-size: 17px; color: var(--ink); }
+  .drawer-item span { font-size: 20px; }
+  .drawer-item:hover { color: var(--accent); }
   .tradecraft { margin-bottom: 22px; }
   .tradecraft-head { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
     color: var(--muted); margin-bottom: 12px; }
@@ -943,21 +959,24 @@
 
   <div class="backup">
     <div class="tool-row do-row">
-      <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox: morning writing, deal an opener" title="Shadowbox — morning writing">🙏</button>
-      <button class="notes-tab bone-key" id="truthBtn" aria-label="truth drill" title="Truths — what’s always true, and what shouldn’t be">🧱</button>
-      <button class="notes-tab bone-key" id="interpretBtn" aria-label="interpreter drills" title="The Interpreter — say what it actually is">👀</button>
-      <button class="notes-tab bone-key" id="questionBtn" aria-label="questions" title="Questions — keys for the room">📮</button>
-      <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it: deal a line with more in it" title="Work it — deal a line with more in it">🔨</button>
-      <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode: judge stale material" title="Axe mode — judge stale material">🪓</button>
+      <button class="notes-tab bone-key" id="shadowBtn" aria-label="shadowbox" title="Shadowbox — morning writing">🙏</button>
+      <button class="notes-tab bone-key" id="libraryBtn" aria-label="library" title="Library — truths, questions, interpreter">📚</button>
+      <button class="notes-tab bone-key" id="shuffleBtn" aria-label="work it" title="Work it — deal a line with more in it">🔨</button>
+      <button class="notes-tab bone-key" id="axeBtn" aria-label="axe mode" title="Axe mode — judge stale material">🪓</button>
+      <button class="notes-tab bone-key" id="flaggedBtn" aria-label="flagged" title="Flagged — starred to work">⭐</button>
+      <button class="notes-tab bone-key" id="drawerBtn" aria-label="more" title="More">⋯</button>
     </div>
-    <div class="tool-row look-row">
-      <button class="notes-tab bone-key" id="flaggedBtn" aria-label="flagged" title="Flagged — what you’ve starred to work">⭐</button>
-      <button class="notes-tab bone-key" id="jabsBtn" aria-label="jabs" title="The jab stack — every rewrite you’ve thrown">🥊</button>
-      <button class="notes-tab bone-key" id="boneOpen" aria-label="open the boneyard" title="The boneyard">🪦</button>
-      <button class="notes-tab" id="notesOpen" aria-label="notes" title="Notes &amp; ideas">📒</button>
-      <button class="notes-tab bone-key" id="schedOpen" aria-label="mic schedule" title="Mic schedule">📅</button>
-      <button class="notes-tab bone-key" id="utilBtn" aria-label="settings" title="Settings">⚙️</button>
+    <div style="display:none">
+      <button id="truthBtn"></button>
+      <button id="interpretBtn"></button>
+      <button id="questionBtn"></button>
+      <button id="jabsBtn"></button>
+      <button id="boneOpen"></button>
+      <button id="notesOpen"></button>
+      <button id="schedOpen"></button>
+      <button id="utilBtn"></button>
     </div>
+
     <span class="sync-chip" id="syncStatus"></span>
     <span class="backup-note" id="authWho"></span>
     <span class="ver-chip" id="verChip"></span>
@@ -1179,6 +1198,35 @@
         <button class="batch-reroll" id="interpretRunNext">next drill →</button>
       </div>
       <div class="batch-recent" id="interpretRunRecent"></div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="libraryOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Library</h2>
+        <button class="notes-close" id="libraryClose">done</button>
+      </div>
+      <p class="bone-note">The lines you keep, by kind.</p>
+      <div class="hub-grid">
+        <button class="hub-tile" id="hubTruths"><span class="hub-emoji">🧱</span><b>Truths</b><span>what’s always true</span></button>
+        <button class="hub-tile" id="hubQuestions"><span class="hub-emoji">📮</span><b>Questions</b><span>keys for the room</span></button>
+        <button class="hub-tile" id="hubInterpret"><span class="hub-emoji">👀</span><b>Interpreter</b><span>say what it is</span></button>
+      </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="drawerOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>More</h2>
+        <button class="notes-close" id="drawerClose">done</button>
+      </div>
+      <div class="drawer-list">
+        <button class="drawer-item" id="drawerJabs"><span>🥊</span> The jab stack</button>
+        <button class="drawer-item" id="drawerBone"><span>🪦</span> The boneyard</button>
+        <button class="drawer-item" id="drawerNotes"><span>📒</span> Notes &amp; tradecraft</button>
+        <button class="drawer-item" id="drawerSched"><span>📅</span> Mic schedule</button>
+        <button class="drawer-item" id="drawerSettings"><span>⚙️</span> Settings</button>
+      </div>
     </div>
   </div>
   <div class="notes-overlay" id="interpretOverlay">
@@ -1447,7 +1495,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.6.7";
+  var APP_VERSION = "v1.7.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3084,6 +3132,42 @@
       line("no streak yet", "a full workout starts it");
     }
   }
+  function openLibrary() {
+    document.getElementById("libraryOverlay").classList.add("open");
+  }
+  document.getElementById("libraryBtn").onclick = openLibrary;
+  document.getElementById("libraryClose").onclick = function () {
+    document.getElementById("libraryOverlay").classList.remove("open");
+  };
+  document.getElementById("hubTruths").onclick = function () {
+    document.getElementById("libraryOverlay").classList.remove("open");
+    document.getElementById("truthBtn").click();
+  };
+  document.getElementById("hubQuestions").onclick = function () {
+    document.getElementById("libraryOverlay").classList.remove("open");
+    document.getElementById("questionBtn").click();
+  };
+  document.getElementById("hubInterpret").onclick = function () {
+    document.getElementById("libraryOverlay").classList.remove("open");
+    document.getElementById("interpretBtn").click();
+  };
+  document.getElementById("drawerBtn").onclick = function () {
+    document.getElementById("drawerOverlay").classList.add("open");
+  };
+  document.getElementById("drawerClose").onclick = function () {
+    document.getElementById("drawerOverlay").classList.remove("open");
+  };
+  function drawerRoute(itemId, targetId) {
+    document.getElementById(itemId).onclick = function () {
+      document.getElementById("drawerOverlay").classList.remove("open");
+      document.getElementById(targetId).click();
+    };
+  }
+  drawerRoute("drawerJabs", "jabsBtn");
+  drawerRoute("drawerBone", "boneOpen");
+  drawerRoute("drawerNotes", "notesOpen");
+  drawerRoute("drawerSched", "schedOpen");
+  drawerRoute("drawerSettings", "utilBtn");
   document.getElementById("interpretBtn").onclick = function () {
     var link = document.getElementById("mapViewLink");
     link.style.display = (state.maps && state.maps.length) ? "" : "none";
