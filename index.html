@@ -697,6 +697,12 @@
   .batch-stem-live.is-truth { font-style: normal; font-size: 21px; color: var(--accent); }
   .batch-stem-live.is-prompt { font-style: italic; opacity: .85; font-size: 19px; }
   .batch-stem-live.is-scene { font-style: italic; font-size: 18px; color: var(--accent2); line-height: 1.4; }
+  .lane-pick { margin: 6px 0 14px; }
+  .lane-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); display: block; margin-bottom: 8px; }
+  .lane-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .lane-chip { background: transparent; border: 1px solid var(--rule); border-radius: 999px; color: var(--muted);
+    font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; padding: 6px 13px; cursor: pointer; }
+  .lane-chip.on { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
   .batch-stem-live.is-interpret { font-style: normal; font-size: 17px; color: var(--accent); line-height: 1.4; letter-spacing: .01em; }
   .batch-hint { display: flex; align-items: center; gap: 12px; }
   .batch-reroll { margin-left: auto; background: transparent; border: 1px solid var(--rule);
@@ -1290,6 +1296,16 @@
         <h2>Shadowbox</h2>
         <button class="notes-close" id="sbLogClose">done</button>
       </div>
+      <div class="lane-pick" id="lanePick">
+        <span class="lane-label">write from:</span>
+        <div class="lane-chips">
+          <button class="lane-chip on" data-lane="mix">mix</button>
+          <button class="lane-chip" data-lane="stem">stems</button>
+          <button class="lane-chip" data-lane="prompt">prompts</button>
+          <button class="lane-chip" data-lane="scene">scenes</button>
+          <button class="lane-chip" data-lane="interpret">interpret</button>
+        </div>
+      </div>
       <button class="sb-start" id="sbStart">🙏  start writing</button>
       <p class="bone-note" id="sbLogNote"></p>
       <div class="notes-index" style="margin-top:8px">
@@ -1364,6 +1380,25 @@
       <div class="truth-nav">
         <button class="truth-skip" id="truthSkip">something else →</button>
       </div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="riffOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Riff</h2>
+        <button class="notes-close" id="riffClose">done</button>
+      </div>
+      <p class="bone-note">Deal one of your own lines and build new off it.</p>
+      <div class="lane-pick">
+        <span class="lane-label">riff from:</span>
+        <div class="lane-chips">
+          <button class="lane-chip on" data-src="truth">truths</button>
+          <button class="lane-chip" data-src="question">questions</button>
+          <button class="lane-chip" data-src="flag">flagged</button>
+          <button class="lane-chip" data-src="all">everything</button>
+        </div>
+      </div>
+      <button class="sb-start" id="riffStart">🔨  start riffing</button>
     </div>
   </div>
   <div class="flip-overlay" id="flipOverlay">
@@ -1495,7 +1530,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.7.0";
+  var APP_VERSION = "v1.7.4";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -4301,10 +4336,13 @@
   // the lenses push a line through a provocative angle — his ask: help put
   // everything through the hard, scary, weird & stupid
   var FLIP_LENSES = [
-    { k: "hard",   ask: "what’s the hard version?" },
-    { k: "scary",  ask: "what’s the scary version?" },
-    { k: "weird",  ask: "what’s the weird version?" },
-    { k: "stupid", ask: "what’s the stupid version?" }
+    { k: "hard",     ask: "what’s the hard version?" },
+    { k: "scary",    ask: "what’s the scary version?" },
+    { k: "weird",    ask: "what’s the weird version?" },
+    { k: "stupid",   ask: "what’s the stupid version?" },
+    { k: "axis",     ask: "wrong axis to judge this on — what’s the truer one?" },
+    { k: "reclass",  ask: "wrong bucket — what is this really?" },
+    { k: "child",    ask: "what would a six-year-old ask that breaks it?" }
   ];
   var flipLens = null;
   function clearBrowse() { browseDeck = null; browseIdx = 0; flipLens = null; }
@@ -4344,7 +4382,7 @@
     });
     var inp = document.getElementById("flipJab");
     var lens = flipLens && FLIP_LENSES.filter(function (L) { return L.k === flipLens; })[0];
-    inp.placeholder = lens ? lens.ask : "throw a jab\u2026 (enter to keep)";
+    inp.placeholder = lens ? lens.ask : "riff a new line off this\u2026";
     var list = document.getElementById("flipJabs");
     list.innerHTML = "";
     // newest at top
@@ -4392,20 +4430,33 @@
   // float to the front — prioritised, not exclusive, so nothing is buried and
   // a forgotten flag just loses ground as newer flags arrive. Replaces the old
   // deal-stuff / deal-a-bit menu.
+  var riffSource = "truth";   // Mode 2 source: truth | question | flag | all
   function dealHammer() {
     var now = Date.now(), pool = [];
+    var src = riffSource;
     (state.truths || []).forEach(function (t) {
-      pool.push({ id: t.id, kind: "truth", at: t.created, flag: !!t.flag });
+      var isQ = hasForm(t, "question"), isT = isTruth(t);
+      if (src === "truth" && !isT) return;
+      if (src === "question" && !isQ) return;
+      if (src === "flag" && !t.flag) return;
+      pool.push({ id: t.id, kind: "truth", at: t.created, flag: !!t.flag,
+                  lead: isT || isQ });   // truths & questions lead the deck
     });
-    (state.bits || []).forEach(function (b) {
-      pool.push({ id: b.id, kind: "bit", at: b.statusAt || b.created, flag: !!b.flag });
-    });
+    if (src === "all" || src === "flag") {
+      (state.bits || []).forEach(function (b) {
+        if (src === "flag" && !b.flag) return;
+        pool.push({ id: b.id, kind: "bit", at: b.statusAt || b.created, flag: !!b.flag, lead: false });
+      });
+    }
     if (!pool.length) return false;
-    // weight = age in days, but a flag multiplies it hard so stars lead
+    // weight = age in days; a flag multiplies hard, and a "lead" source
+    // (truth/question) floats up so the proven veins come first
     var order = [], remaining = pool.slice();
     var weights = remaining.map(function (x) {
       var age = 1 + Math.floor((now - (x.at || now)) / DAY);
-      return x.flag ? age * 1000 : age;   // flagged jump the line, still ordered by age among themselves
+      var w = x.flag ? age * 1000 : age;
+      if (x.lead) w *= 50;   // proven veins lead
+      return w;
     });
     while (remaining.length) {
       var total = 0; weights.forEach(function (w) { total += w; });
@@ -4946,12 +4997,18 @@
     showOpener(pick);
     return true;
   }
+  var writeLane = "mix";   // Mode 1 lane: mix | stem | prompt | scene | interpret
   function dealOpener() {
-    var kinds = ["stem", "prompt", "truth", "scene"].filter(function (k) {
-      return openersOfKind(k).length > 0;
-    });
-    if (!kinds.length) return;
-    var kind = kinds[Math.floor(Math.random() * kinds.length)];
+    var pool;
+    if (writeLane === "mix") {
+      pool = ["stem", "prompt", "scene", "interpret"].filter(function (k) {
+        return openersOfKind(k).length > 0;
+      });
+    } else {
+      pool = openersOfKind(writeLane).length ? [writeLane] : [];
+    }
+    if (!pool.length) return;
+    var kind = pool[Math.floor(Math.random() * pool.length)];
     var pick = drawFromBag(kind);
     if (!pick) return;
     sbToday().cur = { k: pick.k, t: pick.t, id: pick.id || null };
@@ -5092,27 +5149,30 @@
   // returning home. Quitting or finishing tears the banner down.
   // each phase: the principle it trains + how to open/what counts
   var PHASE_META = {
-    scene:     { name: "SEE",       principle: "learn to see",       word: "scenes" },
-    interpret: { name: "INTERPRET", principle: "say what it is",       word: "read truer" },
-    shadow:    { name: "WARM UP",   principle: "write to understand", word: "warm-up" },
-    truth:     { name: "DISTILL",   principle: "write to understand", word: "truths" },
-    hammer:    { name: "WORK IT",   principle: "edit with humility",  word: "worked" },
-    axe:       { name: "CULL",      principle: "edit with humility",  word: "culled" }
+    scene:     { name: "SEE",       mode: "from scratch",   word: "scenes" },
+    interpret: { name: "INTERPRET", mode: "from scratch",   word: "read truer" },
+    shadow:    { name: "WRITE",     mode: "from scratch",   word: "written" },
+    truth:     { name: "DISTILL",   mode: "from your veins", word: "truths" },
+    hammer:    { name: "RIFF",      mode: "from your veins", word: "riffed" },
+    axe:       { name: "CULL",      mode: "the axe",        word: "culled" }
   };
-  // see it → interpret it → write → distill → work → cull
+  // the three modes in order: from scratch (see→interpret→write) →
+  // from your veins (distill→riff) → the axe (cull)
   var FULL_ORDER = ["scene", "interpret", "shadow", "truth", "hammer", "axe"];
+  // which mode each phase belongs to, for the workout banner
+  var MODE_ORDER = ["from scratch", "from your veins", "the axe"];
   var SIZES = {
     light:  { label: "Light",  sub: "a quick loop",        counts: { scene: 2, interpret: 2, shadow: 3, truth: 2, hammer: 2, axe: 3 } },
     normal: { label: "Normal", sub: "the daily discipline", counts: { scene: 3, interpret: 3, shadow: 5, truth: 3, hammer: 3, axe: 5 } },
     long:   { label: "Long",   sub: "when you’ve got the morning", counts: { scene: 5, interpret: 4, shadow: 8, truth: 5, hammer: 5, axe: 8 } }
   };
   var DRILLS = [
-    { phase: "scene",     label: "See",       sub: "scenes — what others see",  count: 5 },
-    { phase: "interpret", label: "Interpret", sub: "say what it actually is",          count: 5 },
-    { phase: "shadow",    label: "Write",     sub: "shadowbox openers",               count: 8 },
-    { phase: "truth",     label: "Distill",   sub: "truth & contradiction",           count: 5 },
-    { phase: "hammer",    label: "Work it",   sub: "throw jabs, find the angle",      count: 5 },
-    { phase: "axe",       label: "Cull",      sub: "keep the gold, axe the rest",     count: 8 }
+    { phase: "scene",     label: "See",       sub: "scenes — what others see",     count: 5 },
+    { phase: "interpret", label: "Interpret", sub: "say what it actually is",       count: 5 },
+    { phase: "shadow",    label: "Write",     sub: "from scratch — pick a lane",    count: 8 },
+    { phase: "truth",     label: "Distill",   sub: "truth & contradiction",         count: 5 },
+    { phase: "hammer",    label: "Riff",      sub: "build off your own veins",      count: 5 },
+    { phase: "axe",       label: "Cull",      sub: "keep the gold, axe the rest",   count: 8 }
   ];
   var circuit = { active: false, phase: null, order: [], counts: null,
                   idx: 0, done: 0, target: 0, tally: null };
@@ -5142,8 +5202,9 @@
     if (!circuit.active) { b.classList.remove("show"); return; }
     var meta = PHASE_META[circuit.phase] || { name: circuit.phase };
     var pos = circuit.single ? "" : "   " + (circuit.idx + 1) + "/" + circuit.order.length;
+    var modeTag = (!circuit.single && meta.mode) ? meta.mode.toUpperCase() + " \u2014 " : "";
     document.getElementById("circuitPhaseText").textContent =
-      meta.name + "  \u00b7  " + circuit.done + " / " + circuit.target + pos;
+      modeTag + meta.name + "  \u00b7  " + circuit.done + " / " + circuit.target + pos;
     b.classList.add("show");
   }
   function beginPhase(phase) {
@@ -5170,6 +5231,8 @@
     } else if (phase === "truth") {
       if (!dealDrill()) { nextPhase(); return; }
     } else if (phase === "hammer") {
+      // RIFF phase mines the veins: truths first, else fall back to everything
+      riffSource = (state.truths || []).some(isTruth) ? "truth" : "all";
       if (!dealHammer()) { nextPhase(); return; }
     } else if (phase === "axe") {
       buildAxeDeck(); renderAxe(); renderAxeControls();
@@ -5339,6 +5402,14 @@
     if (sb.cur) { showOpener(sb.cur); renderReroll(); }
     else dealOpener();
   }
+  Array.prototype.forEach.call(document.querySelectorAll("#lanePick .lane-chip"), function (chip) {
+    chip.onclick = function () {
+      writeLane = chip.getAttribute("data-lane");
+      Array.prototype.forEach.call(document.querySelectorAll("#lanePick .lane-chip"), function (c) {
+        c.classList.toggle("on", c === chip);
+      });
+    };
+  });
   document.getElementById("sbStart").onclick = startWriting;
   document.getElementById("batchReroll").onclick = function () {
     var sb = sbToday();
@@ -5638,7 +5709,28 @@
   };
 
   document.getElementById("shuffleBtn").onclick = function () {
-    if (!dealHammer()) toast("Nothing to work yet — star an entry to send it here.");
+    document.getElementById("riffOverlay").classList.add("open");
+  };
+  document.getElementById("riffClose").onclick = function () {
+    document.getElementById("riffOverlay").classList.remove("open");
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("#riffOverlay .lane-chip"), function (chip) {
+    chip.onclick = function () {
+      riffSource = chip.getAttribute("data-src");
+      Array.prototype.forEach.call(document.querySelectorAll("#riffOverlay .lane-chip"), function (c) {
+        c.classList.toggle("on", c === chip);
+      });
+    };
+  });
+  document.getElementById("riffStart").onclick = function () {
+    document.getElementById("riffOverlay").classList.remove("open");
+    if (!dealHammer()) {
+      var msg = riffSource === "truth" ? "No truths yet — distill some first."
+        : riffSource === "question" ? "No questions yet."
+        : riffSource === "flag" ? "Nothing flagged yet — star what's worth working."
+        : "Nothing to riff yet.";
+      toast(msg);
+    }
   };
 
   // ——— sets ———
