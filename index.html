@@ -469,6 +469,7 @@
   .sort-bucket .sb-note { display: block; font-family: var(--serif); font-style: italic; font-size: 12px; color: var(--muted); margin-top: 3px; }
   .sort-skip { align-self: flex-start; background: transparent; border: none; color: var(--faint);
     font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 16px 2px 24px; cursor: pointer; }
+  .sort-skip.filed { color: var(--accent); font-size: 13px; font-weight: 600; }
   .theme-row { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
   .theme-row .tinfo { flex: 1 1 auto; }
   .theme-row .tname { font-family: var(--serif); font-size: 16.5px; color: var(--ink); }
@@ -1619,7 +1620,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.8.4";
+  var APP_VERSION = "v1.8.6";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3516,14 +3517,19 @@
     if (!cur) {
       document.getElementById("sortLine").textContent = "";
       document.getElementById("sortBuckets").innerHTML = "";
-      document.getElementById("sortLine").innerHTML = '<p class="tradecraft-empty">All sorted. Every flagged line has a home.</p>';
+      document.getElementById("sortLine").innerHTML = '<p class="tradecraft-empty">Done. The ones that orbit a theme are filed \u2014 the rest are just good, and that\u2019s fine.</p>';
       document.querySelector("#sortRun .sort-ask").style.display = "none";
       document.getElementById("sortSkip").style.display = "none";
       countEl.textContent = sortFiled ? sortFiled + " filed" : "";
       return;
     }
     document.querySelector("#sortRun .sort-ask").style.display = "";
-    document.getElementById("sortSkip").style.display = "";
+    document.querySelector("#sortRun .sort-ask").textContent = "does this orbit a theme? (optional)";
+    var adv = document.getElementById("sortSkip");
+    adv.style.display = "";
+    var filed = (cur.item.themes || []).length > 0;
+    adv.textContent = filed ? "next \u2192" : "no theme \u2192";
+    adv.classList.toggle("filed", filed);
     countEl.textContent = (sortIdx + 1) + "/" + sortQueue.length;
     document.getElementById("sortLine").textContent = cur.item.text;
     var host = document.getElementById("sortBuckets");
@@ -6740,6 +6746,31 @@
         save(); render();
       };
       body.appendChild(nw);
+      // theme-free path: pull all flagged lines straight into a set
+      var flaggedCount = (state.truths || []).filter(function (x) { return x.flag; }).length
+                       + (state.bits || []).filter(function (x) { return x.flag; }).length;
+      if (flaggedCount) {
+        var nf = el("button", "bone-digup", "+ set from \u2b50 flagged (" + flaggedCount + ")");
+        nf.style.marginBottom = "14px";
+        nf.style.marginLeft = "8px";
+        nf.onclick = function () {
+          if (!state.bits) state.bits = [];
+          var bitIds = [];
+          (state.truths || []).forEach(function (x) {
+            if (!x.flag) return;
+            var nb = { id: uid(), text: x.text, created: Date.now(), themes: (x.themes || []).slice(), fromStuff: x.id };
+            state.bits.unshift(nb); bitIds.push(nb.id);
+          });
+          (state.bits || []).slice().forEach(function (x) {
+            if (x.flag && bitIds.indexOf(x.id) === -1) bitIds.push(x.id);
+          });
+          var id = uid();
+          state.sets.unshift({ id: id, name: "", bitIds: bitIds, created: Date.now(), updated: Date.now() });
+          setOpen = id;
+          save(); render();
+        };
+        body.appendChild(nf);
+      }
       if (state.sets.length === 0) {
         body.appendChild(el("p", "empty", "No sets yet — tap + new set, then tap bits to string them together."));
         return;
