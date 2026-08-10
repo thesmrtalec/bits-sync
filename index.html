@@ -470,6 +470,27 @@
   .sort-skip { align-self: flex-start; background: transparent; border: none; color: var(--faint);
     font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; padding: 16px 2px 24px; cursor: pointer; }
   .sort-skip.filed { color: var(--accent); font-size: 13px; font-weight: 600; }
+  .spine-beat { margin-bottom: 20px; }
+  .spine-beat-label { font-family: var(--serif); font-style: italic; font-size: 17px; color: var(--accent); margin-bottom: 8px; }
+  .spine-beat-hint { font-family: var(--mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin: -4px 0 8px; }
+  .spine-beat textarea { width: 100%; min-height: 64px; border: 1px solid var(--rule); border-radius: 10px;
+    background: var(--card); font-family: var(--serif); font-size: 15.5px; line-height: 1.5; color: var(--ink);
+    padding: 10px 12px; outline: none; resize: vertical; }
+  .spine-beat textarea:focus { border-color: var(--accent); }
+  .spine-beat-plugs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .spine-plug { font-family: var(--serif); font-size: 12.5px; background: var(--card); border: 1px solid var(--rule);
+    border-radius: 999px; padding: 4px 11px; color: var(--muted); }
+  .spine-plug .x { color: var(--faint); margin-left: 6px; cursor: pointer; }
+  .storycard { padding: 13px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
+  .storycard .stext { font-family: var(--serif); font-size: 15.5px; color: var(--ink); }
+  .storycard .swhen { font-family: var(--mono); font-size: 9px; color: var(--faint); margin-top: 4px; text-transform: uppercase; }
+  .rant-run { display: none; flex-direction: column; }
+  .rant-run.open { display: flex; }
+  .rant-mid { flex: 1 1 auto; display: flex; flex-direction: column; padding: 10px 4px 16px; min-height: 0; }
+  .rant-nudge { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--muted); margin: 4px 0 12px; }
+  .rant-box { flex: 1 1 auto; width: 100%; border: none; background: transparent; resize: none; outline: none;
+    font-family: var(--serif); font-size: 18px; line-height: 1.6; color: var(--ink); }
+  #rantClock.warn { color: var(--accent2, #b4452f); }
   .theme-row { display: flex; align-items: center; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
   .theme-row .tinfo { flex: 1 1 auto; }
   .theme-row .tname { font-family: var(--serif); font-size: 16.5px; color: var(--ink); }
@@ -1268,6 +1289,57 @@
       <button class="sort-skip" id="sortSkip">skip →</button>
     </div>
   </div>
+  <div class="notes-overlay" id="rantDoor">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>The rant</h2>
+        <button class="notes-close" id="rantDoorClose">done</button>
+      </div>
+      <p class="bone-note">Talk it out. The whole story, messy, out loud on the page \u2014 not shaped yet, just out. No prompt to answer, no line to be short. Just tell it.</p>
+      <div class="lane-pick">
+        <span class="lane-label">how long:</span>
+        <div class="lane-chips">
+          <button class="lane-chip" data-min="3">3 min</button>
+          <button class="lane-chip on" data-min="10">10 min</button>
+          <button class="lane-chip" data-min="20">20 min</button>
+        </div>
+      </div>
+      <button class="sb-start" id="rantStart">🗣️ start talking</button>
+    </div>
+  </div>
+  <div class="run-overlay rant-run" id="rantRun">
+    <div class="batch-top">
+      <span class="interpret-run-count" id="rantClock">5:00</span>
+      <button class="batch-done" id="rantDone">done</button>
+    </div>
+    <div class="rant-mid">
+      <p class="rant-nudge">What happened? Just tell it \u2014 start anywhere.</p>
+      <textarea id="rantInput" class="rant-box" placeholder="Once there was\u2026"></textarea>
+    </div>
+  </div>
+  <div class="notes-overlay" id="storiesOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Stories</h2>
+        <button class="notes-close" id="storiesClose">done</button>
+      </div>
+      <p class="bone-note">The Pixar spine. Once you\u2019ve got a story out (the rant, or just start fresh), lay it over these seven beats and see where your bits plug in.</p>
+      <button class="sb-start" id="storyNewBlank">\ud83d\udcd6 start a new spine</button>
+      <div id="rantSeedsList" style="margin-top:6px"></div>
+      <div id="storiesList" style="margin-top:10px"></div>
+    </div>
+  </div>
+  <div class="notes-overlay" id="spineOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2 id="spineTitle">Story</h2>
+        <button class="notes-close" id="spineClose">back</button>
+      </div>
+      <input id="spineNameInput" class="tradecraft-input" placeholder="name this story\u2026" autocomplete="off" style="margin-bottom:16px" />
+      <div id="spineBeats"></div>
+      <button class="drawer-item" id="spineDelete" style="color:var(--accent2,#b4452f); margin-top:10px">delete this story</button>
+    </div>
+  </div>
   <div class="notes-overlay" id="themesOverlay">
     <div class="notes-inner">
       <div class="notes-head">
@@ -1315,7 +1387,9 @@
         <button class="drawer-item" id="drawerBone"><span>🪦</span> The boneyard</button>
         <button class="drawer-item" id="drawerNotes"><span>📒</span> Notes &amp; tradecraft</button>
         <button class="drawer-item" id="drawerSched"><span>📅</span> Mic schedule</button>
+        <button class="drawer-item" id="drawerRant"><span>🗣️</span> The rant — talk it out</button>
         <button class="drawer-item" id="drawerThemes"><span>🧵</span> Themes &mdash; set spines</button>
+        <button class="drawer-item" id="drawerStories"><span>📖</span> Stories — the spine</button>
         <button class="drawer-item" id="drawerSettings"><span>⚙️</span> Settings</button>
       </div>
     </div>
@@ -1620,7 +1694,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.8.6";
+  var APP_VERSION = "v1.9.2";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1753,6 +1827,7 @@
       state.themesSeeded = true;
     } else {
       state.themes = data.themes || [];
+      state.stories = data.stories || [];
       state.themesSeeded = data.themesSeeded || (data.themes && data.themes.length > 0);
     }
     state.planned = data.planned || [];
@@ -3411,6 +3486,191 @@
   drawerRoute("drawerNotes", "notesOpen");
   drawerRoute("drawerSched", "schedOpen");
   drawerRoute("drawerSettings", "utilBtn");
+
+  // ——— the spine: Pixar\u2019s story formula, his exact wording ———
+  var SPINE_BEATS = [
+    { k: "onceUponATime", label: "Once upon a time\u2026" },
+    { k: "everyDay",      label: "Every day\u2026" },
+    { k: "untilOneDay",   label: "Until one day\u2026" },
+    { k: "becauseOfThat1",label: "Because of that\u2026" },
+    { k: "becauseOfThat2",label: "Because of that\u2026" },
+    { k: "untilFinally",  label: "Until finally\u2026" },
+    { k: "everSinceThen", label: "Ever since then\u2026" }
+  ];
+  var spineOpen = null;
+  function blankSpine() {
+    var b = {};
+    SPINE_BEATS.forEach(function (x) { b[x.k] = { text: "", plugs: [] }; });
+    return b;
+  }
+  function renderStories() {
+    var seeds = document.getElementById("rantSeedsList");
+    seeds.innerHTML = "";
+    var raw = (state.stories || []).filter(function (x) { return !x.spine; });
+    if (raw.length) {
+      seeds.appendChild(el("p", "spine-beat-hint", "from the rant \u2014 tap to spine one"));
+      raw.forEach(function (st) {
+        var card = el("div", "storycard");
+        card.appendChild(el("div", "stext", (st.text || "").slice(0, 140) + (st.text.length > 140 ? "\u2026" : "")));
+        card.appendChild(el("div", "swhen", shortWhen(st.created)));
+        card.onclick = function () { openSpine(st); };
+        seeds.appendChild(card);
+      });
+    }
+    var host = document.getElementById("storiesList");
+    host.innerHTML = "";
+    var spined = (state.stories || []).filter(function (x) { return x.spine; });
+    if (spined.length) host.appendChild(el("p", "spine-beat-hint", "spined stories"));
+    spined.forEach(function (st) {
+      var card = el("div", "storycard");
+      card.appendChild(el("div", "stext", st.name || "untitled story"));
+      card.appendChild(el("div", "swhen", shortWhen(st.created)));
+      card.onclick = function () { openSpine(st); };
+      host.appendChild(card);
+    });
+    if (!raw.length && !spined.length) {
+      host.appendChild(el("p", "tradecraft-empty", "No stories yet. Rant one out, or start a blank spine."));
+    }
+  }
+  function openSpine(st) {
+    if (!st.spine) st.spine = blankSpine();
+    spineOpen = st;
+    document.getElementById("spineTitle").textContent = st.name || "Story";
+    document.getElementById("spineNameInput").value = st.name || "";
+    renderSpineBeats();
+    document.getElementById("storiesOverlay").classList.remove("open");
+    document.getElementById("spineOverlay").classList.add("open");
+  }
+  function renderSpineBeats() {
+    var host = document.getElementById("spineBeats");
+    host.innerHTML = "";
+    SPINE_BEATS.forEach(function (beat) {
+      var wrap = el("div", "spine-beat");
+      wrap.appendChild(el("div", "spine-beat-label", beat.label));
+      var ta = document.createElement("textarea");
+      ta.value = spineOpen.spine[beat.k].text || "";
+      ta.placeholder = "\u2026";
+      ta.oninput = function () { spineOpen.spine[beat.k].text = ta.value; };
+      ta.onblur = function () { save(); };
+      wrap.appendChild(ta);
+      var plugs = spineOpen.spine[beat.k].plugs || [];
+      if (plugs.length) {
+        var pr = el("div", "spine-beat-plugs");
+        plugs.forEach(function (pid) {
+          var f = (state.truths || []).find(function (x) { return x.id === pid; })
+               || (state.bits || []).find(function (x) { return x.id === pid; });
+          if (!f) return;
+          var chip = el("span", "spine-plug");
+          chip.appendChild(document.createTextNode(f.text.slice(0, 40)));
+          var x = el("span", "x", "\u00d7");
+          x.onclick = function () {
+            spineOpen.spine[beat.k].plugs = plugs.filter(function (id2) { return id2 !== pid; });
+            save(); renderSpineBeats();
+          };
+          chip.appendChild(x);
+          pr.appendChild(chip);
+        });
+        wrap.appendChild(pr);
+      }
+      host.appendChild(wrap);
+    });
+  }
+  document.getElementById("storyNewBlank").onclick = function () {
+    if (!state.stories) state.stories = [];
+    var st = { id: uid(), text: "", created: Date.now(), spine: blankSpine(), name: "" };
+    state.stories.unshift(st);
+    save();
+    openSpine(st);
+  };
+  document.getElementById("drawerStories").onclick = function () {
+    document.getElementById("drawerOverlay").classList.remove("open");
+    renderStories();
+    document.getElementById("storiesOverlay").classList.add("open");
+  };
+  document.getElementById("storiesClose").onclick = function () {
+    document.getElementById("storiesOverlay").classList.remove("open");
+  };
+  document.getElementById("spineNameInput").addEventListener("input", function () {
+    if (spineOpen) spineOpen.name = this.value;
+  });
+  document.getElementById("spineNameInput").addEventListener("blur", function () { save(); });
+  document.getElementById("spineClose").onclick = function () {
+    save();
+    document.getElementById("spineOverlay").classList.remove("open");
+    renderStories();
+    document.getElementById("storiesOverlay").classList.add("open");
+  };
+  document.getElementById("spineDelete").onclick = function () {
+    if (!spineOpen) return;
+    if (this.textContent === "delete this story") { this.textContent = "sure?"; var b = this; setTimeout(function () { if (b) b.textContent = "delete this story"; }, 2500); return; }
+    state.stories = (state.stories || []).filter(function (x) { return x.id !== spineOpen.id; });
+    spineOpen = null;
+    save();
+    document.getElementById("spineOverlay").classList.remove("open");
+    renderStories();
+    document.getElementById("storiesOverlay").classList.add("open");
+  };
+
+  var rantMin = 10, rantEnd = 0, rantTick = null;
+  Array.prototype.forEach.call(document.querySelectorAll("#rantDoor .lane-chip"), function (chip) {
+    chip.onclick = function () {
+      rantMin = parseInt(chip.getAttribute("data-min"), 10);
+      Array.prototype.forEach.call(document.querySelectorAll("#rantDoor .lane-chip"), function (c) {
+        c.classList.toggle("on", c === chip);
+      });
+    };
+  });
+  document.getElementById("drawerRant").onclick = function () {
+    document.getElementById("drawerOverlay").classList.remove("open");
+    document.getElementById("rantDoor").classList.add("open");
+  };
+  document.getElementById("rantDoorClose").onclick = function () {
+    document.getElementById("rantDoor").classList.remove("open");
+    // backing out of the picker mid-workout shouldn't strand the session —
+    // treat it as skipping the rant this time
+    if (circuit.active && circuit.phase === "story") nextPhase();
+  };
+  function rantFmt(sec) {
+    sec = Math.max(0, sec);
+    var m = Math.floor(sec / 60), s2 = sec % 60;
+    return m + ":" + (s2 < 10 ? "0" : "") + s2;
+  }
+  function rantTickFn() {
+    var left = Math.round((rantEnd - Date.now()) / 1000);
+    var clk = document.getElementById("rantClock");
+    clk.textContent = rantFmt(left);
+    clk.classList.toggle("warn", left <= 30);
+    if (left <= 0) {
+      clearInterval(rantTick); rantTick = null;
+      clk.textContent = "time";
+      buzz();
+    }
+  }
+  function startRantSession(min) {
+    document.getElementById("rantDoor").classList.remove("open");
+    document.getElementById("rantInput").value = "";
+    rantEnd = Date.now() + min * 60000;
+    document.getElementById("rantClock").textContent = rantFmt(min * 60);
+    document.getElementById("rantClock").classList.remove("warn");
+    if (rantTick) clearInterval(rantTick);
+    rantTick = setInterval(rantTickFn, 1000);
+    document.getElementById("rantRun").classList.add("open");
+    setTimeout(function () { document.getElementById("rantInput").focus(); }, 60);
+  }
+  document.getElementById("rantStart").onclick = function () { startRantSession(rantMin); };
+  document.getElementById("rantDone").onclick = function () {
+    if (rantTick) { clearInterval(rantTick); rantTick = null; }
+    var v = document.getElementById("rantInput").value.trim();
+    var inWorkout = circuit.active && circuit.phase === "story";
+    if (!inWorkout) document.getElementById("rantRun").classList.remove("open");
+    if (v) {
+      if (!state.stories) state.stories = [];
+      state.stories.unshift({ id: uid(), text: v, created: Date.now(), spine: null });
+      save();
+      if (!inWorkout) toast("Story kept \ud83d\udcd6 \u2014 find it under Stories");
+    }
+    if (inWorkout) circuitProgress("story");
+  };
 
   // ——— themes: the human-mechanism spines a set orbits ———
   function lineThemes(x) { return x.themes || []; }
@@ -5569,9 +5829,9 @@
   // which mode each phase belongs to, for the workout banner
   var MODE_ORDER = ["from scratch", "from your veins", "the axe"];
   var SIZES = {
-    light:  { label: "Light",  sub: "a quick loop",        counts: { scene: 2, interpret: 2, shadow: 3, truth: 2, hammer: 2, axe: 3 } },
-    normal: { label: "Normal", sub: "the daily discipline", counts: { scene: 3, interpret: 3, shadow: 5, truth: 3, hammer: 3, axe: 5 } },
-    long:   { label: "Long",   sub: "when you’ve got the morning", counts: { scene: 5, interpret: 4, shadow: 8, truth: 5, hammer: 5, axe: 8 } }
+    light:  { label: "Light",  sub: "~10 min",  counts: { scene: 2, interpret: 2, shadow: 3, truth: 2, hammer: 2, axe: 3 } },
+    normal: { label: "Normal", sub: "~20 min",  counts: { scene: 3, interpret: 3, shadow: 5, truth: 3, hammer: 3, axe: 6 } },
+    long:   { label: "Long",   sub: "~30 min — ends with the rant", counts: { scene: 5, interpret: 4, shadow: 7, truth: 5, hammer: 5, axe: 7, story: 1 } }
   };
   var DRILLS = [
     { phase: "scene",     label: "See",       sub: "scenes — what others see",     count: 5 },
@@ -5591,7 +5851,7 @@
     if (!plan) return;
     var order = FULL_ORDER.filter(function (ph) { return (plan.counts[ph] || 0) > 0; });
     circuit = { active: true, phase: null, order: order, counts: plan.counts,
-                idx: 0, done: 0, target: 0, tally: blankTally(), single: false };
+                idx: 0, done: 0, target: 0, tally: blankTally(), single: false, sizeKey: sizeKey };
     document.getElementById("circuitOverlay").classList.remove("open");
     document.getElementById("utilMenu").style.display = "none";
     beginPhase(order[0]);
@@ -5644,6 +5904,8 @@
     } else if (phase === "axe") {
       buildAxeDeck(); renderAxe(); renderAxeControls();
       document.getElementById("axeOverlay").classList.add("open");
+    } else if (phase === "story") {
+      document.getElementById("rantDoor").classList.add("open");
     }
     circuitBanner();
   }
@@ -5669,6 +5931,9 @@
       document.getElementById("flipOverlay").classList.remove("open");
     } else if (phase === "axe") {
       document.getElementById("axeOverlay").classList.remove("open", "dimmed");
+    } else if (phase === "story") {
+      if (rantTick) { clearInterval(rantTick); rantTick = null; }
+      document.getElementById("rantRun").classList.remove("open");
     }
   }
   function nextPhase() {
