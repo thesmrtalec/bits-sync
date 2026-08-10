@@ -1295,7 +1295,7 @@
         <h2>The rant</h2>
         <button class="notes-close" id="rantDoorClose">done</button>
       </div>
-      <p class="bone-note">Talk it out. The whole story, messy, out loud on the page \u2014 not shaped yet, just out. No prompt to answer, no line to be short. Just tell it.</p>
+      <p class="bone-note">Talk it out. The whole story, messy, out loud on the page — not shaped yet, just out. No prompt to answer, no line to be short. Just tell it.</p>
       <div class="lane-pick">
         <span class="lane-label">how long:</span>
         <div class="lane-chips">
@@ -1313,7 +1313,7 @@
       <button class="batch-done" id="rantDone">done</button>
     </div>
     <div class="rant-mid">
-      <p class="rant-nudge">What happened? Just tell it \u2014 start anywhere.</p>
+      <p class="rant-nudge">What happened? Just tell it — start anywhere.</p>
       <textarea id="rantInput" class="rant-box" placeholder="Once there was\u2026"></textarea>
     </div>
   </div>
@@ -1323,8 +1323,8 @@
         <h2>Stories</h2>
         <button class="notes-close" id="storiesClose">done</button>
       </div>
-      <p class="bone-note">The Pixar spine. Once you\u2019ve got a story out (the rant, or just start fresh), lay it over these seven beats and see where your bits plug in.</p>
-      <button class="sb-start" id="storyNewBlank">\ud83d\udcd6 start a new spine</button>
+      <p class="bone-note">The Pixar spine. Once you’ve got a story out (the rant, or just start fresh), lay it over these seven beats and see where your bits plug in.</p>
+      <button class="sb-start" id="storyNewBlank">📖 start a new spine</button>
       <div id="rantSeedsList" style="margin-top:6px"></div>
       <div id="storiesList" style="margin-top:10px"></div>
     </div>
@@ -1694,7 +1694,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.9.2";
+  var APP_VERSION = "v1.9.3";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3777,7 +3777,7 @@
     if (!cur) {
       document.getElementById("sortLine").textContent = "";
       document.getElementById("sortBuckets").innerHTML = "";
-      document.getElementById("sortLine").innerHTML = '<p class="tradecraft-empty">Done. The ones that orbit a theme are filed \u2014 the rest are just good, and that\u2019s fine.</p>';
+      document.getElementById("sortLine").innerHTML = '<p class="tradecraft-empty">Done. The ones that orbit a theme are filed — the rest are just good, and that’s fine.</p>';
       document.querySelector("#sortRun .sort-ask").style.display = "none";
       document.getElementById("sortSkip").style.display = "none";
       countEl.textContent = sortFiled ? sortFiled + " filed" : "";
