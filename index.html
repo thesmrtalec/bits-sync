@@ -481,6 +481,13 @@
   .spine-plug { font-family: var(--serif); font-size: 12.5px; background: var(--card); border: 1px solid var(--rule);
     border-radius: 999px; padding: 4px 11px; color: var(--muted); }
   .spine-plug .x { color: var(--faint); margin-left: 6px; cursor: pointer; }
+  .spine-rant-ref { border: 1px dashed var(--rule); border-radius: 10px; padding: 12px 14px; margin-bottom: 18px; }
+  .spine-rant-ref summary { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--faint); cursor: pointer; }
+  .spine-rant-ref p { font-family: var(--serif); font-size: 14.5px; line-height: 1.55; color: var(--muted);
+    white-space: pre-wrap; margin: 10px 0 0; }
+  .storycard-row { display: flex; align-items: flex-start; gap: 8px; }
+  .storycard-row .stext { flex: 1 1 auto; }
   .storycard { padding: 13px 0; border-bottom: 1px solid var(--rule); cursor: pointer; }
   .storycard .stext { font-family: var(--serif); font-size: 15.5px; color: var(--ink); }
   .storycard .swhen { font-family: var(--mono); font-size: 9px; color: var(--faint); margin-top: 4px; text-transform: uppercase; }
@@ -1336,6 +1343,7 @@
         <button class="notes-close" id="spineClose">back</button>
       </div>
       <input id="spineNameInput" class="tradecraft-input" placeholder="name this story…" autocomplete="off" style="margin-bottom:16px" />
+      <div id="spineRantRef" style="display:none"></div>
       <div id="spineBeats"></div>
       <button class="drawer-item" id="spineDelete" style="color:var(--accent2,#b4452f); margin-top:10px">delete this story</button>
     </div>
@@ -1694,7 +1702,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.9.4";
+  var APP_VERSION = "v1.9.5";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3503,6 +3511,15 @@
     SPINE_BEATS.forEach(function (x) { b[x.k] = { text: "", plugs: [] }; });
     return b;
   }
+  function storyDelBtn(st) {
+    var del = el("button", "tc-del", "\u00d7");
+    del.onclick = function (e) {
+      e.stopPropagation();
+      state.stories = (state.stories || []).filter(function (x) { return x.id !== st.id; });
+      save(); renderStories();
+    };
+    return del;
+  }
   function renderStories() {
     var seeds = document.getElementById("rantSeedsList");
     seeds.innerHTML = "";
@@ -3511,7 +3528,10 @@
       seeds.appendChild(el("p", "spine-beat-hint", "from the rant \u2014 tap to spine one"));
       raw.forEach(function (st) {
         var card = el("div", "storycard");
-        card.appendChild(el("div", "stext", (st.text || "").slice(0, 140) + (st.text.length > 140 ? "\u2026" : "")));
+        var row = el("div", "storycard-row");
+        row.appendChild(el("div", "stext", (st.text || "").slice(0, 140) + (st.text.length > 140 ? "\u2026" : "")));
+        row.appendChild(storyDelBtn(st));
+        card.appendChild(row);
         card.appendChild(el("div", "swhen", shortWhen(st.created)));
         card.onclick = function () { openSpine(st); };
         seeds.appendChild(card);
@@ -3523,7 +3543,10 @@
     if (spined.length) host.appendChild(el("p", "spine-beat-hint", "spined stories"));
     spined.forEach(function (st) {
       var card = el("div", "storycard");
-      card.appendChild(el("div", "stext", st.name || "untitled story"));
+      var row = el("div", "storycard-row");
+      row.appendChild(el("div", "stext", st.name || "untitled story"));
+      row.appendChild(storyDelBtn(st));
+      card.appendChild(row);
       card.appendChild(el("div", "swhen", shortWhen(st.created)));
       card.onclick = function () { openSpine(st); };
       host.appendChild(card);
@@ -3537,6 +3560,21 @@
     spineOpen = st;
     document.getElementById("spineTitle").textContent = st.name || "Story";
     document.getElementById("spineNameInput").value = st.name || "";
+    var refHost = document.getElementById("spineRantRef");
+    if (st.text && st.text.trim()) {
+      refHost.style.display = "";
+      refHost.innerHTML = "";
+      var det = document.createElement("details");
+      det.className = "spine-rant-ref";
+      var sum = document.createElement("summary");
+      sum.textContent = "the original rant \u2014 tap to read";
+      det.appendChild(sum);
+      det.appendChild(el("p", null, st.text));
+      refHost.appendChild(det);
+    } else {
+      refHost.style.display = "none";
+      refHost.innerHTML = "";
+    }
     renderSpineBeats();
     document.getElementById("storiesOverlay").classList.remove("open");
     document.getElementById("spineOverlay").classList.add("open");
