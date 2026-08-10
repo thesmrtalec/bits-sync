@@ -417,7 +417,7 @@
     line-height: 1.4; }
   .batch-line:first-child { color: var(--ink); }
   .notes-overlay.open { display: flex; }
-  .notes-inner { max-width: 620px; width: 100%; margin: 0 auto; padding: 20px 18px 40px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .notes-inner { max-width: 620px; width: 100%; margin: 0 auto; padding: 20px 18px 40px; display: flex; flex-direction: column; flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; }
   .notes-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
   .notes-head h2 { font-family: var(--serif); font-style: italic; font-size: 22px; margin: 0; color: var(--ink); }
   .notes-close { margin-left: auto; background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 999px; padding: 5px 14px; font-family: var(--mono); font-size: 12px; }
@@ -1314,7 +1314,7 @@
     </div>
     <div class="rant-mid">
       <p class="rant-nudge">What happened? Just tell it — start anywhere.</p>
-      <textarea id="rantInput" class="rant-box" placeholder="Once there was\u2026"></textarea>
+      <textarea id="rantInput" class="rant-box" placeholder="Once there was…"></textarea>
     </div>
   </div>
   <div class="notes-overlay" id="storiesOverlay">
@@ -1335,7 +1335,7 @@
         <h2 id="spineTitle">Story</h2>
         <button class="notes-close" id="spineClose">back</button>
       </div>
-      <input id="spineNameInput" class="tradecraft-input" placeholder="name this story\u2026" autocomplete="off" style="margin-bottom:16px" />
+      <input id="spineNameInput" class="tradecraft-input" placeholder="name this story…" autocomplete="off" style="margin-bottom:16px" />
       <div id="spineBeats"></div>
       <button class="drawer-item" id="spineDelete" style="color:var(--accent2,#b4452f); margin-top:10px">delete this story</button>
     </div>
@@ -1350,7 +1350,7 @@
       <button class="sb-start" id="sortStart" style="margin-bottom:16px">🗂️ sort your flagged lines into buckets</button>
       <div id="themesList"></div>
       <div class="q-add" style="margin-top:14px">
-        <input id="themeAddInput" class="tradecraft-input" placeholder="a new throughline\u2026" autocomplete="off" />
+        <input id="themeAddInput" class="tradecraft-input" placeholder="a new throughline…" autocomplete="off" />
         <button id="themeAdd" class="tradecraft-addbtn">add</button>
       </div>
     </div>
@@ -1694,7 +1694,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.9.3";
+  var APP_VERSION = "v1.9.4";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
