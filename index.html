@@ -764,6 +764,7 @@
     font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; padding: 6px 13px; cursor: pointer; }
   .lane-chip.on { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
   .batch-stem-live.is-interpret { font-style: normal; font-size: 17px; color: var(--accent); line-height: 1.4; letter-spacing: .01em; }
+  .batch-stem-live.is-premise { font-weight: 700; font-size: 26px; color: var(--accent); }
   .batch-hint { display: flex; align-items: center; gap: 12px; }
   .batch-reroll { margin-left: auto; background: transparent; border: 1px solid var(--rule);
     border-radius: 7px; font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
@@ -1471,6 +1472,7 @@
           <button class="lane-chip" data-lane="prompt">prompts</button>
           <button class="lane-chip" data-lane="scene">scenes</button>
           <button class="lane-chip" data-lane="interpret">interpret</button>
+          <button class="lane-chip" data-lane="premise">premises</button>
         </div>
       </div>
       <button class="sb-start" id="sbStart">🙏  start writing</button>
@@ -1702,7 +1704,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.9.6";
+  var APP_VERSION = "v1.10.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -5566,6 +5568,37 @@
     { k: "prompt", t: "Where do people behave worse than they admit?" },
     { k: "prompt", t: "What are you good at that doesn’t count as being smart?" },
     { k: "prompt", t: "What do you do differently when no one’s watching?" },
+    { k: "premise", t: "I don’t believe in" },
+    { k: "premise", t: "Nobody talks about how" },
+    { k: "premise", t: "The real problem with" },
+    { k: "premise", t: "I refuse to" },
+    { k: "premise", t: "My personal doctrine on" },
+    { k: "premise", t: "There’s a right way to" },
+    { k: "premise", t: "I’ve decided" },
+    { k: "premise", t: "The secret nobody tells you about" },
+    { k: "premise", t: "I will die on this hill:" },
+    { k: "premise", t: "Everyone’s wrong about" },
+    { k: "premise", t: "The rule I live by is" },
+    { k: "premise", t: "I don’t trust anyone who" },
+    { k: "premise", t: "It should be illegal to" },
+    { k: "premise", t: "The world would be better if everyone just" },
+    { k: "premise", t: "I have never once" },
+    { k: "premise", t: "I have always" },
+    { k: "premise", t: "You can tell everything about a person by" },
+    { k: "premise", t: "I judge people who" },
+    { k: "premise", t: "My whole personality is" },
+    { k: "premise", t: "The one thing I know for certain is" },
+    { k: "premise", t: "I would rather die than" },
+    { k: "premise", t: "Society has it backwards:" },
+    { k: "premise", t: "I’m the only one who understands that" },
+    { k: "premise", t: "Somebody needs to say it:" },
+    { k: "premise", t: "The unwritten rule is" },
+    { k: "premise", t: "I have a theory about" },
+    { k: "premise", t: "I’m convinced that" },
+    { k: "premise", t: "Call me crazy, but" },
+    { k: "premise", t: "There is no version of me that" },
+    { k: "premise", t: "I built my whole life around" },
+    { k: "premise", t: "The line I will not cross is" },
     { k: "prompt", t: "What did you get in trouble for as a kid that you still do?" },
     { k: "prompt", t: "What’s a rule everyone follows that makes no sense?" },
     { k: "prompt", t: "What do you defend that you know is indefensible?" },
@@ -5728,15 +5761,16 @@
     batchStem = pick.t; batchKind = pick.k; batchTruthId = pick.id || null;
     wroteThisOpener = 0;
     var live = document.getElementById("batchStemLive");
-    live.textContent = pick.k === "stem" ? pick.t + "\u2026" : pick.t;
+    live.textContent = (pick.k === "stem" || pick.k === "premise") ? pick.t + "\u2026" : pick.t;
     live.className = "batch-stem-live"
       + (pick.k === "prompt" ? " is-prompt" : "")
       + (pick.k === "truth" ? " is-truth" : "")
       + (pick.k === "scene" ? " is-scene" : "")
-      + (pick.k === "interpret" ? " is-interpret" : "");
+      + (pick.k === "interpret" ? " is-interpret" : "")
+      + (pick.k === "premise" ? " is-premise" : "");
     var inp = document.getElementById("batchInput");
     inp.value = "";
-    inp.placeholder = pick.k === "stem" ? "\u2026"
+    inp.placeholder = (pick.k === "stem" || pick.k === "premise") ? "\u2026"
       : pick.k === "truth" ? "where else is this true?"
       : pick.k === "scene" ? "put us in the room — play it, don’t tell it"
       : pick.k === "interpret" ? "say what it actually is"
@@ -5791,7 +5825,7 @@
     // double it, leaving it out shouldn't lose it. Either way the saved line
     // reads as a whole sentence.
     var text = v;
-    if (batchStem && batchKind === "stem") {
+    if (batchStem && (batchKind === "stem" || batchKind === "premise")) {
       var norm = function (x) { return x.toLowerCase().replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim(); };
       text = norm(v).indexOf(norm(batchStem)) === 0 ? v : (batchStem + " " + v);
     }
@@ -5810,8 +5844,14 @@
       if (!entry.forms) entry.forms = [];
       if (entry.forms.indexOf("interpret") === -1) entry.forms.push("interpret");
     }
+    if (batchKind === "premise") {
+      // quantity over quality — badge it so the pile is findable later, but
+      // nothing here judges it. Auto-badging is the only ceremony a premise gets.
+      if (!entry.forms) entry.forms = [];
+      if (entry.forms.indexOf("premise") === -1) entry.forms.push("premise");
+    }
     if (batchKind === "truth" && batchTruthId) { entry.src = batchTruthId; entry.prompt = batchStem; }
-    if (batchStem && batchKind === "stem") entry.stem = batchStem;
+    if (batchStem && (batchKind === "stem" || batchKind === "premise")) entry.stem = batchStem;
     if (batchForms.length) {
       entry.forms = batchForms.slice();
       if (entry.forms.indexOf("truth") !== -1) entry.flag = true;   // truths auto-star
@@ -5845,7 +5885,15 @@
       host.appendChild(el("p", "batch-line", t));
     });
   }
+  function premiseCount() {
+    return (state.truths || []).filter(function (x) { return hasForm(x, "premise"); }).length;
+  }
   function updateBatchCount() {
+    if (writeLane === "premise") {
+      var n = premiseCount();
+      document.getElementById("batchCount").textContent = Math.min(n, 999) + " / 100";
+      return;
+    }
     document.getElementById("batchCount").textContent =
       batchWritten.length ? batchWritten.length + (batchWritten.length === 1 ? " down" : " down") : "";
   }
