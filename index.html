@@ -1702,7 +1702,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.9.5";
+  var APP_VERSION = "v1.9.6";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3995,6 +3995,7 @@
       iRun.kept++;
       (iRun.recent = iRun.recent || []).push(v);
       buzz(); save(); renderInterpretRun();
+      if (circuit.active && circuit.phase === "interpret") circuitProgress("interpret");
     }
     if (advance) dealInterpretDrill();
   }
@@ -4173,6 +4174,7 @@
   });
   document.getElementById("interpretRunDone").onclick = function () {
     commitInterpretDrill(false);
+    if (circuit.active && circuit.phase === "interpret") { nextPhase(); return; }
     document.getElementById("interpretRun").classList.remove("open");
     var n = iRun.kept;
     if (n) toast(n + (n === 1 ? " interpretation kept" : " interpretations kept"));
@@ -5923,10 +5925,10 @@
       document.getElementById("batchOverlay").classList.add("open");
       if (!dealSceneOpener()) { nextPhase(); return; }
     } else if (phase === "interpret") {
-      batchStem = null; batchWritten = [];
-      sbToday(); startSession(); updateBatchCount();
-      document.getElementById("batchOverlay").classList.add("open");
-      if (!dealInterpretOpener()) { nextPhase(); return; }
+      iRun = { prompt: null, kept: 0, recent: [] };
+      renderInterpretRun();
+      dealInterpretDrill();
+      document.getElementById("interpretRun").classList.add("open");
     } else if (phase === "shadow") {
       batchStem = null; batchWritten = [];
       sbToday(); startSession(); updateBatchCount();
@@ -5951,7 +5953,7 @@
     // called when the active phase produces one unit of work. Scene and shadow
     // both fire through the batch writer, so map by which phase is live.
     if (!circuit.active) return;
-    if (phase === "shadow" && (circuit.phase === "scene" || circuit.phase === "interpret")) phase = circuit.phase;
+    if (phase === "shadow" && circuit.phase === "scene") phase = circuit.phase;
     if (circuit.phase !== phase) return;
     circuit.done++;
     if (circuit.tally) circuit.tally[phase]++;
@@ -5959,9 +5961,11 @@
     if (circuit.done >= circuit.target) nextPhase();
   }
   function closePhase(phase) {
-    if (phase === "scene" || phase === "interpret" || phase === "shadow") {
+    if (phase === "scene" || phase === "shadow") {
       endSession();
       document.getElementById("batchOverlay").classList.remove("open");
+    } else if (phase === "interpret") {
+      document.getElementById("interpretRun").classList.remove("open");
     } else if (phase === "truth") {
       document.getElementById("truthOverlay").classList.remove("open");
     } else if (phase === "hammer") {
