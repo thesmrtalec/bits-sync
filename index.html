@@ -189,6 +189,9 @@
     padding: 8px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
   .fw-dismiss { background: transparent; border: none; color: var(--faint); font-family: var(--mono);
     font-size: 10px; letter-spacing: .04em; cursor: pointer; padding: 8px 4px; }
+  .fw-read { background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 8px;
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; cursor: pointer; padding: 7px 12px; }
+  .fw-read:hover { border-color: var(--accent); color: var(--accent); }
   .bone-card { background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--faint); border-radius: 9px; padding: 12px 14px; margin-bottom: 9px; box-shadow: var(--cardshadow); }
   .bone-card p { margin: 0 0 8px; font-size: 15px; line-height: 1.5; color: var(--ink); }
   .ver-chip { font-family: var(--mono); font-size: 10px; color: var(--faint); opacity: .6; margin-left: auto; }
@@ -1026,6 +1029,7 @@
     <span id="freewriteBannerText"></span>
     <button class="fw-go" id="freewriteBannerGo">go →</button>
     <button class="fw-dismiss" id="freewriteBannerDismiss">not now</button>
+    <button class="fw-read" id="freewriteBannerRead" style="display:none">read →</button>
   </div>
   <div class="search-row" id="searchRow">
     <input type="search" id="searchBox" placeholder="search stuff, bits, sets, tags…" autocomplete="off" />
@@ -1732,7 +1736,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.11.3";
+  var APP_VERSION = "v1.11.4";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2252,12 +2256,14 @@
     var doneToday = (state.freewriteDays || []).indexOf(k) !== -1;
     var fs = freewriteStreak();
     if (doneToday) {
-      // never vanishes once earned — a quiet confirmed state, front and center
+      // never vanishes once earned — a quiet confirmed state, front and center,
+      // AND it's the shortcut to the writing itself (his ask: too hard to find)
       b.classList.add("fw-done");
       document.getElementById("freewriteBannerText").textContent =
         "\u2713 today's 10 done" + (fs.current > 0 ? "  \u00b7  \ud83d\udd25 " + fs.current + (fs.current === 1 ? " day" : " days") : "");
       document.getElementById("freewriteBannerGo").style.display = "none";
       document.getElementById("freewriteBannerDismiss").style.display = "none";
+      document.getElementById("freewriteBannerRead").style.display = "";
       b.style.display = "flex";
       return;
     }
@@ -2265,6 +2271,7 @@
     b.classList.remove("fw-done");
     document.getElementById("freewriteBannerGo").style.display = "";
     document.getElementById("freewriteBannerDismiss").style.display = "";
+    document.getElementById("freewriteBannerRead").style.display = "none";
     document.getElementById("freewriteBannerText").textContent =
       "Today's 10 \u2014 non-negotiable" + (fs.current > 0 ? "  \u00b7  \ud83d\udd25 " + fs.current : "");
     b.style.display = "flex";
@@ -2276,6 +2283,10 @@
   document.getElementById("freewriteBannerDismiss").onclick = function () {
     fwDismissedToday = true;
     renderFreewriteBanner();
+  };
+  document.getElementById("freewriteBannerRead").onclick = function () {
+    renderStories();
+    document.getElementById("storiesOverlay").classList.add("open");
   };
   function render() {
     // apply any sync update that arrived while an edit was open
