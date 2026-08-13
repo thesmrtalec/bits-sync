@@ -506,6 +506,11 @@
   .storycard .swhen { font-family: var(--mono); font-size: 9px; color: var(--faint); margin-top: 4px; text-transform: uppercase; }
   .rant-run { display: none; flex-direction: column; }
   .rant-run.open { display: flex; }
+  .fw-entry { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+  .fw-entry .fwtext { font-family: var(--serif); font-size: 16px; line-height: 1.6; color: var(--ink); white-space: pre-wrap; }
+  .fw-entry .fwspine { display: block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--faint); margin-top: 9px; cursor: pointer; }
+  .fw-entry .fwspine:hover { color: var(--accent); }
   .rant-mid { flex: 1 1 auto; display: flex; flex-direction: column; padding: 10px 4px 16px; min-height: 0; }
   .rant-nudge { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--muted); margin: 4px 0 12px; }
   .rant-box { flex: 1 1 auto; width: 100%; border: none; background: transparent; resize: none; outline: none;
@@ -1357,6 +1362,16 @@
       <textarea id="rantInput" class="rant-box"></textarea>
     </div>
   </div>
+  <div class="notes-overlay" id="freewriteLogOverlay">
+    <div class="notes-inner">
+      <div class="notes-head">
+        <h2>Free writing</h2>
+        <button class="notes-close" id="freewriteLogClose">done</button>
+      </div>
+      <p class="bone-note">Everything you've talked out, day by day. Just to read — nothing to name, nothing to shape.</p>
+      <div id="freewriteLogList"></div>
+    </div>
+  </div>
   <div class="notes-overlay" id="storiesOverlay">
     <div class="notes-inner">
       <div class="notes-head">
@@ -1430,6 +1445,7 @@
         <button class="drawer-item" id="drawerSched"><span>📅</span> Mic schedule</button>
         <button class="drawer-item" id="drawerRant"><span>🗣️</span> The rant — talk it out</button>
         <button class="drawer-item" id="drawerThemes"><span>🧵</span> Themes &mdash; set spines</button>
+        <button class="drawer-item" id="drawerFreewriteLog"><span>🗒️</span> Free writing</button>
         <button class="drawer-item" id="drawerStories"><span>📖</span> Stories — the spine</button>
         <button class="drawer-item" id="drawerSettings"><span>⚙️</span> Settings</button>
       </div>
@@ -1736,7 +1752,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.11.4";
+  var APP_VERSION = "v1.12.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2284,9 +2300,32 @@
     fwDismissedToday = true;
     renderFreewriteBanner();
   };
+  function renderFreewriteEntry(st, list) {
+    var row = el("div", "fw-entry");
+    row.appendChild(el("div", "fwtext", st.text));
+    var link = el("span", "fwspine", st.spine ? "\u2192 open its spine" : "\u2192 build a spine from this");
+    link.onclick = function () { openSpine(st); };
+    row.appendChild(link);
+    list.appendChild(row);
+  }
+  function renderFreewriteLog() {
+    var list = document.getElementById("freewriteLogList");
+    list.innerHTML = "";
+    var items = (state.stories || []).slice().sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
+    if (!items.length) {
+      list.appendChild(el("p", "tradecraft-empty", "Nothing yet. Talk one out and it'll show up here, day by day."));
+      return;
+    }
+    var todayKey = truthDayKey(Date.now());
+    var groups = rollupByTime(items, function (s) { return s.created; });
+    renderRollup(groups, list, renderFreewriteEntry, todayKey, "fw:");
+  }
+  document.getElementById("freewriteLogClose").onclick = function () {
+    document.getElementById("freewriteLogOverlay").classList.remove("open");
+  };
   document.getElementById("freewriteBannerRead").onclick = function () {
-    renderStories();
-    document.getElementById("storiesOverlay").classList.add("open");
+    renderFreewriteLog();
+    document.getElementById("freewriteLogOverlay").classList.add("open");
   };
   function render() {
     // apply any sync update that arrived while an edit was open
@@ -3712,6 +3751,11 @@
     state.stories.unshift(st);
     save();
     openSpine(st);
+  };
+  document.getElementById("drawerFreewriteLog").onclick = function () {
+    document.getElementById("drawerOverlay").classList.remove("open");
+    renderFreewriteLog();
+    document.getElementById("freewriteLogOverlay").classList.add("open");
   };
   document.getElementById("drawerStories").onclick = function () {
     document.getElementById("drawerOverlay").classList.remove("open");
