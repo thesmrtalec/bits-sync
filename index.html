@@ -763,6 +763,10 @@
   .lane-chip { background: transparent; border: 1px solid var(--rule); border-radius: 999px; color: var(--muted);
     font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; padding: 6px 13px; cursor: pointer; }
   .lane-chip.on { background: var(--accent); color: var(--onaccent); border-color: var(--accent); }
+  .origin-pick { display: flex; gap: 7px; margin: 8px 0 2px; }
+  .origin-chip { background: transparent; border: 1px solid var(--rule); border-radius: 999px; color: var(--faint);
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; padding: 4px 11px; cursor: pointer; }
+  .origin-chip.on { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
   .batch-stem-live.is-interpret { font-style: normal; font-size: 17px; color: var(--accent); line-height: 1.4; letter-spacing: .01em; }
   .batch-stem-live.is-premise { font-weight: 700; font-size: 26px; color: var(--accent); }
   .batch-hint { display: flex; align-items: center; gap: 12px; }
@@ -1019,6 +1023,10 @@
     <button class="add-btn" id="addBtn">Add</button>
   </div>
   <div class="form-row cap-forms" id="capForms"></div>
+  <div class="origin-pick" id="capOriginPick">
+    <button class="origin-chip" data-o="earned">🌱 earned</button>
+    <button class="origin-chip" data-o="forced">⚒️ forced</button>
+  </div>
 
   <div class="wisdom" id="wisdom" style="display:none"></div>
   <div id="copyToast" class="copy-toast">copied</div>
@@ -1210,6 +1218,10 @@
           <span id="batchHintText">enter to keep going</span>
           <button class="batch-reroll batch-next" id="batchNext" style="display:none">next →</button>
           <button class="batch-reroll" id="batchReroll">another ↻</button>
+        </div>
+        <div class="origin-pick" id="originPick" style="display:none">
+          <button class="origin-chip" data-o="earned">🌱 earned</button>
+          <button class="origin-chip" data-o="forced">⚒️ forced</button>
         </div>
         <div class="form-row batch-forms" id="batchForms"></div>
         <div class="batch-recent" id="batchRecent"></div>
@@ -1704,7 +1716,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.10.0";
+  var APP_VERSION = "v1.10.3";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2508,7 +2520,9 @@
   draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
   var pendingForms = [];
+  var capOrigin = null;   // earned/forced for the home capture box
   var batchForms = [];   // noticing badges armed for the next fired line
+  var batchOrigin = null;   // "earned" | "forced" | null — premise lane only, optional
   function renderCapForms() {
     var host = document.getElementById("capForms");
     host.innerHTML = "";
@@ -2544,14 +2558,20 @@
     if (!text) return;
     var forms = pendingForms.slice();
     var taggedTruth = forms.indexOf("truth") !== -1;
+    function resetCapOrigin() {
+      capOrigin = null;
+      Array.prototype.forEach.call(document.querySelectorAll("#capOriginPick .origin-chip"), function (c) { c.classList.remove("on"); });
+    }
     if (stageFilter === "pool" || stageFilter === "home") {
       if (!state.truths) state.truths = [];
       var t0 = { id: uid(), text: text, created: Date.now() };
       if (forms.length) t0.forms = forms;
       if (taggedTruth) t0.flag = true;   // a truth is a badged entry; auto-star it
+      if (capOrigin) t0.origin = capOrigin;
       state.truths.unshift(t0);
       draft.value = "";
       pendingForms = []; renderCapForms();
+      resetCapOrigin();
       save(); render();
       return;
     }
@@ -2563,12 +2583,23 @@
       statusAt: Date.now()
     };
     if (forms.length) b0.forms = forms;
+    if (capOrigin) b0.origin = capOrigin;
     state.bits.unshift(b0);
     draft.value = "";
     pendingForms = []; renderCapForms();
+    resetCapOrigin();
     draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
     save(); render();
   }
+  Array.prototype.forEach.call(document.querySelectorAll("#capOriginPick .origin-chip"), function (chip) {
+    chip.onclick = function () {
+      var o = chip.getAttribute("data-o");
+      capOrigin = (capOrigin === o) ? null : o;
+      Array.prototype.forEach.call(document.querySelectorAll("#capOriginPick .origin-chip"), function (c) {
+        c.classList.toggle("on", c === chip && capOrigin === o);
+      });
+    };
+  });
   document.getElementById("addBtn").onclick = addBit;
   renderCapForms();
   document.getElementById("utilBtn").onclick = function () {
@@ -4009,7 +4040,11 @@
     "a religion", "a war", "an addiction", "a custody battle", "a startup pitch",
     "rehab", "a funeral", "a first day of school", "a border crossing", "a séance",
     "a timeshare presentation", "witness protection", "a gang initiation", "a coronation",
-    "a hospital visit", "an intervention", "a blind audition", "a parole hearing"
+    "a hospital visit", "an intervention", "a blind audition", "a parole hearing",
+    "the fall of Rome", "the Cold War", "the gold rush", "a mutiny", "the French Revolution",
+    "a colonial invasion", "the Manhattan Project", "a witch trial", "the Prohibition era",
+    "a border dispute", "an arms race", "a royal succession", "the Trojan horse",
+    "a peace treaty nobody trusts", "a doomsday cult awaiting the end", "the fall of an empire"
   ];
   var mapBag = [];
   var mapState = { subject: "", template: "", a: [""], b: [""] };
@@ -5031,7 +5066,8 @@
     { k: "stupid",   ask: "what’s the stupid version?" },
     { k: "axis",     ask: "wrong axis to judge this on — what’s the truer one?" },
     { k: "reclass",  ask: "wrong bucket — what is this really?" },
-    { k: "child",    ask: "what would a six-year-old ask that breaks it?" }
+    { k: "child",    ask: "what would a six-year-old ask that breaks it?" },
+    { k: "advocate", ask: "argue the side everyone hates here — make the best case for it" }
   ];
   var flipLens = null;
   function clearBrowse() { browseDeck = null; browseIdx = 0; flipLens = null; }
@@ -5599,6 +5635,10 @@
     { k: "premise", t: "There is no version of me that" },
     { k: "premise", t: "I built my whole life around" },
     { k: "premise", t: "The line I will not cross is" },
+    { k: "premise", t: "Unpopular opinion, but" },
+    { k: "premise", t: "I'll die defending" },
+    { k: "premise", t: "History will remember" },
+    { k: "premise", t: "This is basically the [historical event] of" },
     { k: "prompt", t: "What did you get in trouble for as a kid that you still do?" },
     { k: "prompt", t: "What’s a rule everyone follows that makes no sense?" },
     { k: "prompt", t: "What do you defend that you know is indefensible?" },
@@ -5777,6 +5817,10 @@
       : "answer it";
     renderReroll();
     renderBatchForms();
+    batchOrigin = null;
+    var op = document.getElementById("originPick");
+    op.style.display = "";
+    Array.prototype.forEach.call(op.querySelectorAll(".origin-chip"), function (c) { c.classList.remove("on"); });
     setTimeout(function () { inp.focus(); }, 50);
   }
   function renderBatchForms() {
@@ -5850,6 +5894,9 @@
       if (!entry.forms) entry.forms = [];
       if (entry.forms.indexOf("premise") === -1) entry.forms.push("premise");
     }
+    // earned vs forced — did this pour out, or did you grind it out. Optional,
+    // applies to any line you write, not just premises. Skippable.
+    if (batchOrigin) entry.origin = batchOrigin;
     if (batchKind === "truth" && batchTruthId) { entry.src = batchTruthId; entry.prompt = batchStem; }
     if (batchStem && (batchKind === "stem" || batchKind === "premise")) entry.stem = batchStem;
     if (batchForms.length) {
@@ -5862,6 +5909,9 @@
     wroteThisOpener++;
     batchForms = [];
     renderBatchForms();
+    batchOrigin = null;
+    var op = document.getElementById("originPick");
+    if (op) Array.prototype.forEach.call(op.querySelectorAll(".origin-chip"), function (c) { c.classList.remove("on"); });
     circuitProgress("shadow");
     inp.value = "";
     buzz();
@@ -5888,15 +5938,28 @@
   function premiseCount() {
     return (state.truths || []).filter(function (x) { return hasForm(x, "premise"); }).length;
   }
+  function premiseEarnedCount() {
+    return (state.truths || []).filter(function (x) { return hasForm(x, "premise") && x.origin === "earned"; }).length;
+  }
   function updateBatchCount() {
     if (writeLane === "premise") {
-      var n = premiseCount();
-      document.getElementById("batchCount").textContent = Math.min(n, 999) + " / 100";
+      var n = premiseCount(), e = premiseEarnedCount();
+      document.getElementById("batchCount").textContent =
+        Math.min(n, 999) + " / 100" + (e ? "  \u00b7  " + e + " earned" : "");
       return;
     }
     document.getElementById("batchCount").textContent =
       batchWritten.length ? batchWritten.length + (batchWritten.length === 1 ? " down" : " down") : "";
   }
+  Array.prototype.forEach.call(document.querySelectorAll("#originPick .origin-chip"), function (chip) {
+    chip.onclick = function () {
+      var o = chip.getAttribute("data-o");
+      batchOrigin = (batchOrigin === o) ? null : o;   // tap again to clear
+      Array.prototype.forEach.call(document.querySelectorAll("#originPick .origin-chip"), function (c) {
+        c.classList.toggle("on", c === chip && batchOrigin === o);
+      });
+    };
+  });
   // ——— the workout: warm up → work → cull, one guided pass ———
   // A tiny state machine. Each phase launches the tool it owns, capped at a
   // count; when the cap is hit (or you skip) it advances to the next. The three
