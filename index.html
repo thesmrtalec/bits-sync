@@ -179,6 +179,14 @@
   .bone-key { font-size: 15px; padding: 4px 4px; opacity: .55; }
   .bone-key:hover { opacity: 1; }
   .bone-note { font-size: 12.5px; color: var(--faint); font-style: italic; margin: 0 0 4px; }
+  .rant-streak { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .03em; margin: 0 0 14px; }
+  .freewrite-banner { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--accent);
+    border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; }
+  .freewrite-banner span { flex: 1 1 auto; font-family: var(--serif); font-size: 14px; color: var(--ink); }
+  .fw-go { background: var(--accent); color: var(--onaccent, #fff); border: none; border-radius: 8px;
+    padding: 8px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
+  .fw-dismiss { background: transparent; border: none; color: var(--faint); font-family: var(--mono);
+    font-size: 10px; letter-spacing: .04em; cursor: pointer; padding: 8px 4px; }
   .bone-card { background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--faint); border-radius: 9px; padding: 12px 14px; margin-bottom: 9px; box-shadow: var(--cardshadow); }
   .bone-card p { margin: 0 0 8px; font-size: 15px; line-height: 1.5; color: var(--ink); }
   .ver-chip { font-family: var(--mono); font-size: 10px; color: var(--faint); opacity: .6; margin-left: auto; }
@@ -1012,6 +1020,11 @@
 
 
   <div class="section-row" id="sectionRow"></div>
+  <div class="freewrite-banner" id="freewriteBanner" style="display:none">
+    <span id="freewriteBannerText"></span>
+    <button class="fw-go" id="freewriteBannerGo">go →</button>
+    <button class="fw-dismiss" id="freewriteBannerDismiss">not now</button>
+  </div>
   <div class="search-row" id="searchRow">
     <input type="search" id="searchBox" placeholder="search stuff, bits, sets, tags…" autocomplete="off" />
   </div>
@@ -1316,6 +1329,7 @@
         <button class="notes-close" id="rantDoorClose">done</button>
       </div>
       <p class="bone-note">Talk it out. The whole story, messy, out loud on the page — not shaped yet, just out. No prompt to answer, no line to be short. Just tell it.</p>
+      <p class="rant-streak" id="rantStreakLine"></p>
       <div class="lane-pick">
         <span class="lane-label">how long:</span>
         <div class="lane-chips">
@@ -1716,7 +1730,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.10.3";
+  var APP_VERSION = "v1.11.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -1830,6 +1844,7 @@
     state.sb = data.sb || null;
     state.sbLog = data.sbLog || [];
     state.workoutDays = data.workoutDays || [];
+    state.freewriteDays = data.freewriteDays || [];
     state.maps = data.maps || [];
     state.tradecraft = data.tradecraft || [];
     // themes = the human mechanisms his sets orbit (editable spine). Seed once.
@@ -2229,6 +2244,25 @@
     return b;
   }
 
+  function renderFreewriteBanner() {
+    var b = document.getElementById("freewriteBanner");
+    if (fwDismissedToday) { b.style.display = "none"; return; }
+    var k = truthDayKey(Date.now());
+    var doneToday = (state.freewriteDays || []).indexOf(k) !== -1;
+    if (doneToday) { b.style.display = "none"; return; }
+    var fs = freewriteStreak();
+    document.getElementById("freewriteBannerText").textContent =
+      "Today's 10 \u2014 non-negotiable" + (fs.current > 0 ? "  \u00b7  \ud83d\udd25 " + fs.current : "");
+    b.style.display = "flex";
+  }
+  var fwDismissedToday = false;
+  document.getElementById("freewriteBannerGo").onclick = function () {
+    startRantSession(10);
+  };
+  document.getElementById("freewriteBannerDismiss").onclick = function () {
+    fwDismissedToday = true;
+    renderFreewriteBanner();
+  };
   function render() {
     // apply any sync update that arrived while an edit was open
     if (pendingRemote && tagEditing == null && workbenchId == null) {
@@ -2239,6 +2273,7 @@
       }
     }
     applyTheme();
+    renderFreewriteBanner();
     // strip
     var weekCount = state.bits.filter(function (b) { return (b.statusAt || b.created) >= startOfWeek(); }).length;
     document.getElementById("weekCount").textContent = weekCount;
@@ -3691,8 +3726,20 @@
       });
     };
   });
+  function renderRantStreak() {
+    var el2 = document.getElementById("rantStreakLine");
+    if (!el2) return;
+    var fs = freewriteStreak();
+    if (fs.current > 0) {
+      el2.textContent = "\ud83d\udd25 " + fs.current + (fs.current === 1 ? " day" : " days") +
+        (fs.longest > fs.current ? "   \u00b7   best: " + fs.longest : "   \u00b7   your best yet");
+    } else {
+      el2.textContent = "no streak yet \u2014 today starts it";
+    }
+  }
   document.getElementById("drawerRant").onclick = function () {
     document.getElementById("drawerOverlay").classList.remove("open");
+    renderRantStreak();
     document.getElementById("rantDoor").classList.add("open");
   };
   document.getElementById("rantDoorClose").onclick = function () {
@@ -3717,6 +3764,35 @@
       buzz();
     }
   }
+  // ——— the daily non-negotiable: 10 minutes of free writing, no exceptions.
+  // Any completed rant counts, whatever length he picked — the discipline is
+  // "wrote today," not "wrote exactly 10." Same quiet streak pattern as the
+  // workout chain: encourages, never scolds, grace day for today-not-yet.
+  function recordFreewrite() {
+    if (!state.freewriteDays) state.freewriteDays = [];
+    var k = truthDayKey(Date.now());
+    if (state.freewriteDays.indexOf(k) === -1) state.freewriteDays.push(k);
+    save();
+  }
+  function freewriteStreak() {
+    var days = (state.freewriteDays || []).slice();
+    if (!days.length) return { current: 0, longest: 0 };
+    var set = {};
+    days.forEach(function (k) { set[k] = true; });
+    var cur = 0, d = new Date(); d.setHours(0, 0, 0, 0);
+    if (!set[truthDayKey(d.getTime())]) d = new Date(d.getTime() - DAY);
+    while (set[truthDayKey(d.getTime())]) { cur++; d = new Date(d.getTime() - DAY); }
+    var stamps = days.map(function (k) {
+      var p2 = k.split("-"); return new Date(+p2[0], +p2[1], +p2[2]).getTime();
+    }).sort(function (a, b) { return a - b; });
+    var longest = 1, run = 1;
+    for (var i = 1; i < stamps.length; i++) {
+      var gap = Math.round((stamps[i] - stamps[i - 1]) / DAY);
+      if (gap === 1) { run++; longest = Math.max(longest, run); }
+      else if (gap > 1) { run = 1; }
+    }
+    return { current: cur, longest: Math.max(longest, cur) };
+  }
   function startRantSession(min) {
     document.getElementById("rantDoor").classList.remove("open");
     document.getElementById("rantInput").value = "";
@@ -3737,8 +3813,10 @@
     if (v) {
       if (!state.stories) state.stories = [];
       state.stories.unshift({ id: uid(), text: v, created: Date.now(), spine: null });
+      recordFreewrite();
+      var fs = freewriteStreak();
       save();
-      if (!inWorkout) toast("Story kept \ud83d\udcd6 \u2014 find it under Stories");
+      if (!inWorkout) toast("Story kept \ud83d\udcd6" + (fs.current > 1 ? "  \u00b7  \ud83d\udd25 " + fs.current : ""));
     }
     if (inWorkout) circuitProgress("story");
   };
