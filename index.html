@@ -182,6 +182,8 @@
   .rant-streak { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .03em; margin: 0 0 14px; }
   .freewrite-banner { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--accent);
     border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; }
+  .freewrite-banner.fw-done { border-color: var(--rule); padding: 9px 14px; }
+  .freewrite-banner.fw-done span { color: var(--muted); font-size: 12.5px; }
   .freewrite-banner span { flex: 1 1 auto; font-family: var(--serif); font-size: 14px; color: var(--ink); }
   .fw-go { background: var(--accent); color: var(--onaccent, #fff); border: none; border-radius: 8px;
     padding: 8px 14px; font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
@@ -1348,7 +1350,7 @@
     </div>
     <div class="rant-mid">
       <p class="rant-nudge">What happened? Just tell it — start anywhere.</p>
-      <textarea id="rantInput" class="rant-box" placeholder="Once there was…"></textarea>
+      <textarea id="rantInput" class="rant-box"></textarea>
     </div>
   </div>
   <div class="notes-overlay" id="storiesOverlay">
@@ -1730,7 +1732,7 @@
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v1.11.0";
+  var APP_VERSION = "v1.11.3";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2246,11 +2248,23 @@
 
   function renderFreewriteBanner() {
     var b = document.getElementById("freewriteBanner");
-    if (fwDismissedToday) { b.style.display = "none"; return; }
     var k = truthDayKey(Date.now());
     var doneToday = (state.freewriteDays || []).indexOf(k) !== -1;
-    if (doneToday) { b.style.display = "none"; return; }
     var fs = freewriteStreak();
+    if (doneToday) {
+      // never vanishes once earned — a quiet confirmed state, front and center
+      b.classList.add("fw-done");
+      document.getElementById("freewriteBannerText").textContent =
+        "\u2713 today's 10 done" + (fs.current > 0 ? "  \u00b7  \ud83d\udd25 " + fs.current + (fs.current === 1 ? " day" : " days") : "");
+      document.getElementById("freewriteBannerGo").style.display = "none";
+      document.getElementById("freewriteBannerDismiss").style.display = "none";
+      b.style.display = "flex";
+      return;
+    }
+    if (fwDismissedToday) { b.style.display = "none"; return; }
+    b.classList.remove("fw-done");
+    document.getElementById("freewriteBannerGo").style.display = "";
+    document.getElementById("freewriteBannerDismiss").style.display = "";
     document.getElementById("freewriteBannerText").textContent =
       "Today's 10 \u2014 non-negotiable" + (fs.current > 0 ? "  \u00b7  \ud83d\udd25 " + fs.current : "");
     b.style.display = "flex";
@@ -3819,6 +3833,7 @@
       if (!inWorkout) toast("Story kept \ud83d\udcd6" + (fs.current > 1 ? "  \u00b7  \ud83d\udd25 " + fs.current : ""));
     }
     if (inWorkout) circuitProgress("story");
+    else render();   // refresh the home banner immediately — it hides once today's is done
   };
 
   // ——— themes: the human-mechanism spines a set orbits ———
