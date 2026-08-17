@@ -629,8 +629,49 @@
   .welcome-go { width: 100%; padding: 13px; border: none; border-radius: 10px; background: var(--accent); color: var(--onaccent); font-family: var(--mono); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
 
   /* ——— first-run stage tour ——— */
-  .tour-gate { position: fixed; inset: 0; background: var(--page); z-index: 88; display: none; overflow-y: auto; -webkit-overflow-scrolling: touch; }
-  .tour-gate.open { display: block; }
+  .tour-gate { position: fixed; inset: 0; background: var(--page); z-index: 88; display: none; }
+  .tour-gate.open { display: flex; flex-direction: column; }
+  /* tap-through carousel */
+  .tourc-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 4px; }
+  .tourc-skip { background: transparent; border: none; color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: .04em; }
+  .tourc-count { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; color: var(--faint); }
+  .tourc-track { flex: 1 1 auto; overflow: hidden; position: relative; }
+  .tourc-rail { display: flex; height: 100%; transition: transform .32s cubic-bezier(.4,0,.2,1); }
+  .tourc-card { flex: 0 0 100%; height: 100%; box-sizing: border-box; padding: 8px 26px 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; overflow-y: auto; }
+  .tourc-shot { width: 100%; max-width: 300px; margin: 0 auto 22px; }
+  .tourc-h { font-family: var(--serif); font-size: 23px; color: var(--ink); margin: 0 0 8px; }
+  .tourc-p { font-size: 15px; line-height: 1.55; color: var(--ink); margin: 0; max-width: 320px; }
+  .tourc-p b { color: var(--accent2); }
+  .tourc-foot { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 22px; gap: 14px; }
+  .tourc-dots { display: flex; gap: 7px; flex: 1 1 auto; justify-content: center; }
+  .tourc-dots i { width: 7px; height: 7px; border-radius: 999px; background: var(--rule); transition: background .2s, transform .2s; }
+  .tourc-dots i.on { background: var(--accent); transform: scale(1.25); }
+  .tourc-btn { background: var(--accent); color: var(--onaccent); border: none; border-radius: 10px; padding: 12px 22px; font-family: var(--mono); font-size: 12px; letter-spacing: .07em; text-transform: uppercase; font-weight: 700; flex: 0 0 auto; }
+  .tourc-back { background: transparent; border: none; color: var(--muted); font-family: var(--mono); font-size: 12px; letter-spacing: .05em; flex: 0 0 auto; visibility: hidden; }
+  .tourc-back.show { visibility: visible; }
+  /* faithful mini-mockups from the app's own tokens */
+  .mock { background: var(--page); border: 1px solid var(--rule); border-radius: 14px; padding: 14px; box-shadow: var(--cardshadow); text-align: left; }
+  .mock-banner { text-align: center; border-bottom: 2px solid var(--accent); padding-bottom: 9px; margin-bottom: 11px; }
+  .mock-title { font-family: var(--serif); font-weight: 700; font-size: 17px; color: var(--ink); }
+  .mock-sub { font-family: var(--mono); font-size: 7px; letter-spacing: .2em; text-transform: uppercase; color: var(--faint); margin-top: 2px; }
+  .mock-tabs { display: flex; gap: 14px; justify-content: center; margin-bottom: 11px; }
+  .mock-tab { font-family: var(--mono); font-size: 9px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); padding-bottom: 3px; }
+  .mock-tab.on { color: var(--accent); border-bottom: 2px solid var(--accent); }
+  .mock-box { background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 10px; font-family: var(--serif); font-size: 12px; color: var(--muted); min-height: 40px; box-shadow: inset 0 1px 3px rgba(0,0,0,.1); }
+  .mock-row { display: flex; gap: 8px; align-items: stretch; }
+  .mock-add { background: var(--accent); color: var(--onaccent); border-radius: 7px; font-family: var(--mono); font-size: 9px; font-weight: 700; letter-spacing: .06em; display: flex; align-items: center; padding: 0 12px; }
+  .mock-attach { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+  .mock-chip { border: 1px solid var(--rule); border-radius: 999px; padding: 3px 9px; font-family: var(--mono); font-size: 9px; color: var(--muted); background: var(--card); }
+  .mock-card { background: var(--card); border: 1px solid var(--rule); border-radius: 9px; padding: 11px 12px; margin-bottom: 8px; box-shadow: var(--cardshadow); }
+  .mock-card p { font-family: var(--serif); font-size: 12px; color: var(--ink); margin: 0; line-height: 1.4; }
+  .mock-cue { font-family: var(--mono); font-size: 8px; color: var(--faint); margin-top: 6px; letter-spacing: .04em; }
+  .mock-foot { display: flex; justify-content: space-around; border-top: 1px solid var(--rule); margin-top: 11px; padding-top: 10px; font-size: 15px; }
+  .mock-grip { color: var(--faint); font-family: var(--mono); margin-right: 8px; }
+  .mock-run { background: var(--ink); border-radius: 12px; padding: 18px 14px; text-align: center; }
+  .mock-run .rtxt { font-family: "Bradley Hand", cursive, var(--serif); font-size: 15px; color: var(--onaccent); line-height: 1.4; }
+  .mock-run .rclock { font-family: var(--mono); font-size: 11px; color: var(--accent2); margin-top: 12px; }
+  .mock-pill { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: var(--onaccent); border-radius: 8px; padding: 7px 13px; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; margin: 3px; }
+  .mock-pill.ghost { background: transparent; color: var(--ink); border: 1px solid var(--rule); }
   .tour-box { max-width: 400px; width: 100%; margin: 0 auto; padding: 40px 24px 48px; box-sizing: border-box; }
   .modal-gate { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 92; display: none; align-items: center; justify-content: center; padding: 28px; }
   .modal-gate.open { display: flex; }
@@ -1160,19 +1201,109 @@
     </div>
   </div>
   <div class="tour-gate" id="tourGate">
-    <div class="tour-box">
-      <h2>The pipeline</h2>
-      <p class="tsub">stuff in, sets out</p>
-      <div class="tour-stage"><span class="tour-dot">stuff</span><p>Confessions, observations, half-thoughts. Anything true enough to write down. Lines never leave.</p></div>
-      <div class="tour-stage"><span class="tour-dot">bit</span><p>Find the funny and put it in words. Bits get timed, reacted, and strung into sets.</p></div>
-      <div class="tour-stage"><span class="tour-dot">set</span><p>String bits in order against a clock. This is the thing you say on stage.</p></div>
-      <div class="tour-rule"></div>
-      <div class="tour-stage"><span class="tour-dot alt">capture</span><p>Write it down. You won’t remember it in 30 seconds. <b>WRITE IT DOWN.</b> The tab you’re on says which drawer it lands in — stuff or bits.</p></div>
-      <div class="tour-stage"><span class="tour-dot alt">tags</span><p>Casually organize your mess. Buzzwords of your choice — topic, voice, theme, intended audience. Tap one to filter; the ones you use most rise to the top.</p></div>
-      <div class="tour-stage"><span class="tour-dot alt">the gym</span><p>Tap a bit to take it into the gym — the line up top, the speed bag for jabs, a scratch pad below. Each bit keeps its own.</p></div>
-      <div class="tour-stage"><span class="tour-dot alt">notes</span><p>Endless blank space to fuel your existential crisis. Exercises, brain-dumps, half-thoughts — the stuff that isn’t a bit.</p></div>
-      <div class="tour-stage"><span class="tour-dot alt">vault</span><p>Dead bits in your basement. Think there’s still meat on the bone? Take a look. Ready to say goodbye? Delete for good from here.</p></div>
-      <button class="tour-go" id="tourGo">Let's go</button>
+    <div class="tourc-head">
+      <span class="tourc-count" id="tourcCount">1 / 7</span>
+      <button class="tourc-skip" id="tourcSkip">skip</button>
+    </div>
+    <div class="tourc-track" id="tourcTrack">
+      <div class="tourc-rail" id="tourcRail">
+
+        <div class="tourc-card">
+          <div class="tourc-shot">
+            <div class="mock">
+              <div class="mock-banner"><div class="mock-title">Just the Bits</div><div class="mock-sub">stuff in · sets out</div></div>
+              <div class="mock-card"><p>My therapist says I have a fear of abandonment. Or she used to.</p><div class="mock-cue">⏱ 0:06 · ⭐ flagged</div></div>
+              <div class="mock-card"><p>airport people-mover but for awkward conversations</p></div>
+            </div>
+          </div>
+          <h2 class="tourc-h">Stuff in, sets out</h2>
+          <p class="tourc-p">Every stray thought, observation, and half-formed premise goes in here — so it's waiting for you when it's time to build a set.</p>
+        </div>
+
+        <div class="tourc-card">
+          <div class="tourc-shot">
+            <div class="mock">
+              <div class="mock-tabs"><span class="mock-tab on">stuff</span><span class="mock-tab">bits</span><span class="mock-tab">sets</span></div>
+              <div class="mock-row">
+                <div class="mock-box">saw a guy tip his hat to a pigeon and I haven't recovered…</div>
+                <div class="mock-add">ADD</div>
+              </div>
+            </div>
+          </div>
+          <h2 class="tourc-h">1 · Catch it</h2>
+          <p class="tourc-p">Type it and hit <b>add</b>. The tab you're on — <b>stuff</b> or <b>bits</b> — says where it lands. You won't remember it in 30 seconds. <b>Write it down.</b></p>
+        </div>
+
+        <div class="tourc-card">
+          <div class="tourc-shot">
+            <div class="mock">
+              <div class="mock-box" style="font-family:var(--serif);color:var(--ink)">saw a guy tip his hat to a pigeon</div>
+              <div class="mock-attach"><span class="mock-chip">🥊 jab</span><span class="mock-chip">🥊 jab</span><span class="mock-chip">＋ speed bag</span></div>
+              <div class="mock-cue" style="margin-top:9px">the gym · scratch pad below</div>
+            </div>
+          </div>
+          <h2 class="tourc-h">2 · Work it</h2>
+          <p class="tourc-p">Tap a line to take it into <b>the gym</b> — the premise up top, the speed bag for jabs, a scratch pad below. Punch it up till it's a bit.</p>
+        </div>
+
+        <div class="tourc-card">
+          <div class="tourc-shot">
+            <div class="mock">
+              <div class="mock-tabs"><span class="mock-tab">stuff</span><span class="mock-tab">bits</span><span class="mock-tab on">sets</span></div>
+              <div class="mock-card"><p><span class="mock-grip">≡</span>Opener: the pigeon guy</p></div>
+              <div class="mock-card"><p><span class="mock-grip">≡</span>Callback: therapist bit</p></div>
+              <div class="mock-card"><p><span class="mock-grip">≡</span>Closer: the people-mover</p></div>
+            </div>
+          </div>
+          <h2 class="tourc-h">3 · Build the set</h2>
+          <p class="tourc-p">String bits in order against a clock — drag the ≡ grip to reorder. This is the thing you actually say on stage.</p>
+        </div>
+
+        <div class="tourc-card">
+          <div class="tourc-shot">
+            <div class="mock-run">
+              <div class="rtxt">“My therapist says I have a fear of abandonment. Or she used to.”</div>
+              <div class="rclock">0:18 · 2 / 8</div>
+            </div>
+            <div style="text-align:center;margin-top:14px"><span class="mock-pill">▶ run it</span></div>
+          </div>
+          <h2 class="tourc-h">Run it before you're up</h2>
+          <p class="tourc-p"><b>Run it</b> plays the set full-screen with a clock — tap a side to move, mark ● landed / ○ died. Rehearse till it's in your bones.</p>
+        </div>
+
+        <div class="tourc-card">
+          <div class="tourc-shot">
+            <div class="mock">
+              <div class="mock-foot">🙏 <span>📚</span> 🔨 🪓 ⭐ ⋯</div>
+            </div>
+          </div>
+          <h2 class="tourc-h">The row along the bottom</h2>
+          <p class="tourc-p" style="max-width:340px;text-align:left">
+            <b>🙏 Shadowbox</b> — morning writing warm-up.<br>
+            <b>📚 Library</b> — truths, questions, the interpreter.<br>
+            <b>🔨 Work it</b> — deals you a line with meat still on it.<br>
+            <b>🪓 Axe mode</b> — judge stale material: keep or kill.<br>
+            <b>⭐ Flagged</b> — the bits you starred to work.<br>
+            <b>⋯ More</b> — everything else.
+          </p>
+        </div>
+
+        <div class="tourc-card">
+          <div class="tourc-shot">
+            <div class="mock">
+              <div class="mock-card" style="margin:0"><p>Swipe ← to bury · swipe → for actions</p></div>
+            </div>
+          </div>
+          <h2 class="tourc-h">A couple last things</h2>
+          <p class="tourc-p">Swipe a line <b>left</b> to bury it — it drops to the vault, not the trash. Think there's still meat on the bone later? Dig it back up. <b>Notes</b> is blank space for everything that isn't a bit yet.</p>
+        </div>
+
+      </div>
+    </div>
+    <div class="tourc-foot">
+      <button class="tourc-back" id="tourcBack">back</button>
+      <div class="tourc-dots" id="tourcDots"></div>
+      <button class="tourc-btn" id="tourcNext">Next</button>
     </div>
   </div>
   <div class="auth-gate" id="authGate">
@@ -7409,8 +7540,48 @@
       try { localStorage.setItem(TKEY, "1"); } catch (e) {}
       document.getElementById("tourGate").classList.remove("open");
     }
-    var tgo = document.getElementById("tourGo");
-    if (tgo) tgo.onclick = dismissTour;
+
+    // ——— tap-through tour carousel ———
+    (function () {
+      var rail = document.getElementById("tourcRail");
+      if (!rail) return;
+      var cards = rail.children.length;
+      var idx = 0;
+      var dotsWrap = document.getElementById("tourcDots");
+      for (var d = 0; d < cards; d++) dotsWrap.appendChild(document.createElement("i"));
+      var dots = dotsWrap.children;
+      var nextBtn = document.getElementById("tourcNext");
+      var backBtn = document.getElementById("tourcBack");
+      var count = document.getElementById("tourcCount");
+      function paint() {
+        rail.style.transform = "translateX(" + (-idx * 100) + "%)";
+        for (var i = 0; i < dots.length; i++) dots[i].className = (i === idx ? "on" : "");
+        count.textContent = (idx + 1) + " / " + cards;
+        nextBtn.textContent = (idx === cards - 1) ? "Let's go" : "Next";
+        backBtn.classList.toggle("show", idx > 0);
+      }
+      function go(n) { idx = Math.max(0, Math.min(cards - 1, n)); paint(); }
+      nextBtn.onclick = function () { if (idx === cards - 1) dismissTour(); else go(idx + 1); };
+      backBtn.onclick = function () { go(idx - 1); };
+      document.getElementById("tourcSkip").onclick = dismissTour;
+      var track = document.getElementById("tourcTrack");
+      var sx = 0, sy = 0, swiping = false;
+      track.addEventListener("touchstart", function (e) {
+        var t = e.touches[0]; sx = t.clientX; sy = t.clientY; swiping = true;
+      }, { passive: true });
+      track.addEventListener("touchend", function (e) {
+        if (!swiping) return; swiping = false;
+        var t = e.changedTouches[0];
+        var dx = t.clientX - sx, dy = t.clientY - sy;
+        if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) go(idx + (dx < 0 ? 1 : -1));
+      }, { passive: true });
+      var gate = document.getElementById("tourGate");
+      var obs = new MutationObserver(function () {
+        if (gate.classList.contains("open")) { idx = 0; paint(); }
+      });
+      obs.observe(gate, { attributes: true, attributeFilter: ["class"] });
+      paint();
+    })();
 
     // if welcome was already seen, still offer the tour once
     try { if (localStorage.getItem(WKEY) && !localStorage.getItem(TKEY)) maybeTour(); } catch (e) {}
