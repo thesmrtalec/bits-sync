@@ -1148,8 +1148,8 @@ body { font-size:16px; }
 
 /* Quiet capture; the writing workspace lives behind its own navigation item. */
 body.capture-view .wrap { max-width:620px; }
-body.capture-view .desk-header { border:0; padding:10px 0 0; margin:0; justify-content:flex-end; }
-body.capture-view .desk-brand { display:none; }
+
+
 body.capture-view .bannerband { margin:8px 0 20px; padding:0 0 16px; }
 body.capture-view .desk-grid { display:block; }
 body.capture-view .desk-capture > .desk-kicker,
@@ -1174,10 +1174,19 @@ body.capture-view .wisdom-by { opacity:.85; }
 .run-stage > .run-card { margin-top:auto; margin-bottom:auto; flex-shrink:0; }
 
 /* Navigation stays with the page; occasional tools live in its footer. */
-.desk-header { display:none!important; }
+
 .desk-nav button { min-width:0; overflow-wrap:anywhere; padding:8px 4px; }
 .backup #deskMore { margin-left:auto; flex:0 0 auto; }
 .backup #authWho { overflow-wrap:anywhere; min-width:0; }
+
+/* A small text masthead and three quiet links leave room for writing. */
+.desk-header { display:flex; justify-content:flex-start; border:0; margin:0; padding:calc(20px + env(safe-area-inset-top)) 0 8px; }
+.desk-brand { display:block; font-size:24px; min-height:44px; }
+.desk-tools:empty { display:none; }
+.desk-nav { position:static; width:100%; gap:24px; justify-content:flex-start; margin:0 0 22px; padding:0; background:transparent; border:0; box-shadow:none; }
+.desk-nav button { flex:0 1 auto; font-size:15px; min-height:44px; padding:8px 0; border-radius:0; border-bottom:2px solid transparent; overflow-wrap:normal; }
+.desk-nav button.active { background:transparent; border-bottom-color:var(--accent); color:var(--accent2); font-weight:700; }
+.desk-nav button:focus-visible,.desk-brand:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
 
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1202,11 +1211,11 @@ body.capture-view .wisdom-by { opacity:.85; }
 </head>
 <body>
 <div class="wrap">
-<nav class="desk-nav" aria-label="Main navigation"><button data-desk="home">Capture</button><button data-desk="write">Write today</button><button data-desk="pool">Notebook</button><button data-desk="sets">Set lists</button></nav>
 <header class="desk-header">
   <button class="desk-brand" id="deskHome">Just the <span>Bits.</span></button>
   <div class="desk-tools"><button class="desk-btn" id="deskMore" aria-label="More tools and settings">More</button></div>
 </header>
+<nav class="desk-nav" aria-label="Main navigation"><button data-desk="home">Capture</button><button data-desk="write">Write</button><button data-desk="pool">Notebook</button></nav>
 <div id="deskDemo" class="desk-demo" hidden>Trial notebook · Saved only in this browser. <a href="?">Sign in to your notebook</a></div>
 <main id="deskHomePanel">
  <div class="desk-grid">
@@ -1216,7 +1225,7 @@ body.capture-view .wisdom-by { opacity:.85; }
  <section class="desk-section" hidden><div class="desk-section-head"><h2>Recently captured</h2><button class="desk-btn text" id="deskAll">Open notebook</button></div><div class="desk-recent" id="deskRecent"></div></section>
  <section class="desk-section" hidden><div class="desk-section-head"><h2>Writing sessions</h2><button class="desk-btn text" id="deskHistory">See all</button></div><div class="desk-recent" id="deskSessions"></div></section>
 </main>
-<section id="deskNotebookHead" hidden><h1 class="desk-title">Your notebook.</h1><div class="desk-tabs"><button class="desk-btn" id="deskCaptured">Captured thoughts</button><button class="desk-btn" id="deskBits">Developing bits</button><button class="desk-btn" id="deskStarred">Starred</button><button class="desk-btn" id="deskAxe">🪓 Axe mode</button></div></section>
+<section id="deskNotebookHead" hidden><h1 class="desk-title">Your notebook.</h1><div class="desk-tabs"><button class="desk-btn" id="deskCaptured">Captured thoughts</button><button class="desk-btn" id="deskBits">Developing bits</button><button class="desk-btn" id="deskSets" data-desk="sets">Set lists</button><button class="desk-btn" id="deskStarred">Starred</button><button class="desk-btn" id="deskAxe">🪓 Axe mode</button></div></section>
 <section id="deskWriter" class="desk-writer" hidden aria-label="Daily writing session"></section>
 <section id="deskHistoryPanel" hidden></section>
 
@@ -2044,7 +2053,7 @@ body.capture-view .wisdom-by { opacity:.85; }
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.2.1";
+  var APP_VERSION = "v2.2.2";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -7986,10 +7995,10 @@ body.capture-view .wisdom-by { opacity:.85; }
     // Existing set, search, and workbench actions can change stageFilter directly.
     if(stageFilter!=='home')deskView=stageFilter;
     document.body.classList.toggle('capture-view',deskView==='home');
-    document.querySelector('.bannerband').style.display=deskView==='home'?'block':'none';
+    document.querySelector('.bannerband').style.display='none';
     document.getElementById('wisdom').style.display=deskView==='home'?'block':'none';
     document.getElementById('deskHomePanel').hidden=deskView!=='home';
-    document.getElementById('deskNotebookHead').hidden=deskView!=='pool'&&deskView!=='bit';
+    document.getElementById('deskNotebookHead').hidden=['pool','bit','sets','history'].indexOf(deskView)===-1;
     document.getElementById('deskWriter').hidden=deskView!=='write';
     document.getElementById('deskHistoryPanel').hidden=deskView!=='history';
     document.getElementById('deskCaptured').classList.toggle('active',deskView==='pool');
@@ -7998,7 +8007,7 @@ body.capture-view .wisdom-by { opacity:.85; }
     document.getElementById('searchRow').style.display=notebook?'':'none';
     if(notebook)renderSearch();else document.getElementById('searchOut').innerHTML='';
     if(deskView==='home')deskRenderHome();if(deskView==='write')deskRenderWriter();if(deskView==='history')deskRenderHistory();
-    document.querySelectorAll('[data-desk]').forEach(function(b){var v=b.dataset.desk;b.classList.toggle('active',v===deskView||(v==='pool'&&deskView==='bit'));b.setAttribute('aria-current',b.classList.contains('active')?'page':'false');});
+    document.querySelectorAll('[data-desk]').forEach(function(b){var v=b.dataset.desk;b.classList.toggle('active',v===deskView||(v==='pool'&&['bit','sets','history'].indexOf(deskView)!==-1));b.setAttribute('aria-current',b.classList.contains('active')?'page':'false');});
   }
   function deskInit() {
     document.querySelector('.backup').appendChild(document.getElementById('deskMore'));
@@ -8010,7 +8019,7 @@ body.capture-view .wisdom-by { opacity:.85; }
     quotes.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();dealWisdom();}};
 
     var host=document.getElementById('deskCaptureHost');host.appendChild(document.querySelector('.capture'));host.appendChild(document.getElementById('capDest'));
-    draft.placeholder='What was the thought? Save the words before they go.';draft.setAttribute('aria-label','Capture a funny thought');document.getElementById('addBtn').textContent='Save thought';
+    draft.placeholder='Catch the thought…';draft.setAttribute('aria-label','Capture a funny thought');document.getElementById('addBtn').textContent='Save thought';
     try{draft.value=localStorage.getItem(deskDraftKey())||'';}catch(e){}
     try{pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+'-forms')||'[]');if(!Array.isArray(pendingForms))pendingForms=[];}catch(e){pendingForms=[];}
     var tags=el('div');tags.id='deskCaptureTags';document.getElementById('addBtn').insertAdjacentElement('beforebegin',tags);deskRenderCaptureTags();
