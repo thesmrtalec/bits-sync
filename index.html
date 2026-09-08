@@ -1214,6 +1214,30 @@ body.capture-view .wisdom-by { opacity:.85; }
   font-style:normal;
 }
 
+
+/* The live capture composer fits the visible viewport above the phone keyboard. */
+.desk-capture-top { display:none; }
+body.capture-typing { overflow:hidden; }
+body.capture-typing .desk-header,
+body.capture-typing .desk-nav,
+body.capture-typing #wisdom,
+body.capture-typing .backup { display:none!important; }
+body.capture-typing #deskCaptureHost {
+  position:fixed; z-index:45; left:0; right:0;
+  top:var(--capture-top,0px); height:var(--capture-height,100dvh);
+  padding:8px 16px 12px; background:var(--page); overflow:hidden;
+}
+body.capture-typing .desk-capture .capture { height:100%; min-height:0; gap:8px; }
+body.capture-typing .desk-capture-top { display:flex; flex:0 0 auto; align-items:center; justify-content:space-between; }
+body.capture-typing .desk-capture-top .desk-kicker { margin:0; }
+body.capture-typing #deskCaptureDone { min-height:36px; padding:4px 0 4px 16px; }
+body.capture-typing .desk-capture #draft { flex:1 1 0; height:0; min-height:0!important; max-height:none; overflow-y:auto; resize:none; }
+body.capture-typing #deskCaptureTags { flex:0 0 auto; }
+body.capture-typing #deskCaptureTags .desk-quick-tags { flex-wrap:nowrap; gap:8px; margin:0; }
+body.capture-typing #deskCaptureTags .desk-tag { flex:1; min-width:0; padding:8px 6px; font-size:14px; }
+body.capture-typing .desk-capture #addBtn { flex:0 0 auto; align-self:stretch; min-height:44px; padding:10px 16px; }
+body.capture-typing #deskCaptureStatus { flex:0 0 auto; margin:0; font-size:12px; min-height:16px; }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -2079,7 +2103,7 @@ body.capture-view .wisdom-by { opacity:.85; }
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.2.3";
+  var APP_VERSION = "v2.2.4";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -8035,6 +8059,44 @@ body.capture-view .wisdom-by { opacity:.85; }
     if(deskView==='home')deskRenderHome();if(deskView==='write')deskRenderWriter();if(deskView==='history')deskRenderHistory();
     document.querySelectorAll('[data-desk]').forEach(function(b){var v=b.dataset.desk;b.classList.toggle('active',v===deskView||(v==='pool'&&['bit','sets','history'].indexOf(deskView)!==-1));b.setAttribute('aria-current',b.classList.contains('active')?'page':'false');});
   }
+
+  function deskInitCaptureKeyboard() {
+    var host=document.getElementById('deskCaptureHost'),capture=host.querySelector('.capture');
+    var viewport=window.visualViewport, active=false, sawKeyboard=false;
+    var fullHeight=viewport ? viewport.height : window.innerHeight;
+    var top=el('div','desk-capture-top');top.appendChild(el('span','desk-kicker','Capture'));
+    var done=deskButton('Done',function(){draft.blur();setActive(false);},'text');done.id='deskCaptureDone';top.appendChild(done);capture.insertBefore(top,draft);
+    capture.appendChild(document.getElementById('deskCaptureStatus'));
+    function update() {
+      if(!active)return;
+      var height=viewport ? viewport.height : window.innerHeight;
+      if(fullHeight-height>100)sawKeyboard=true;
+      if(sawKeyboard && fullHeight-height<60){draft.blur();setActive(false);return;}
+      host.style.setProperty('--capture-top',(viewport ? viewport.offsetTop : 0)+'px');
+      host.style.setProperty('--capture-height',height+'px');
+    }
+    function setActive(on) {
+      active=on;document.body.classList.toggle('capture-typing',on);
+      if(on)update();else {sawKeyboard=false;host.style.removeProperty('--capture-top');host.style.removeProperty('--capture-height');}
+    }
+    draft.addEventListener('focus',function(){
+      if(deskView!=='home'||!window.matchMedia('(pointer: coarse)').matches)return;
+      if(!active){fullHeight=Math.max(fullHeight,viewport ? viewport.height : window.innerHeight);sawKeyboard=false;setActive(true);}
+    });
+    draft.addEventListener('blur',function(){setTimeout(function(){if(!host.contains(document.activeElement))setActive(false);},0);});
+    host.addEventListener('pointerdown',function(e){
+      var button=e.target.closest('button');
+      if(active && button && button!==done){e.preventDefault();draft.focus({preventScroll:true});}
+    });
+    host.addEventListener('click',function(e){
+      if(active && e.target.closest('button') && e.target.closest('button')!==done)draft.focus({preventScroll:true});
+    });
+    if(viewport){viewport.addEventListener('resize',update);viewport.addEventListener('scroll',update);}
+    window.addEventListener('resize',update);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&active){draft.blur();setActive(false);}});
+    window.addEventListener('pagehide',function(){setActive(false);});
+  }
+
   function deskInit() {
     document.querySelector('.backup').appendChild(document.getElementById('deskMore'));
     var logo=document.querySelector('.bannerband');
@@ -8051,6 +8113,7 @@ body.capture-view .wisdom-by { opacity:.85; }
     var tags=el('div');tags.id='deskCaptureTags';document.getElementById('addBtn').insertAdjacentElement('beforebegin',tags);deskRenderCaptureTags();
     var wbTags=el('div');wbTags.id='deskWorkbenchTags';document.getElementById('wbBit').insertAdjacentElement('beforebegin',wbTags);
     draft.addEventListener('input',deskPersistCapture);
+    deskInitCaptureKeyboard();
     document.getElementById('deskHome').onclick=function(){deskRoute('home');};
     document.getElementById('deskStart').onclick=deskBegin;
     document.getElementById('deskAll').onclick=function(){deskRoute('pool');};
