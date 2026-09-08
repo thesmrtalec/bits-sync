@@ -2038,7 +2038,7 @@ body.capture-view .wisdom-by { opacity:.85; }
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.1.2";
+  var APP_VERSION = "v2.2.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -7781,7 +7781,9 @@ body.capture-view .wisdom-by { opacity:.85; }
     render(); window.scrollTo(0,0);
   }
   function deskBegin() {
-    var s=deskOpenSession(); deskSessionId=s ? s.id : null; deskRoute('write');
+    var s=deskSessions().find(function(x){return x.mode==='warmup' && !x.finished && deskDay(x.created)===deskDay(Date.now());});
+    if(!s)s=deskNewWarmup();
+    deskSessionId=s.id; deskRoute('write');
   }
   function deskUseSubject(text,id,forms) {
     if(!text.trim()) return;
@@ -7818,9 +7820,105 @@ body.capture-view .wisdom-by { opacity:.85; }
     deskSessions().forEach(function(s){h.appendChild(deskSessionCard(s));});
     if(!deskSessions().length) h.appendChild(deskButton('Start your first session',deskBegin,'primary'));
   }
+
+  var DESK_WARM_PROMPTS = [
+    'What small thing gets a bigger reaction out of you than it should?',
+    'What conversation are you still having in your head?',
+    'What are you already negotiating with yourself about?',
+    'What do people pretend is easy?',
+    'What ordinary thing have you never quite understood?',
+    'What are you looking forward to more than you want to admit?',
+    'What do you keep doing after deciding you are done doing it?',
+    'What phrase sounds normal until you think about it?',
+    'What tiny detail from somewhere you have been keeps coming back?',
+    'What do you take personally that probably is not about you?',
+    'What unwritten rule would you like to challenge?',
+    'What do you own that says too much about you?',
+    'What are you weirdly particular about?',
+    'What did you misunderstand for an embarrassingly long time?',
+    'What is sold as a convenience but feels like another job?',
+    'What do you envy that sounds ridiculous said out loud?',
+    'Where do your standards change when you are the one doing it?',
+    'What harmless thing makes you suspicious?',
+    'What responsibility do you still feel unqualified for?',
+    'What are you tired of acting interested in?',
+    'What unexpectedly made you happy recently?',
+    'What do you miss that you used to complain about?',
+    'What would someone misunderstand if they watched your routine?',
+    'What have you caught yourself defending for a bad reason?'
+  ];
+  var DESK_WARM_ANGLES = [
+    'What is the exact detail that makes this yours?',
+    'What do you actually want here? Say the unreasonable part.',
+    'What else behaves this way? Try a comparison.',
+    'Take the reaction too far. What does it turn into?',
+    'What would the other side say about you?',
+    'Give the thing you are describing a voice. What does it say?',
+    'Where do you contradict your own complaint?',
+    'What would you say if you stopped trying to sound reasonable?'
+  ];
+  function deskWarmPrompt(s) {
+    return s.angle ? DESK_WARM_ANGLES[s.angleIndex % DESK_WARM_ANGLES.length] : DESK_WARM_PROMPTS[s.deck[s.cursor % s.deck.length]];
+  }
+  function deskNewWarmup() {
+    var deck=DESK_WARM_PROMPTS.map(function(_,i){return i;});
+    for(var i=deck.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=deck[i];deck[i]=deck[j];deck[j]=t;}
+    var recent=deskSessions().filter(function(x){return x.mode==='warmup';}).slice(0,3).map(function(x){return x.deck[x.cursor%x.deck.length];});
+    var fresh=deck.findIndex(function(x){return recent.indexOf(x)===-1;});
+    if(fresh>0){var first=deck.splice(fresh,1)[0];deck.unshift(first);}
+    var s={id:uid(),mode:'warmup',subject:'Fresh writing',created:Date.now(),updated:Date.now(),pieces:[],draft:'',finished:null,deck:deck,cursor:0,angle:null,angleIndex:0};
+    deskSessions().unshift(s);return s;
+  }
+  function deskWarmKeep(s,text) {
+    text=text.trim();if(!text)return null;
+    var cue=deskWarmPrompt(s),now=Date.now();
+    var p={id:uid(),text:text,kind:'attempt',cue:cue,created:now};
+    if(s.angle)p.src=s.angle.id;
+    s.pieces.push(p);
+    var entry={id:p.id,text:text,created:now,writingSession:s.id,writingKind:'attempt',prompt:cue,subject:s.subject,forms:[]};
+    if(p.src)entry.src=p.src;
+    (state.truths||(state.truths=[])).unshift(entry);
+    s.draft='';s.updated=now;return p;
+  }
+  function deskRenderWarmup(h,s) {
+    if(s.finished){
+      h.appendChild(el('p','desk-kicker','Writing saved'));
+      h.appendChild(el('h1','desk-title',s.pieces.length+' '+(s.pieces.length===1?'piece':'pieces')+' of new writing.'));
+      h.appendChild(el('p','desk-copy','Your words are in Notebook. You can leave them rough.'));
+      h.appendChild(deskButton('Keep going',function(){s.finished=null;deskPersist();render();},'primary'));
+      h.appendChild(deskButton('Back to capture',function(){deskRoute('home');},'text'));
+      return;
+    }
+    var top=el('div','desk-section-head');top.appendChild(el('p','desk-kicker','Write today'));
+    top.appendChild(el('span','desk-meta',s.pieces.length+' saved'));h.appendChild(top);
+    var cue=deskWarmPrompt(s);h.appendChild(el('h1','desk-title',cue));
+    if(s.angle){var source=el('details','desk-previous');source.appendChild(el('summary',null,'The thought you’re riffing on'));source.appendChild(el('p',null,s.angle.text));h.appendChild(source);}
+    var ta=el('textarea','desk-writing');ta.id='deskWritingInput';ta.value=s.draft||'';ta.placeholder='A few words, a rough line, or wherever this takes you…';ta.setAttribute('aria-label',cue);h.appendChild(ta);
+    var status=el('p','desk-save',s.draft?'Draft restored':'Type or use your keyboard’s microphone.');status.id='deskWritingStatus';status.setAttribute('role','status');h.appendChild(status);
+    function advance(action){
+      var before=JSON.parse(JSON.stringify(s)),entries=state.truths;
+      var piece=deskWarmKeep(s,ta.value);
+      if(action==='stay' && !piece)return;
+      if(action==='stay'){s.angle=piece;s.angleIndex=before.angle ? before.angleIndex+1 : 0;}
+      else {s.angle=null;s.cursor++;}
+      if(action==='finish')s.finished=Date.now();
+      s.updated=Date.now();
+      if(deskPersist()===false){Object.keys(s).forEach(function(k){delete s[k];});Object.assign(s,before);if(piece)state.truths=entries.filter(function(x){return x.id!==piece.id;});status.textContent='Could not save. Your writing is still here. Try again.';return;}
+      render();window.scrollTo(0,0);
+    }
+    var actions=el('div','desk-actions');
+    var next=deskButton('Keep & next',function(){advance('next');},'primary');next.id='deskWritingNext';next.disabled=!ta.value.trim();actions.appendChild(next);h.appendChild(actions);
+    var choices=el('div','desk-actions');
+    var stay=deskButton('Keep & try an angle',function(){advance('stay');});stay.id='deskWarmStay';stay.disabled=!ta.value.trim();choices.appendChild(stay);
+    var skip=deskButton(ta.value.trim()?'Keep & switch prompt':'Different prompt',function(){advance('next');},'text');skip.id='deskWarmSkip';choices.appendChild(skip);h.appendChild(choices);
+    ta.oninput=function(){s.draft=ta.value;s.updated=Date.now();next.disabled=stay.disabled=!ta.value.trim();skip.textContent=ta.value.trim()?'Keep & switch prompt':'Different prompt';status.textContent='Saving draft…';clearTimeout(deskSaveTimer);deskSaveTimer=setTimeout(function(){status.textContent=deskPersist()===false?'Could not save. Keep this page open.':'Draft saved';},300);};
+    ta.onkeydown=function(e){if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();next.click();}};
+    var foot=el('div','desk-section');foot.appendChild(deskButton('Done for now',function(){advance('finish');},'text'));h.appendChild(foot);
+  }
+
   function deskRenderWriter() {
     var h=document.getElementById('deskWriter');h.innerHTML='';var s=deskCurrent();
-    h.appendChild(deskButton('Past sessions',function(){deskRoute('history');},'text'));
+    if(s && s.mode==='warmup'){deskRenderWarmup(h,s);return;}
     if(!s){deskRenderStart(h);return;}
     if(s.finished){deskRenderFinished(h,s);return;}
     var plan=deskSessionSteps(s);
@@ -7920,11 +8018,12 @@ body.capture-view .wisdom-by { opacity:.85; }
     document.getElementById('deskAxe').onclick=function(){document.getElementById('axeBtn').click();};
     document.getElementById('deskMore').onclick=function(){document.getElementById('drawerBtn').click();};
     document.getElementById('deskHistory').onclick=function(){deskRoute('history');};
+    document.getElementById('deskNotebookHead').appendChild(deskButton('Writing sessions',function(){deskRoute('history');},'text'));
     document.querySelectorAll('[data-desk]').forEach(function(b){b.onclick=function(){if(b.dataset.desk==='write')deskBegin();else deskRoute(b.dataset.desk);};});
     document.getElementById('freewriteBannerGo').onclick=deskBegin;
     document.getElementById('circuitBtn').onclick=function(){document.getElementById('utilMenu').style.display='none';deskBegin();};
     document.getElementById('circuitBtn').textContent='Daily writing session';
-    var wbAction=deskButton('Use this for today’s writing',function(){var b=benchFind();if(!b)return;saveWorkbench();document.getElementById('wbClose').click();var active=deskOpenSession();if(active){deskSessionId=active.id;deskRoute('write');toast('Continue your open session first.');}else deskUseSubject(b.text,b.id);});
+    var wbAction=deskButton('Explore a few versions',function(){var b=benchFind();if(!b)return;saveWorkbench();document.getElementById('wbClose').click();deskUseSubject(b.text,b.id);});
     document.getElementById('wbPad').insertAdjacentElement('afterend',wbAction);
     document.getElementById('deskDemo').hidden=!deskTrial;
     window.addEventListener('pagehide',function(){deskPersistCapture();if(deskView==='write')deskPersist();});
