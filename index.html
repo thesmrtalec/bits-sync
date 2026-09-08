@@ -1188,6 +1188,32 @@ body.capture-view .wisdom-by { opacity:.85; }
 .desk-nav button.active { background:transparent; border-bottom-color:var(--accent); color:var(--accent2); font-weight:700; }
 .desk-nav button:focus-visible,.desk-brand:focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
 
+/* Match the original notebook: handwriting on softly textured, ruled paper. */
+.desk-writing, .desk-capture #draft {
+  font-family:'Caveat','Bradley Hand',cursive;
+  font-size:22px;
+  font-weight:500;
+  line-height:1.5;
+  padding:12px 16px;
+  color:var(--ink);
+  background-color:var(--card);
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(1.5em - 1px), color-mix(in srgb, var(--ink) 14%, transparent) calc(1.5em - 1px), color-mix(in srgb, var(--ink) 14%, transparent) 1.5em),
+    radial-gradient(ellipse at 12% 18%, color-mix(in srgb, var(--page) 24%, transparent), transparent 75%),
+    radial-gradient(circle, color-mix(in srgb, var(--ink) 4%, transparent) .6px, transparent .9px);
+  background-size:auto, 100% 100%, 4px 5px;
+  background-position:0 12px, 0 0, 0 0;
+  background-attachment:local;
+  border:1px solid var(--rule);
+  border-radius:7px 9px 8px 6px;
+  box-shadow:inset 0 1px 3px #0000000a, 0 2px 5px #00000008;
+}
+.desk-writing::placeholder, .desk-capture #draft::placeholder {
+  color:var(--muted);
+  opacity:1;
+  font-style:normal;
+}
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -2053,7 +2079,7 @@ body.capture-view .wisdom-by { opacity:.85; }
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.2.2";
+  var APP_VERSION = "v2.2.3";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
