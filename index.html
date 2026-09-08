@@ -1051,7 +1051,7 @@
 :root { --desk-rule: var(--rule); --muted:#6d6051; --faint:#796953; }
 @media (prefers-color-scheme:dark) { :root { --muted:#b0a28e; --faint:#ac9983; } }
 body { font-size:16px; }
-.wrap { max-width:1000px; padding:0 28px 108px; }
+.wrap { max-width:1000px; padding:0 28px calc(28px + env(safe-area-inset-bottom)); }
 .desk-unused,#sectionRow,#freewriteBanner,.backup .tool-row,#capForms,#capOriginPick { display:none!important; }
 .desk-header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:24px 0 22px; border-bottom:2px solid var(--ink); margin-bottom:28px; }
 .desk-brand { border:0; background:none; padding:0; color:var(--ink); font:700 24px var(--serif); letter-spacing:-.6px; }
@@ -1087,7 +1087,7 @@ body { font-size:16px; }
 .desk-entry p { font:17px/1.45 var(--serif); margin:0 0 7px; white-space:pre-wrap; overflow-wrap:anywhere; }
 .desk-meta { font:12px/1.5 var(--mono); color:var(--muted); }
 .desk-empty { color:var(--muted); font-size:16px; line-height:1.5; padding:15px 0; }
-.desk-nav { position:fixed; z-index:100; left:50%; transform:translateX(-50%); bottom:0; width:min(100%,1000px); display:flex; background:var(--card); border-top:1px solid var(--rule); padding:8px 16px calc(8px + env(safe-area-inset-bottom)); box-shadow:0 -6px 20px #00000008; }
+.desk-nav { position:sticky; z-index:40; top:0; width:100%; display:flex; gap:4px; background:var(--card); border-bottom:1px solid var(--rule); padding:calc(6px + env(safe-area-inset-top)) 6px 6px; margin-bottom:22px; box-shadow:0 4px 12px #00000008; }
 .desk-nav button { flex:1; min-height:48px; border:0; border-radius:6px; background:none; font:14px var(--mono); color:var(--muted); }
 .desk-nav button.active { color:var(--accent2); background:var(--tagbg); font-weight:700; }
 .desk-tabs { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 20px; }
@@ -1122,7 +1122,7 @@ body { font-size:16px; }
 .welcome-gate,.tour-invite,.tour-curtain { display:none!important; }
 #searchBox { font-size:16px; min-height:46px; }
 @media (max-width:650px) {
- .wrap { padding:0 18px 108px; border:0; }
+ .wrap { padding:0 18px calc(24px + env(safe-area-inset-bottom)); border:0; }
  .desk-header { padding:18px 0; margin-bottom:22px; }
  .desk-brand { font-size:22px; }
  .desk-tools { gap:5px; }
@@ -1173,6 +1173,12 @@ body.capture-view .wisdom-by { opacity:.85; }
 .run-stage { min-height:0; align-items:flex-start; }
 .run-stage > .run-card { margin-top:auto; margin-bottom:auto; flex-shrink:0; }
 
+/* Navigation stays with the page; occasional tools live in its footer. */
+.desk-header { display:none!important; }
+.desk-nav button { min-width:0; overflow-wrap:anywhere; padding:8px 4px; }
+.backup #deskMore { margin-left:auto; flex:0 0 auto; }
+.backup #authWho { overflow-wrap:anywhere; min-width:0; }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -1196,6 +1202,7 @@ body.capture-view .wisdom-by { opacity:.85; }
 </head>
 <body>
 <div class="wrap">
+<nav class="desk-nav" aria-label="Main navigation"><button data-desk="home">Capture</button><button data-desk="write">Write today</button><button data-desk="pool">Notebook</button><button data-desk="sets">Set lists</button></nav>
 <header class="desk-header">
   <button class="desk-brand" id="deskHome">Just the <span>Bits.</span></button>
   <div class="desk-tools"><button class="desk-btn" id="deskMore" aria-label="More tools and settings">More</button></div>
@@ -1212,7 +1219,6 @@ body.capture-view .wisdom-by { opacity:.85; }
 <section id="deskNotebookHead" hidden><h1 class="desk-title">Your notebook.</h1><div class="desk-tabs"><button class="desk-btn" id="deskCaptured">Captured thoughts</button><button class="desk-btn" id="deskBits">Developing bits</button><button class="desk-btn" id="deskStarred">Starred</button><button class="desk-btn" id="deskAxe">🪓 Axe mode</button></div></section>
 <section id="deskWriter" class="desk-writer" hidden aria-label="Daily writing session"></section>
 <section id="deskHistoryPanel" hidden></section>
-<nav class="desk-nav" aria-label="Main navigation"><button data-desk="home">Capture</button><button data-desk="write">Write today</button><button data-desk="pool">Notebook</button><button data-desk="sets">Set lists</button></nav>
 
   <div class="bannerband">
     <h1 class="sr-only">Just the Bits</h1>
@@ -2038,7 +2044,7 @@ body.capture-view .wisdom-by { opacity:.85; }
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.2.0";
+  var APP_VERSION = "v2.2.1";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -7995,6 +8001,7 @@ body.capture-view .wisdom-by { opacity:.85; }
     document.querySelectorAll('[data-desk]').forEach(function(b){var v=b.dataset.desk;b.classList.toggle('active',v===deskView||(v==='pool'&&deskView==='bit'));b.setAttribute('aria-current',b.classList.contains('active')?'page':'false');});
   }
   function deskInit() {
+    document.querySelector('.backup').appendChild(document.getElementById('deskMore'));
     var logo=document.querySelector('.bannerband');
     document.getElementById('deskHomePanel').insertAdjacentElement('beforebegin',logo);
     logo.querySelectorAll('img').forEach(function(img){img.alt='Just the Bits';});
