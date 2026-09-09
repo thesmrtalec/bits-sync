@@ -1265,6 +1265,42 @@ body.write-typing #deskWriter .desk-actions .desk-btn { flex:1; min-width:0; min
 body.write-typing #deskWriter > .desk-section { flex:0 0 auto; margin:0; padding:0; border:0; }
 body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; padding:4px 0; font-size:14px; }
 
+/* Notebook: browse first, occasional controls tucked away. */
+.notice-mirror,#list > .lens-row { display:none; }
+#deskNotebookHead .desk-title { margin:0; }
+#deskNotebookHead .desk-section-head { align-items:center; }
+#deskNotebookMenu { position:relative; flex-shrink:0; }
+#deskNotebookMenu summary,#deskFilters summary,#deskBenchLines summary { cursor:pointer; font:14px var(--mono); padding:12px 4px; color:var(--accent2); }
+.desk-notebook-menu { position:absolute; z-index:46; right:0; min-width:200px; padding:12px; background:var(--card); border:1px solid var(--rule); box-shadow:0 5px 16px #0002; }
+.desk-notebook-menu .desk-btn { display:block; width:100%; text-align:left; margin:4px 0; }
+#searchRow { display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px; }
+#searchBox { flex:1; min-width:150px; }
+#deskFilters { flex:0 0 auto; max-width:100%; }
+#deskFilters[open] { flex-basis:100%; }
+#deskFilterChoices { margin:8px 0; }
+#list .swipe-face > .star-btn { float:right; min-width:44px; min-height:44px; margin:-4px -2px 0 6px; }
+#list [role=button]:focus-visible { outline:2px solid var(--accent); }
+.desk-original { display:block; width:100%; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; background:var(--card); color:var(--ink); border:1px solid var(--rule); border-radius:7px; padding:14px; font:500 22px/1.4 'Caveat','Bradley Hand',cursive; margin-bottom:18px; }
+.desk-original[hidden],#wbBit[hidden] { display:none!important; }
+#workbenchOverlay #wbBit,#workbenchOverlay #wbPad { flex:none; max-height:none; overflow:hidden; resize:none; }
+#workbenchOverlay .notes-head { flex-wrap:wrap; }
+#deskBenchStatus { margin-left:auto; }
+#deskBenchKeyboardDone { display:none; }
+#deskBenchLines { margin:12px 0; }
+body.bench-typing { overflow:hidden; }
+body.bench-typing #workbenchOverlay .notes-inner { position:fixed; top:var(--bench-top,0); height:var(--bench-height,100dvh); min-height:0; max-height:none; width:100%; max-width:none; display:flex; gap:10px; padding:10px 16px 12px; overflow:hidden; background:var(--page); }
+body.bench-typing #workbenchOverlay .notes-inner > :not(.notes-head):not(.desk-bench-active):not(#deskBenchLines) { display:none!important; }
+body.bench-typing #workbenchOverlay .notes-head { margin:0; flex:0 0 auto; }
+body.bench-typing #wbTitle { font-size:20px; }
+body.bench-typing #deskBenchKeyboardDone { display:block; }
+body.bench-typing #workbenchOverlay .desk-bench-active { flex:1 1 0!important; height:0!important; min-height:0!important; max-height:none!important; overflow-y:auto!important; display:block!important; margin:0; width:100%; }
+body.bench-typing #deskBenchLines { display:contents; }
+body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!important; }
+
+#deskNotebookMenu > summary { list-style:none; min-width:44px; text-align:center; }
+#deskNotebookMenu > summary::-webkit-details-marker { display:none; }
+.desk-original { background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(1.4em - 1px),color-mix(in srgb,var(--ink) 12%,transparent) calc(1.4em - 1px),color-mix(in srgb,var(--ink) 12%,transparent) 1.4em); background-position:0 14px; }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -1302,7 +1338,11 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
  <section class="desk-section" hidden><div class="desk-section-head"><h2>Recently captured</h2><button class="desk-btn text" id="deskAll">Open notebook</button></div><div class="desk-recent" id="deskRecent"></div></section>
  <section class="desk-section" hidden><div class="desk-section-head"><h2>Writing sessions</h2><button class="desk-btn text" id="deskHistory">See all</button></div><div class="desk-recent" id="deskSessions"></div></section>
 </main>
-<section id="deskNotebookHead" hidden><h1 class="desk-title">Your notebook.</h1><div class="desk-tabs"><button class="desk-btn" id="deskCaptured">Captured thoughts</button><button class="desk-btn" id="deskBits">Developing bits</button><button class="desk-btn" id="deskSets" data-desk="sets">Set lists</button><button class="desk-btn" id="deskStarred">Starred</button><button class="desk-btn" id="deskAxe">🪓 Axe mode</button></div></section>
+<section id="deskNotebookHead" hidden>
+ <div class="desk-section-head"><h1 class="desk-title">Your notebook.</h1><details id="deskNotebookMenu"><summary aria-label="Notebook menu" title="Notebook menu">•••</summary><div class="desk-notebook-menu"><button class="desk-btn" id="deskSets" data-desk="sets">Set lists</button><button class="desk-btn" id="deskAxe">🪓 Axe mode</button></div></details></div>
+ <div class="desk-tabs"><button class="desk-btn" id="deskCaptured">Captured</button><button class="desk-btn" id="deskBits">Developing</button></div>
+ <details id="deskFilters"><summary>Filter</summary><div id="deskFilterChoices"></div><button class="desk-btn" id="deskStarred">Starred only</button><button class="desk-btn text" id="deskClearFilters">Clear filters</button></details>
+</section>
 <section id="deskWriter" class="desk-writer" hidden aria-label="Daily writing session"></section>
 <section id="deskHistoryPanel" hidden></section>
 
@@ -2130,7 +2170,7 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.2.5";
+  var APP_VERSION = "v2.3.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -2840,7 +2880,7 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
     // list
     var list = document.getElementById("list");
     list.innerHTML = "";
-    var visible = state.bits.slice();
+    var visible = state.bits.filter(function(x){return lensMatch(x,stuffLens) && (!deskOnlyStarred || x.flag);});
     visible.sort(function (a, b2) { return b2.created - a.created; });
 
     var todayK = truthDayKey(Date.now());
@@ -2914,9 +2954,9 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
       p.title = isOpen ? "Tap to collapse \u00b7 long-press to copy" : "Tap to open \u00b7 long-press to copy";
       p.onclick = function () {
         if (swipeOpenCard === card) { closeSwipe(); return; }
-        expandedBit = isOpen ? null : b.id; render();
+        openWorkbench(b.id, "bit");
       };
-      attachLongPressCopy(p, function () { return b.text; });
+      deskEntryAccess(p); card.appendChild(starToggle(b)); attachLongPressCopy(p, function () { return b.text; });
       card.appendChild(p);
 
       if (!isOpen) {
@@ -2977,9 +3017,9 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
       };
       footR.appendChild(rBtn);
       footR.appendChild(starToggle(b));
-      var wbBtn = el("button", "foot-btn bench-btn", "gym");
-      wbBtn.title = "Into the gym";
-      wbBtn.setAttribute("aria-label", "gym");
+      var wbBtn = el("button", "foot-btn bench-btn", "Working notes");
+      wbBtn.title = "Open working notes";
+      wbBtn.setAttribute("aria-label", "Working notes");
       wbBtn.onclick = function (e) { e.stopPropagation(); openWorkbench(b.id); };
       footR.appendChild(wbBtn);
       foot.appendChild(footR);
@@ -3446,7 +3486,7 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
       : "Not a bit after all — move it back to the stuff pool";
     mv.onclick = wbMoveAcross;
     document.getElementById("workbenchOverlay").classList.add("open");
-    setTimeout(function () { document.getElementById("wbBit").focus(); }, 0);
+
   }
 
   // Tag editing lives right in the workbench — this is where you're actually
@@ -3485,12 +3525,12 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
     if (!b) return;
     saveWorkbench();
     var isTruth = workbenchKind === "truth";
-    var carried = {
+    var carried = Object.assign({}, b, {
       id: b.id, text: b.text, created: b.created,
       workshop: b.workshop, mined: b.mined,
       tags: (b.tags || []).slice(),
       touched: Date.now()
-    };
+    });
     if (isTruth) {
       // stuff -> bit
       state.truths = (state.truths || []).filter(function (x) { return x.id !== b.id; });
@@ -3601,7 +3641,7 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
     if ((v && v !== b.text) || pad !== (b.workshop || "")) b.touched = Date.now();
     if (v) b.text = v;
     b.workshop = pad;
-    save();
+    return save();
   }
   document.getElementById("flipClose").onclick = closeFlip;
   document.getElementById("flipPrev").onclick = function () { flipGo(-1); };
@@ -5376,7 +5416,7 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
     var mirror = buildNoticeMirror(all);
     if (mirror) list.appendChild(mirror);
     list.appendChild(buildLensRow(all, stuffLens, function (k) { stuffLens = k; render(); }));
-    var truths = all.filter(function (x) { return lensMatch(x, stuffLens); });
+    var truths = all.filter(function (x) { return lensMatch(x, stuffLens) && (!deskOnlyStarred || x.flag); });
     if (truths.length === 0) {
       list.appendChild(el("p", "empty", "Nothing of that shape yet."));
       return;
@@ -5442,9 +5482,9 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
       p.title = isOpen ? "Tap to collapse \u00b7 long-press to copy" : "Tap to open \u00b7 long-press to copy";
       p.onclick = function () {
         if (swipeOpenCard === card) { closeSwipe(); return; }
-        expandedTruth = isOpen ? null : t.id; render();
+        openWorkbench(t.id, "truth");
       };
-      attachLongPressCopy(p, function () { return t.text; });
+      deskEntryAccess(p); card.appendChild(starToggle(t)); attachLongPressCopy(p, function () { return t.text; });
       card.appendChild(p);
 
       if (!isOpen) {
@@ -5472,9 +5512,9 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
         footR.appendChild(mined);
       }
       footR.appendChild(starToggle(t));
-      var twb = el("button", "foot-btn bench-btn", "gym");
-      twb.setAttribute("aria-label", "gym");
-      twb.title = "Into the gym";
+      var twb = el("button", "foot-btn bench-btn", "Working notes");
+      twb.setAttribute("aria-label", "Working notes");
+      twb.title = "Open working notes";
       twb.onclick = function (e) { e.stopPropagation(); openWorkbench(t.id, "truth"); };
       footR.appendChild(twb);
       foot.appendChild(footR);
@@ -8184,7 +8224,7 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
     document.getElementById('deskAxe').onclick=function(){document.getElementById('axeBtn').click();};
     document.getElementById('deskMore').onclick=function(){document.getElementById('drawerBtn').click();};
     document.getElementById('deskHistory').onclick=function(){deskRoute('history');};
-    document.getElementById('deskNotebookHead').appendChild(deskButton('Writing sessions',function(){deskRoute('history');},'text'));
+    document.querySelector('.desk-notebook-menu').appendChild(deskButton('Writing sessions',function(){deskRoute('history');},'text'));
     document.querySelectorAll('[data-desk]').forEach(function(b){b.onclick=function(){if(b.dataset.desk==='write')deskBegin();else deskRoute(b.dataset.desk);};});
     document.getElementById('freewriteBannerGo').onclick=deskBegin;
     document.getElementById('circuitBtn').onclick=function(){document.getElementById('utilMenu').style.display='none';deskBegin();};
@@ -8208,9 +8248,85 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
   // Safe trial never initializes Supabase, even when a real session is cached.
   if(deskTrial){KEY=deskTrialKey;SYNC_READY=false;}
 
+  var deskOnlyStarred=false,deskBenchScroll=0,deskBenchActive=null,deskBenchKeyboardUpdate=null;
+  function deskEntryAccess(p){
+    p.setAttribute('role','button');p.tabIndex=0;p.title='Open working notes · long-press to copy';
+    p.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();p.click();}};
+  }
+  function deskNotebookFilters(){
+    var panel=document.getElementById('deskFilters');if(!panel)return;
+    panel.hidden=deskView!=='pool'&&deskView!=='bit';
+    var pool=deskView==='bit'?state.bits:(state.truths||[]),host=document.getElementById('deskFilterChoices');host.innerHTML='';
+    host.appendChild(buildLensRow(pool,stuffLens,function(k){stuffLens=k;render();}));
+    panel.querySelector('summary').textContent='Filter'+(stuffLens?' · '+(stuffLens==='__none'?'Untagged':deskFormLabel(stuffLens)):'')+(deskOnlyStarred?' · Starred':'');
+    var star=document.getElementById('deskStarred');star.setAttribute('aria-pressed',String(deskOnlyStarred));star.classList.toggle('active',deskOnlyStarred);
+  }
+  function deskBenchGrow(node){if(!node||node===deskBenchActive)return;node.style.height='auto';node.style.height=Math.max(node.scrollHeight,node.id==='wbPad'?200:80)+'px';}
+  function deskBenchRefresh(){
+    var bit=document.getElementById('wbBit'),preview=document.getElementById('deskOriginal');
+    preview.textContent=bit.value;bit.hidden=true;preview.hidden=false;
+    document.getElementById('deskBenchLines').open=false;
+    document.getElementById('deskBenchStatus').textContent='';
+    deskBenchGrow(document.getElementById('wbPad'));
+    document.getElementById('workbenchOverlay').scrollTop=0;
+  }
+  var deskNotebookRender=render;
+  render=function(){deskNotebookRender();deskNotebookFilters();};
+  var deskNotebookOpen=openWorkbench;
+  openWorkbench=function(id,kind){
+    if(!document.getElementById('workbenchOverlay').classList.contains('open'))deskBenchScroll=window.scrollY;
+    deskNotebookOpen(id,kind);if(workbenchId)deskBenchRefresh();
+  };
+  function deskNotebookInit(){
+    var search=document.getElementById('searchRow'),filters=document.getElementById('deskFilters');search.appendChild(filters);
+    document.getElementById('deskStarred').onclick=function(){deskOnlyStarred=!deskOnlyStarred;render();};
+    document.getElementById('deskClearFilters').onclick=function(){deskOnlyStarred=false;stuffLens=null;render();};
+    document.querySelector('.desk-notebook-menu').addEventListener('click',function(e){if(e.target.closest('button'))document.getElementById('deskNotebookMenu').open=false;});
+    var overlay=document.getElementById('workbenchOverlay'),inner=overlay.querySelector('.notes-inner'),bit=document.getElementById('wbBit'),pad=document.getElementById('wbPad');
+    var preview=el('button','desk-original');preview.id='deskOriginal';preview.setAttribute('aria-label','Original thought — tap to edit');bit.before(preview);
+    preview.onclick=function(){preview.hidden=true;bit.hidden=false;deskBenchGrow(bit);bit.focus({preventScroll:true});};
+    var label=pad.previousElementSibling;bit.after(label,pad);
+    var lines=document.createElement('details');lines.id='deskBenchLines';lines.appendChild(el('summary',null,'Alternate lines'));
+    var angle=document.getElementById('wbAngleInput'),angleLabel=angle.previousElementSibling;
+    lines.appendChild(angleLabel);lines.appendChild(angle);lines.appendChild(document.getElementById('wbAngles'));pad.after(lines);
+    var status=el('span','desk-meta');status.id='deskBenchStatus';status.setAttribute('role','status');overlay.querySelector('.notes-head').insertBefore(status,document.getElementById('wbClose'));
+    var viewport=window.visualViewport,fullHeight=viewport?viewport.height:innerHeight,sawKeyboard=false,scroll=0;
+    function closeKeyboard(){
+      document.body.classList.remove('bench-typing');if(deskBenchActive)deskBenchActive.classList.remove('desk-bench-active');deskBenchActive=null;sawKeyboard=false;
+      inner.style.removeProperty('--bench-top');inner.style.removeProperty('--bench-height');overlay.scrollTop=scroll;
+      deskBenchGrow(pad);if(!bit.hidden)deskBenchGrow(bit);
+    }
+    function update(){
+      if(!deskBenchActive)return;
+      var height=viewport?viewport.height:innerHeight;
+      if(fullHeight-height>100)sawKeyboard=true;
+      if(sawKeyboard&&fullHeight-height<60){deskBenchActive.blur();closeKeyboard();return;}
+      inner.style.setProperty('--bench-top',(viewport?viewport.offsetTop:0)+'px');inner.style.setProperty('--bench-height',height+'px');
+    }
+    deskBenchKeyboardUpdate=update;
+    [bit,pad,angle].forEach(function(field){
+      field.addEventListener('focus',function(){
+        if(!matchMedia('(pointer: coarse)').matches)return;
+        if(!deskBenchActive){scroll=overlay.scrollTop;fullHeight=Math.max(fullHeight,viewport?viewport.height:innerHeight);sawKeyboard=false;}
+        if(deskBenchActive)deskBenchActive.classList.remove('desk-bench-active');deskBenchActive=field;field.classList.add('desk-bench-active');document.body.classList.add('bench-typing');update();
+      });
+      if(field!==angle)field.oninput=function(){status.textContent=saveWorkbench()===false?'Could not save. Keep this open.':'Saved on device';deskBenchGrow(field);};
+      field.addEventListener('blur',function(){setTimeout(function(){if(deskBenchActive&&!inner.contains(document.activeElement))closeKeyboard();},0);});
+    });
+    // Pull the optional line input into the same flex layout while typing.
+    var dismiss=deskButton('Done editing',function(){if(deskBenchActive)deskBenchActive.blur();closeKeyboard();},'text');dismiss.id='deskBenchKeyboardDone';overlay.querySelector('.notes-head').appendChild(dismiss);
+    var close=document.getElementById('wbClose'),classicClose=close.onclick;
+    close.onclick=function(){if(deskBenchActive)deskBenchActive.blur();closeKeyboard();classicClose();requestAnimationFrame(function(){window.scrollTo(0,deskBenchScroll);});};
+    if(viewport){viewport.addEventListener('resize',update);viewport.addEventListener('scroll',update);}
+    window.addEventListener('resize',update);
+    document.addEventListener('keydown',function(e){if(e.key==='Escape'&&deskBenchActive){deskBenchActive.blur();closeKeyboard();}});
+    deskNotebookFilters();
+  }
+
   load();
 
   deskInit();
+  deskNotebookInit();
   drawerRoute("deskLegacyPrompts", "shadowBtn");
   drawerRoute("deskLegacyLibrary", "libraryBtn");
   drawerRoute("deskLegacyRiff", "shuffleBtn");
