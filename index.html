@@ -1300,6 +1300,14 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 #deskNotebookMenu > summary { list-style:none; min-width:44px; text-align:center; }
 #deskNotebookMenu > summary::-webkit-details-marker { display:none; }
 .desk-original { background-image:repeating-linear-gradient(to bottom,transparent 0,transparent calc(1.4em - 1px),color-mix(in srgb,var(--ink) 12%,transparent) calc(1.4em - 1px),color-mix(in srgb,var(--ink) 12%,transparent) 1.4em); background-position:0 14px; }
+.desk-status-tabs { display:flex; gap:22px; margin:4px 0 12px; border-bottom:1px solid var(--rule); }
+.desk-status-tabs .desk-btn { padding:9px 0; border:0; border-bottom:2px solid transparent; border-radius:0; background:transparent; }
+.desk-status-tabs .desk-btn.active { color:var(--accent2); border-bottom-color:var(--accent); }
+.desk-unified-date { margin:18px 0 8px; font:12px var(--mono); text-transform:uppercase; letter-spacing:.12em; color:var(--muted); }
+.desk-unified-card { cursor:default; }
+.desk-unified-card > .star-btn { float:right; min-width:44px; min-height:44px; margin:-6px -4px 0 8px; }
+.desk-unified-card > p { cursor:pointer; white-space:pre-wrap; overflow-wrap:anywhere; }
+#workbenchOverlay #wbMove { display:none; }
 
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1340,7 +1348,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 </main>
 <section id="deskNotebookHead" hidden>
  <div class="desk-section-head"><h1 class="desk-title">Your notebook.</h1><details id="deskNotebookMenu"><summary aria-label="Notebook menu" title="Notebook menu">•••</summary><div class="desk-notebook-menu"><button class="desk-btn" id="deskSets" data-desk="sets">Set lists</button><button class="desk-btn" id="deskAxe">🪓 Axe mode</button></div></details></div>
- <div class="desk-tabs"><button class="desk-btn" id="deskCaptured">Captured</button><button class="desk-btn" id="deskBits">Developing</button></div>
+ <div class="desk-status-tabs" role="group" aria-label="Notebook view"><button class="desk-btn active" id="deskAllStatus" aria-pressed="true">All</button><button class="desk-btn" id="deskNewStatus" aria-pressed="false">New</button><button class="desk-btn" id="deskWorkedStatus" aria-pressed="false">Worked</button></div>
  <details id="deskFilters"><summary>Filter</summary><div id="deskFilterChoices"></div><button class="desk-btn" id="deskStarred">Starred only</button><button class="desk-btn text" id="deskClearFilters">Clear filters</button></details>
 </section>
 <section id="deskWriter" class="desk-writer" hidden aria-label="Daily writing session"></section>
@@ -2170,7 +2178,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.3.0";
+  var APP_VERSION = "v2.4.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -7906,6 +7914,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   }
   function deskButton(label,fn,cls) { var b=el('button','desk-btn'+(cls?' '+cls:''),label); b.onclick=fn; return b; }
   function deskRoute(view) {
+    if(view==='bit') view='pool';
     if(deskCurrent() && deskView==='write') deskPersist();
     deskView=view;
     stageFilter=(view==='pool'||view==='bit'||view==='sets') ? view : 'home';
@@ -8122,9 +8131,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     document.getElementById('deskNotebookHead').hidden=['pool','bit','sets','history'].indexOf(deskView)===-1;
     document.getElementById('deskWriter').hidden=deskView!=='write';
     document.getElementById('deskHistoryPanel').hidden=deskView!=='history';
-    document.getElementById('deskCaptured').classList.toggle('active',deskView==='pool');
-    document.getElementById('deskBits').classList.toggle('active',deskView==='bit');
-    var notebook=deskView==='pool'||deskView==='bit';
+    var notebook=deskView==='pool';
     document.getElementById('searchRow').style.display=notebook?'':'none';
     if(notebook)renderSearch();else document.getElementById('searchOut').innerHTML='';
     if(deskView==='home')deskRenderHome();if(deskView==='write')deskRenderWriter();if(deskView==='history')deskRenderHistory();
@@ -8218,8 +8225,6 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     document.getElementById('deskHome').onclick=function(){deskRoute('home');};
     document.getElementById('deskStart').onclick=deskBegin;
     document.getElementById('deskAll').onclick=function(){deskRoute('pool');};
-    document.getElementById('deskCaptured').onclick=function(){deskRoute('pool');};
-    document.getElementById('deskBits').onclick=function(){deskRoute('bit');};
     document.getElementById('deskStarred').onclick=function(){document.getElementById('flaggedBtn').click();};
     document.getElementById('deskAxe').onclick=function(){document.getElementById('axeBtn').click();};
     document.getElementById('deskMore').onclick=function(){document.getElementById('drawerBtn').click();};
@@ -8248,15 +8253,41 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   // Safe trial never initializes Supabase, even when a real session is cached.
   if(deskTrial){KEY=deskTrialKey;SYNC_READY=false;}
 
-  var deskOnlyStarred=false,deskBenchScroll=0,deskBenchActive=null,deskBenchKeyboardUpdate=null;
+  var deskOnlyStarred=false,deskNotebookStatus='all',deskBenchScroll=0,deskBenchActive=null,deskBenchKeyboardUpdate=null;
+  function deskIsWorked(entry,kind){
+    return kind==='bit'||!!(entry.workshop&&entry.workshop.trim())||!!(entry.angles&&entry.angles.length)||!!entry.mined||!!entry.writingSession||!!entry.touched;
+  }
+  function deskUnifiedEntries(){
+    var truths=(state.truths||[]).map(function(x){return {entry:x,kind:'truth'};});
+    var bits=(state.bits||[]).map(function(x){return {entry:x,kind:'bit'};});
+    return truths.concat(bits).filter(function(row){
+      var worked=deskIsWorked(row.entry,row.kind);
+      return (!stuffLens||lensMatch(row.entry,stuffLens))&&(!deskOnlyStarred||row.entry.flag)&&(deskNotebookStatus==='all'||(deskNotebookStatus==='worked'?worked:!worked));
+    }).sort(function(a,b){return (b.entry.created||0)-(a.entry.created||0);});
+  }
+  function deskRenderUnifiedNotebook(){
+    var list=document.getElementById('list');list.innerHTML='';var rows=deskUnifiedEntries();
+    if(!rows.length){list.appendChild(el('p','desk-empty',deskNotebookStatus==='new'?'No untouched thoughts here.':deskNotebookStatus==='worked'?'Nothing worked yet.':'Nothing here yet.'));return;}
+    var last='';
+    rows.forEach(function(row){
+      var e=row.entry,key=truthDayKey(e.created||Date.now());
+      if(key!==last){last=key;list.appendChild(el('div','rollup-head desk-unified-date',key===truthDayKey(Date.now())?'Today':new Date(e.created||Date.now()).toLocaleDateString(undefined,{month:'short',day:'numeric'})));}
+      var card=el('article','bone-card truth-card desk-unified-card');
+      if(e.prompt)card.appendChild(el('div','card-prompt',e.prompt));
+      var star=starToggle(e);card.appendChild(star);
+      var body=el('p',null,e.text);deskEntryAccess(body);body.onclick=function(){openWorkbench(e.id,row.kind);};attachLongPressCopy(body,function(){return e.text;});card.appendChild(body);
+      var meta=[];if(deskIsWorked(e,row.kind))meta.push('Worked');var forms=deskTagText(e.forms);if(forms)meta.push(forms);if(meta.length)card.appendChild(el('div','desk-meta',meta.join(' · ')));
+      list.appendChild(card);
+    });
+  }
   function deskEntryAccess(p){
     p.setAttribute('role','button');p.tabIndex=0;p.title='Open working notes · long-press to copy';
     p.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();p.click();}};
   }
   function deskNotebookFilters(){
     var panel=document.getElementById('deskFilters');if(!panel)return;
-    panel.hidden=deskView!=='pool'&&deskView!=='bit';
-    var pool=deskView==='bit'?state.bits:(state.truths||[]),host=document.getElementById('deskFilterChoices');host.innerHTML='';
+    panel.hidden=deskView!=='pool';
+    var pool=(state.truths||[]).concat(state.bits||[]),host=document.getElementById('deskFilterChoices');host.innerHTML='';
     host.appendChild(buildLensRow(pool,stuffLens,function(k){stuffLens=k;render();}));
     panel.querySelector('summary').textContent='Filter'+(stuffLens?' · '+(stuffLens==='__none'?'Untagged':deskFormLabel(stuffLens)):'')+(deskOnlyStarred?' · Starred':'');
     var star=document.getElementById('deskStarred');star.setAttribute('aria-pressed',String(deskOnlyStarred));star.classList.toggle('active',deskOnlyStarred);
@@ -8271,7 +8302,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     document.getElementById('workbenchOverlay').scrollTop=0;
   }
   var deskNotebookRender=render;
-  render=function(){deskNotebookRender();deskNotebookFilters();};
+  render=function(){deskNotebookRender();if(deskView==='pool')deskRenderUnifiedNotebook();deskNotebookFilters();};
   var deskNotebookOpen=openWorkbench;
   openWorkbench=function(id,kind){
     if(!document.getElementById('workbenchOverlay').classList.contains('open'))deskBenchScroll=window.scrollY;
@@ -8280,7 +8311,8 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   function deskNotebookInit(){
     var search=document.getElementById('searchRow'),filters=document.getElementById('deskFilters');search.appendChild(filters);
     document.getElementById('deskStarred').onclick=function(){deskOnlyStarred=!deskOnlyStarred;render();};
-    document.getElementById('deskClearFilters').onclick=function(){deskOnlyStarred=false;stuffLens=null;render();};
+    document.getElementById('deskClearFilters').onclick=function(){deskOnlyStarred=false;stuffLens=null;deskNotebookStatus='all';render();};
+    [['deskAllStatus','all'],['deskNewStatus','new'],['deskWorkedStatus','worked']].forEach(function(pair){document.getElementById(pair[0]).onclick=function(){deskNotebookStatus=pair[1];render();};});
     document.querySelector('.desk-notebook-menu').addEventListener('click',function(e){if(e.target.closest('button'))document.getElementById('deskNotebookMenu').open=false;});
     var overlay=document.getElementById('workbenchOverlay'),inner=overlay.querySelector('.notes-inner'),bit=document.getElementById('wbBit'),pad=document.getElementById('wbPad');
     var preview=el('button','desk-original');preview.id='deskOriginal';preview.setAttribute('aria-label','Original thought — tap to edit');bit.before(preview);
@@ -8322,6 +8354,11 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     document.addEventListener('keydown',function(e){if(e.key==='Escape'&&deskBenchActive){deskBenchActive.blur();closeKeyboard();}});
     deskNotebookFilters();
   }
+  var deskStatusRender=deskNotebookFilters;
+  deskNotebookFilters=function(){
+    deskStatusRender();
+    [['deskAllStatus','all'],['deskNewStatus','new'],['deskWorkedStatus','worked']].forEach(function(pair){var b=document.getElementById(pair[0]);var on=deskNotebookStatus===pair[1];b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});
+  };
 
   load();
 
