@@ -1238,6 +1238,33 @@ body.capture-typing #deskCaptureTags .desk-tag { flex:1; min-width:0; padding:8p
 body.capture-typing .desk-capture #addBtn { flex:0 0 auto; align-self:stretch; min-height:44px; padding:10px 16px; }
 body.capture-typing #deskCaptureStatus { flex:0 0 auto; margin:0; font-size:12px; min-height:16px; }
 
+
+/* Fresh writing uses the same above-keyboard workspace as Capture. */
+body.write-typing { overflow:hidden; }
+body.write-typing .desk-header, body.write-typing .desk-nav,
+body.write-typing .backup { display:none!important; }
+body.write-typing #deskWriter {
+  position:fixed; z-index:45; left:0; right:0; width:100%; max-width:none;
+  top:var(--write-top,0px); height:var(--write-height,100dvh);
+  display:flex; flex-direction:column; gap:8px;
+  padding:10px 16px 12px; background:var(--page); overflow:hidden;
+}
+body.write-typing #deskWriter > .desk-section-head,
+body.write-typing #deskWriter > .desk-previous { display:none; }
+body.write-typing #deskWriter > .desk-title {
+  flex:0 1 auto; min-height:28px; max-height:26%; overflow-y:auto;
+  margin:0; font-size:21px; line-height:1.2; letter-spacing:0;
+}
+body.write-typing #deskWritingInput {
+  flex:1 1 0; height:0; min-height:0; max-height:none; margin:0;
+  overflow-y:auto; resize:none;
+}
+body.write-typing #deskWritingStatus { flex:0 0 auto; margin:0; min-height:16px; font-size:12px; }
+body.write-typing #deskWriter > .desk-actions { flex:0 0 auto; margin:0; gap:8px; flex-wrap:nowrap; }
+body.write-typing #deskWriter .desk-actions .desk-btn { flex:1; min-width:0; min-height:44px; padding:8px 6px; font-size:13px; }
+body.write-typing #deskWriter > .desk-section { flex:0 0 auto; margin:0; padding:0; border:0; }
+body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; padding:4px 0; font-size:14px; }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -2103,7 +2130,7 @@ body.capture-typing #deskCaptureStatus { flex:0 0 auto; margin:0; font-size:12px
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.2.4";
+  var APP_VERSION = "v2.2.5";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -7733,7 +7760,7 @@ body.capture-typing #deskCaptureStatus { flex:0 0 auto; margin:0; font-size:12px
 
   // Daily writing lives alongside the existing notebook schema. Every submitted
   // piece is also an ordinary captured entry, readable by the previous app.
-  var deskView = 'home', deskSessionId = null, deskSaveTimer = null;
+  var deskView = 'home', deskSessionId = null, deskSaveTimer = null, deskWriteKeyboardSync = null;
   var deskTrial = new URLSearchParams(location.search).get('demo') === '1';
   var deskTrialKey = 'bits-studio-trial-v2';
   var DESK_STEPS = [
@@ -7969,7 +7996,10 @@ body.capture-typing #deskCaptureStatus { flex:0 0 auto; margin:0; font-size:12px
       if(action==='finish')s.finished=Date.now();
       s.updated=Date.now();
       if(deskPersist()===false){Object.keys(s).forEach(function(k){delete s[k];});Object.assign(s,before);if(piece)state.truths=entries.filter(function(x){return x.id!==piece.id;});status.textContent='Could not save. Your writing is still here. Try again.';return;}
-      render();window.scrollTo(0,0);
+      var keepKeyboard=document.body.classList.contains('write-typing');
+      render();
+      if(keepKeyboard && !s.finished){var input=document.getElementById('deskWritingInput');if(input)input.focus({preventScroll:true});}
+      else window.scrollTo(0,0);
     }
     var actions=el('div','desk-actions');
     var next=deskButton('Keep & next',function(){advance('next');},'primary');next.id='deskWritingNext';next.disabled=!ta.value.trim();actions.appendChild(next);h.appendChild(actions);
@@ -7983,6 +8013,7 @@ body.capture-typing #deskCaptureStatus { flex:0 0 auto; margin:0; font-size:12px
 
   function deskRenderWriter() {
     var h=document.getElementById('deskWriter');h.innerHTML='';var s=deskCurrent();
+    h.dataset.keyboardWriter=String(!!(s && s.mode==='warmup' && !s.finished));
     if(s && s.mode==='warmup'){deskRenderWarmup(h,s);return;}
     if(!s){deskRenderStart(h);return;}
     if(s.finished){deskRenderFinished(h,s);return;}
@@ -8057,7 +8088,36 @@ body.capture-typing #deskCaptureStatus { flex:0 0 auto; margin:0; font-size:12px
     document.getElementById('searchRow').style.display=notebook?'':'none';
     if(notebook)renderSearch();else document.getElementById('searchOut').innerHTML='';
     if(deskView==='home')deskRenderHome();if(deskView==='write')deskRenderWriter();if(deskView==='history')deskRenderHistory();
+    if(deskWriteKeyboardSync)deskWriteKeyboardSync();
     document.querySelectorAll('[data-desk]').forEach(function(b){var v=b.dataset.desk;b.classList.toggle('active',v===deskView||(v==='pool'&&['bit','sets','history'].indexOf(deskView)!==-1));b.setAttribute('aria-current',b.classList.contains('active')?'page':'false');});
+  }
+
+
+  function deskInitWriteKeyboard() {
+    var host=document.getElementById('deskWriter'),viewport=window.visualViewport;
+    var active=false,sawKeyboard=false,fullHeight=viewport?viewport.height:window.innerHeight;
+    function close(){active=false;sawKeyboard=false;document.body.classList.remove('write-typing');host.style.removeProperty('--write-top');host.style.removeProperty('--write-height');}
+    function update(){
+      if(!active)return;
+      if(deskView!=='write'||host.dataset.keyboardWriter!=='true'){close();return;}
+      var height=viewport?viewport.height:window.innerHeight;
+      if(fullHeight-height>100)sawKeyboard=true;
+      if(sawKeyboard&&fullHeight-height<60){var input=host.querySelector('textarea');if(input)input.blur();close();return;}
+      host.style.setProperty('--write-top',(viewport?viewport.offsetTop:0)+'px');
+      host.style.setProperty('--write-height',height+'px');
+    }
+    deskWriteKeyboardSync=update;
+    host.addEventListener('focusin',function(e){
+      if(e.target.id!=='deskWritingInput'||host.dataset.keyboardWriter!=='true'||!window.matchMedia('(pointer: coarse)').matches)return;
+      if(!active){fullHeight=Math.max(fullHeight,viewport?viewport.height:window.innerHeight);sawKeyboard=false;active=true;document.body.classList.add('write-typing');}update();
+    });
+    host.addEventListener('focusout',function(){setTimeout(function(){if(active&&!host.contains(document.activeElement))close();},0);});
+    host.addEventListener('pointerdown',function(e){
+      if(active&&e.target.closest('button')){e.preventDefault();var input=host.querySelector('textarea');if(input)input.focus({preventScroll:true});}
+    });
+    if(viewport){viewport.addEventListener('resize',update);viewport.addEventListener('scroll',update);}
+    window.addEventListener('resize',update);
+    window.addEventListener('pagehide',close);
   }
 
   function deskInitCaptureKeyboard() {
@@ -8114,6 +8174,7 @@ body.capture-typing #deskCaptureStatus { flex:0 0 auto; margin:0; font-size:12px
     var wbTags=el('div');wbTags.id='deskWorkbenchTags';document.getElementById('wbBit').insertAdjacentElement('beforebegin',wbTags);
     draft.addEventListener('input',deskPersistCapture);
     deskInitCaptureKeyboard();
+    deskInitWriteKeyboard();
     document.getElementById('deskHome').onclick=function(){deskRoute('home');};
     document.getElementById('deskStart').onclick=deskBegin;
     document.getElementById('deskAll').onclick=function(){deskRoute('pool');};
