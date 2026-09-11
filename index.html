@@ -3263,8 +3263,7 @@
         });
       });
       groups = Object.keys(byName).sort(function (a, b) {
-        if (byName[b].length !== byName[a].length) return byName[b].length - byName[a].length;
-        return a.localeCompare(b);
+        return lastName(a).localeCompare(lastName(b)) || a.localeCompare(b);
       }).map(function (n) { return { name: n, items: byName[n] }; });
       note.textContent = groups.length
         ? groups.length + (groups.length === 1 ? " voice" : " voices")
