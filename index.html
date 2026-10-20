@@ -618,6 +618,7 @@
   .share-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
   .share-actions button { border:1px solid var(--rule); border-radius:9px; padding:11px 9px; background:var(--card);
     color:var(--ink); font:11px var(--mono); cursor:pointer; }
+  .share-actions button small { display:block; margin-top:5px; opacity:.72; font-size:9px; font-weight:400; }
   .share-actions button.primary { background:var(--accent); border-color:var(--accent); color:var(--onaccent); }
   .share-hint { color:var(--faint); font:10px/1.4 var(--mono); margin:10px 2px 0; }
   @media (min-width:700px) { .share-sheet { align-items:center; } .share-panel { border-radius:18px; } }
@@ -1088,7 +1089,7 @@ body { font-size:16px; }
 .desk-copy { color:var(--muted); font-size:16px; line-height:1.5; margin:8px 0 20px; }
 .desk-grid { display:grid; grid-template-columns:1.15fr 1fr; gap:32px; align-items:start; }
 .desk-capture .capture { display:flex!important; flex-direction:column; gap:10px; margin:0; }
-.desk-capture #draft { min-height:170px!important; width:100%; font-size:19px; line-height:1.5; }
+.desk-capture #draft { min-height:76px!important; max-height:96px; width:100%; font-size:16px; line-height:1.4; overflow-y:auto; }
 .desk-capture .add-btn { align-self:flex-start; min-height:44px; padding:12px 20px; font-size:14px; text-transform:none; letter-spacing:0; }
 .desk-capture #capDest { display:none!important; }
 .desk-save { font:12px var(--mono); color:var(--muted); min-height:18px; margin:10px 0 0; }
@@ -1150,7 +1151,7 @@ body { font-size:16px; }
  .desk-tools .desk-btn { padding:8px 10px; font-size:13px; }
  .desk-grid { grid-template-columns:1fr; gap:25px; }
  .desk-invite { padding:20px; }
- .desk-capture #draft { min-height:135px!important; }
+ .desk-capture #draft { min-height:76px!important; max-height:96px; }
  .desk-invite h2 { font-size:26px; }
  .desk-week { margin-top:18px; }
  .desk-writing { min-height:200px; font-size:18px; }
@@ -1166,6 +1167,19 @@ body { font-size:16px; }
 .desk-tag.selected { color:var(--accent2); background:var(--tagbg); border-color:var(--accent); font-weight:700; }
 .desk-tag.selected::before { content:'✓ '; }
 .desk-tag:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+.capture-tags-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:-2px 0 4px; }
+.capture-tag-toggle { border:0; background:transparent; color:var(--accent2); padding:7px 2px; font:12px var(--mono); }
+.capture-tag-summary { color:var(--muted); font:11px/1.4 var(--mono); }
+.capture-tag-tray { width:100%; border-top:1px solid var(--rule); padding-top:9px; }
+.capture-tag-input-row { display:flex; gap:7px; }
+.capture-tag-input-row input { flex:1; min-width:0; border:1px solid var(--rule); border-radius:7px; background:var(--card); color:var(--ink); padding:8px 10px; font:13px var(--mono); }
+.capture-tag-input-row button { border:1px solid var(--rule); border-radius:7px; background:var(--card); color:var(--ink); padding:8px 11px; font:12px var(--mono); }
+.capture-tag-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.capture-tag-chip { border:1px solid var(--rule); border-radius:999px; background:transparent; color:var(--muted); padding:5px 9px; font:11px var(--mono); }
+.capture-tag-chip.on { border-color:var(--accent); background:var(--tagbg); color:var(--accent2); }
+.desk-entry-actions { display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:9px; border-top:1px solid var(--rule); }
+.desk-entry-action { border:0; background:transparent; color:var(--accent2); padding:5px 6px 5px 0; font:12px var(--mono); }
+.desk-entry-action + .desk-entry-action { color:var(--muted); }
 
 /* Quiet capture; the writing workspace lives behind its own navigation item. */
 body.capture-view .wrap { max-width:620px; }
@@ -1178,7 +1192,7 @@ body.capture-view .desk-capture > .desk-title { display:none; }
 body.capture-view .desk-invite { display:none; }
 body.capture-view .desk-invite > :not(#deskStart) { display:none; }
 body.capture-view #deskStart { background:none; border-color:var(--rule); color:var(--accent2); width:auto; font-weight:400; }
-body.capture-view .desk-capture #draft { min-height:190px!important; }
+body.capture-view .desk-capture #draft { min-height:76px!important; max-height:96px; }
 body.capture-view .wisdom { margin:4px 0 20px; padding:24px 18px 8px; }
 body.capture-view .wisdom-q { opacity:1; }
 body.capture-view .wisdom-by { opacity:.85; }
@@ -2111,7 +2125,6 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     <div class="notes-inner">
       <div class="notes-head">
         <h2 id="wbTitle">Working notes</h2>
-        <button class="wb-share" id="wbShare">share</button>
         <button class="notes-close" id="wbClose">done</button>
       </div>
       <div class="wb-label" id="wbBitLabel">the bit</div>
@@ -2131,15 +2144,13 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   </div>
   <div class="share-sheet" id="shareSheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
     <div class="share-panel">
-      <div class="share-head"><h2 id="shareTitle">Share this bit</h2><button class="share-close" id="shareClose">done</button></div>
+      <div class="share-head"><h2 id="shareTitle">Share</h2><button class="share-close" id="shareClose">done</button></div>
       <div class="share-preview" id="sharePreview"></div>
       <div class="share-actions">
-        <button class="primary" id="shareNative">share</button>
-        <button id="shareCopy">copy text</button>
-        <button id="shareText">download .txt</button>
-        <button id="shareCards">post cards</button>
+        <button class="primary" id="shareScreen">One screen<small>bit + alternate lines</small></button>
+        <button id="shareCards">Slides<small>one line per image</small></button>
       </div>
-      <p class="share-hint">Post cards exports square PNGs: the bit first, then one card per alternate line. Working notes stay private.</p>
+      <p class="share-hint">Working notes stay private.</p>
     </div>
   </div>
   <div class="notes-overlay" id="notesOverlay">
@@ -2213,7 +2224,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.5.0";
+  var APP_VERSION = "v2.6.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3085,6 +3096,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
   var pendingForms = [];
+  var pendingTags = [];
   var capOrigin = null;   // earned/forced for the home capture box
   var batchForms = [];   // noticing badges armed for the next fired line
   var batchOrigin = null;   // "earned" | "forced" | null — premise lane only, optional
@@ -3131,10 +3143,12 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       if (!state.truths) state.truths = [];
       var t0 = { id: uid(), text: text, created: Date.now() };
       if (forms.length) t0.forms = forms;
+      if (pendingTags.length) t0.tags = pendingTags.slice();
       /* Quick tags describe an entry, not its quality. */   // a truth is a badged entry; auto-star it
       if (capOrigin) t0.origin = capOrigin;
       state.truths.unshift(t0);
       draft.value = "";
+      pendingTags = [];
       pendingForms = []; renderCapForms();
       resetCapOrigin();
       save(); render();
@@ -3143,7 +3157,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var b0 = {
       id: uid(),
       text: text,
-      tags: [],
+      tags: pendingTags.slice(),
       created: Date.now(),
       statusAt: Date.now()
     };
@@ -3151,6 +3165,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     if (capOrigin) b0.origin = capOrigin;
     state.bits.unshift(b0);
     draft.value = "";
+    pendingTags = [];
     pendingForms = []; renderCapForms();
     resetCapOrigin();
     draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
@@ -3446,7 +3461,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var who = document.getElementById("authWho");
     if (sbUser) {
       gate.classList.remove("open");
-      if (!draft.value) { try { draft.value=localStorage.getItem(deskDraftKey())||""; pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+"-forms")||"[]"); if(!Array.isArray(pendingForms))pendingForms=[]; deskRenderCaptureTags(); } catch(e) {} }
+      if (!draft.value) { try { draft.value=localStorage.getItem(deskDraftKey())||""; pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+"-forms")||"[]"); if(!Array.isArray(pendingForms))pendingForms=[]; pendingTags=JSON.parse(localStorage.getItem(deskDraftKey()+"-tags")||"[]"); if(!Array.isArray(pendingTags))pendingTags=[]; deskRenderCaptureTags(); } catch(e) {} }
       if (who) who.textContent = sbUser.email || "signed in";
     } else {
       gate.classList.add("open");
@@ -3575,11 +3590,18 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     out.push("", "— Just the Bits");
     return out.join("\n");
   }
-  function openShareSheet() {
-    saveWorkbench();
-    var b = benchFind();
+  function sharePublicText(b) {
+    var out=[b.text||""];
+    entryAngles(b).forEach(function(a){out.push("",a.t);});
+    return out.join("\n");
+  }
+  var shareTarget = null;
+  function openShareSheet(target) {
+    if (!target) saveWorkbench();
+    var b = target || benchFind();
     if (!b) return;
-    document.getElementById("sharePreview").textContent = shareEntryText(b);
+    shareTarget = b;
+    document.getElementById("sharePreview").textContent = sharePublicText(b);
     document.getElementById("shareSheet").classList.add("open");
   }
   function closeShareSheet() { document.getElementById("shareSheet").classList.remove("open"); }
@@ -3593,7 +3615,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 1200);
   }
   function copyShareText() {
-    var b = benchFind(); if (!b) return;
+    var b = shareTarget || benchFind(); if (!b) return;
     var text = shareEntryText(b);
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function () { alert("Copied."); }, function () { legacyCopy(text); });
@@ -3604,7 +3626,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); alert("Copied.");
   }
   function nativeShareEntry() {
-    var b = benchFind(); if (!b) return;
+    var b = shareTarget || benchFind(); if (!b) return;
     var payload = { title: "Just the Bits", text: shareEntryText(b) };
     if (navigator.share) navigator.share(payload).catch(function () {}); else copyShareText();
   }
@@ -3640,7 +3662,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     return new Promise(function (resolve) { c.toBlob(resolve, "image/png"); });
   }
   function exportPostCards() {
-    var b = benchFind(); if (!b) return;
+    var b = shareTarget || benchFind(); if (!b) return;
     var slides = [b.text].concat(entryAngles(b).map(function (a) { return a.t; })).filter(Boolean);
     Promise.all(slides.map(function (t,i) { return makePostCard(t,i+1,slides.length); })).then(function (blobs) {
       var stem = safeFileStem(b.text);
@@ -3652,15 +3674,17 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       }
     });
   }
-  document.getElementById("wbShare").onclick = openShareSheet;
+  function exportOneScreen() {
+    var b=shareTarget||benchFind();if(!b)return;
+    makePostCard(sharePublicText(b),1,1).then(function(blob){
+      var stem=safeFileStem(b.text),file=new File([blob],stem+".png",{type:"image/png"});
+      if(navigator.canShare&&navigator.share&&navigator.canShare({files:[file]}))navigator.share({files:[file],title:"Just the Bits"}).catch(function(){});
+      else downloadBlob(blob,stem+".png");
+    });
+  }
   document.getElementById("shareClose").onclick = closeShareSheet;
   document.getElementById("shareSheet").onclick = function (e) { if (e.target === this) closeShareSheet(); };
-  document.getElementById("shareCopy").onclick = copyShareText;
-  document.getElementById("shareNative").onclick = nativeShareEntry;
-  document.getElementById("shareText").onclick = function () {
-    var b = benchFind(); if (!b) return;
-    downloadBlob(new Blob([shareEntryText(b)], {type:"text/plain;charset=utf-8"}), safeFileStem(b.text) + ".txt");
-  };
+  document.getElementById("shareScreen").onclick = exportOneScreen;
   document.getElementById("shareCards").onclick = exportPostCards;
 
   // Move the open item between the stuff pool and bits, carrying everything
@@ -7987,9 +8011,26 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     bridge.label='Keep this & try versions';return [bridge].concat(versions);
   }
   function deskSessionSteps(s) { return s.steps || DESK_STEPS; }
+  var captureTagTrayOpen=false;
   function deskRenderCaptureTags() {
     var host=document.getElementById('deskCaptureTags');if(!host)return;host.innerHTML='';
     host.appendChild(deskTagRow(pendingForms,function(forms){pendingForms=forms;deskRenderCaptureTags();deskPersistCapture();}));
+    var bar=el('div','capture-tags-bar');
+    var toggle=el('button','capture-tag-toggle',captureTagTrayOpen?'done tagging':'+ tag');toggle.type='button';
+    toggle.setAttribute('aria-expanded',String(captureTagTrayOpen));
+    toggle.onclick=function(){captureTagTrayOpen=!captureTagTrayOpen;deskRenderCaptureTags();};bar.appendChild(toggle);
+    if(pendingTags.length)bar.appendChild(el('span','capture-tag-summary',pendingTags.join(' · ')));
+    host.appendChild(bar);
+    if(!captureTagTrayOpen)return;
+    var tray=el('div','capture-tag-tray'),inputRow=el('div','capture-tag-input-row');
+    var input=el('input');input.placeholder='tag…';input.setAttribute('aria-label','Add a tag');
+    function addTag(raw){var tag=(raw||'').trim().toLowerCase();if(tag&&pendingTags.indexOf(tag)===-1)pendingTags.push(tag);deskPersistCapture();deskRenderCaptureTags();}
+    input.onkeydown=function(e){if(e.key==='Enter'||e.key===','){e.preventDefault();addTag(input.value);}else if(e.key==='Escape'){captureTagTrayOpen=false;deskRenderCaptureTags();draft.focus();}};
+    var add=el('button',null,'add');add.type='button';add.onclick=function(){addTag(input.value);};inputRow.appendChild(input);inputRow.appendChild(add);tray.appendChild(inputRow);
+    var chips=el('div','capture-tag-chips');
+    pendingTags.forEach(function(tag){var chip=el('button','capture-tag-chip on',tag+' ×');chip.type='button';chip.onclick=function(){pendingTags=pendingTags.filter(function(x){return x!==tag;});deskPersistCapture();deskRenderCaptureTags();};chips.appendChild(chip);});
+    allTagCounts().slice(0,10).forEach(function(item){if(pendingTags.indexOf(item.tag)!==-1)return;var chip=el('button','capture-tag-chip',item.tag);chip.type='button';chip.onclick=function(){pendingTags.push(item.tag);deskPersistCapture();deskRenderCaptureTags();};chips.appendChild(chip);});
+    tray.appendChild(chips);host.appendChild(tray);setTimeout(function(){var field=host.querySelector('.capture-tag-input-row input');if(field)field.focus();},0);
   }
   function deskRenderWorkbenchTags() {
     var host=document.getElementById('deskWorkbenchTags'),b=benchFind();if(!host||!b)return;host.innerHTML='';
@@ -8047,7 +8088,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   }
   function deskDraftKey() { return deskTrial ? deskTrialKey+'-capture' : KEY+'-capture-'+(sbUser ? sbUser.id : 'device'); }
   function deskPersistCapture() {
-    try { localStorage.setItem(deskDraftKey(),draft.value); localStorage.setItem(deskDraftKey()+'-forms',JSON.stringify(pendingForms)); document.getElementById('deskCaptureStatus').textContent=draft.value ? 'Draft saved on this device' : ''; }
+    try { localStorage.setItem(deskDraftKey(),draft.value); localStorage.setItem(deskDraftKey()+'-forms',JSON.stringify(pendingForms)); localStorage.setItem(deskDraftKey()+'-tags',JSON.stringify(pendingTags)); document.getElementById('deskCaptureStatus').textContent=draft.value ? 'Draft saved on this device' : ''; }
     catch(e) { document.getElementById('deskCaptureStatus').textContent='Draft could not save. Keep this page open.'; }
   }
   function deskButton(label,fn,cls) { var b=el('button','desk-btn'+(cls?' '+cls:''),label); b.onclick=fn; return b; }
@@ -8355,10 +8396,10 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     draft.placeholder='Catch the thought…';draft.setAttribute('aria-label','Capture a funny thought');document.getElementById('addBtn').textContent='Save thought';
     try{draft.value=localStorage.getItem(deskDraftKey())||'';}catch(e){}
     try{pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+'-forms')||'[]');if(!Array.isArray(pendingForms))pendingForms=[];}catch(e){pendingForms=[];}
+    try{pendingTags=JSON.parse(localStorage.getItem(deskDraftKey()+'-tags')||'[]');if(!Array.isArray(pendingTags))pendingTags=[];}catch(e){pendingTags=[];}
     var tags=el('div');tags.id='deskCaptureTags';document.getElementById('addBtn').insertAdjacentElement('beforebegin',tags);deskRenderCaptureTags();
     var wbTags=el('div');wbTags.id='deskWorkbenchTags';document.getElementById('wbBit').insertAdjacentElement('beforebegin',wbTags);
     draft.addEventListener('input',deskPersistCapture);
-    deskInitCaptureKeyboard();
     deskInitWriteKeyboard();
     document.getElementById('deskHome').onclick=function(){deskRoute('home');};
     document.getElementById('deskStart').onclick=deskBegin;
@@ -8413,8 +8454,12 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       var card=el('article','bone-card truth-card desk-unified-card');
       if(e.prompt)card.appendChild(el('div','card-prompt',e.prompt));
       var star=starToggle(e);card.appendChild(star);
-      var body=el('p',null,e.text);deskEntryAccess(body);body.onclick=function(){openWorkbench(e.id,row.kind);};attachLongPressCopy(body,function(){return e.text;});card.appendChild(body);
-      var meta=[];if(deskIsWorked(e,row.kind))meta.push('Worked');var forms=deskTagText(e.forms);if(forms)meta.push(forms);if(meta.length)card.appendChild(el('div','desk-meta',meta.join(' · ')));
+      var body=el('p',null,e.text);attachLongPressCopy(body,function(){return e.text;});card.appendChild(body);
+      var meta=[];if(deskIsWorked(e,row.kind))meta.push('Worked');var forms=deskTagText(e.forms);if(forms)meta.push(forms);if(e.tags&&e.tags.length)meta.push(e.tags.join(' · '));if(meta.length)card.appendChild(el('div','desk-meta',meta.join(' · ')));
+      var actions=el('div','desk-entry-actions');
+      var develop=el('button','desk-entry-action','Develop');develop.type='button';develop.onclick=function(){openWorkbench(e.id,row.kind);};actions.appendChild(develop);
+      var share=el('button','desk-entry-action','Share');share.type='button';share.onclick=function(){openShareSheet(e);};actions.appendChild(share);
+      card.appendChild(actions);
       list.appendChild(card);
     });
   }
