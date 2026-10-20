@@ -602,6 +602,27 @@
   .wb-pad { flex: 1 1 auto; min-height: 200px; }
   .wb-meta { font-family: var(--mono); font-size: 10.5px; color: var(--faint); margin: 14px 0 0; }
   .has-notes { font-family: var(--mono); font-size: 11px; color: var(--accent); opacity: .65; }
+  .wb-share { background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 999px;
+    padding: 6px 12px; font-family: var(--mono); font-size: 11px; cursor: pointer; margin-left: auto; }
+  .wb-share:hover { border-color: var(--accent); color: var(--accent); }
+  .share-sheet { position: fixed; inset: 0; z-index: 520; display: none; align-items: flex-end;
+    justify-content: center; background: rgba(0,0,0,.42); padding: 18px; }
+  .share-sheet.open { display: flex; }
+  .share-panel { width: min(520px,100%); max-height: 84dvh; overflow: auto; background: var(--page);
+    border: 1px solid var(--rule); border-radius: 18px 18px 10px 10px; padding: 20px; box-shadow: 0 18px 60px rgba(0,0,0,.25); }
+  .share-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .share-head h2 { margin:0; font-family:var(--serif); font-size:22px; }
+  .share-close { margin-left:auto; background:transparent; border:0; color:var(--muted); font:12px var(--mono); }
+  .share-preview { white-space:pre-wrap; font:15px/1.55 var(--serif); color:var(--ink); background:var(--card);
+    border:1px solid var(--rule); border-radius:10px; padding:14px; max-height:34dvh; overflow:auto; }
+  .share-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
+  .share-actions button { border:1px solid var(--rule); border-radius:9px; padding:11px 9px; background:var(--card);
+    color:var(--ink); font:11px var(--mono); cursor:pointer; }
+  .share-actions button.primary { background:var(--accent); border-color:var(--accent); color:var(--onaccent); }
+  .share-hint { color:var(--faint); font:10px/1.4 var(--mono); margin:10px 2px 0; }
+  @media (min-width:700px) { .share-sheet { align-items:center; } .share-panel { border-radius:18px; } }
+  /* Keep the line being worked visible while the notes below it scroll. */
+  #workbenchOverlay .wb-bit { position: sticky; top: 50px; z-index: 2; box-shadow: 0 10px 14px -14px rgba(0,0,0,.45); }
 
   /* ——— sync auth gate ——— */
   .auth-gate { position: fixed; inset: 0; background: var(--page); z-index: 80; display: none; align-items: center; justify-content: center; padding: 24px; }
@@ -2090,6 +2111,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     <div class="notes-inner">
       <div class="notes-head">
         <h2 id="wbTitle">Working notes</h2>
+        <button class="wb-share" id="wbShare">share</button>
         <button class="notes-close" id="wbClose">done</button>
       </div>
       <div class="wb-label" id="wbBitLabel">the bit</div>
@@ -2105,6 +2127,19 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
         <button class="wb-move" id="wbMove"></button>
         <div class="wb-meta" id="wbMeta"></div>
       </div>
+    </div>
+  </div>
+  <div class="share-sheet" id="shareSheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
+    <div class="share-panel">
+      <div class="share-head"><h2 id="shareTitle">Share this bit</h2><button class="share-close" id="shareClose">done</button></div>
+      <div class="share-preview" id="sharePreview"></div>
+      <div class="share-actions">
+        <button class="primary" id="shareNative">share</button>
+        <button id="shareCopy">copy text</button>
+        <button id="shareText">download .txt</button>
+        <button id="shareCards">post cards</button>
+      </div>
+      <p class="share-hint">Post cards exports square PNGs: the bit first, then one card per alternate line. Working notes stay private.</p>
     </div>
   </div>
   <div class="notes-overlay" id="notesOverlay">
@@ -2178,7 +2213,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.4.0";
+  var APP_VERSION = "v2.5.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3524,6 +3559,109 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       host.appendChild(add);
     }
   }
+
+  // ——— share / export ———
+  // Full-entry sharing preserves the work around a bit. Social cards deliberately
+  // publish only the written material; scratchpad notes never leak into images.
+  function shareEntryText(b) {
+    var out = [b.text || ""];
+    var angles = entryAngles(b);
+    if (angles.length) {
+      out.push("", "ALTERNATE LINES");
+      angles.forEach(function (a) { out.push("— " + a.t); });
+    }
+    if (b.workshop && b.workshop.trim()) out.push("", "WORKING NOTES", b.workshop.trim());
+    if (b.tags && b.tags.length) out.push("", "TAGS", b.tags.join(" · "));
+    out.push("", "— Just the Bits");
+    return out.join("\n");
+  }
+  function openShareSheet() {
+    saveWorkbench();
+    var b = benchFind();
+    if (!b) return;
+    document.getElementById("sharePreview").textContent = shareEntryText(b);
+    document.getElementById("shareSheet").classList.add("open");
+  }
+  function closeShareSheet() { document.getElementById("shareSheet").classList.remove("open"); }
+  function safeFileStem(text) {
+    var stem = (text || "bit").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 42);
+    return stem || "bit";
+  }
+  function downloadBlob(blob, name) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1200);
+  }
+  function copyShareText() {
+    var b = benchFind(); if (!b) return;
+    var text = shareEntryText(b);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { alert("Copied."); }, function () { legacyCopy(text); });
+    } else legacyCopy(text);
+  }
+  function legacyCopy(text) {
+    var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); alert("Copied.");
+  }
+  function nativeShareEntry() {
+    var b = benchFind(); if (!b) return;
+    var payload = { title: "Just the Bits", text: shareEntryText(b) };
+    if (navigator.share) navigator.share(payload).catch(function () {}); else copyShareText();
+  }
+  function wrapCanvasText(ctx, text, maxWidth) {
+    var words = String(text).split(/\s+/), lines = [], line = "";
+    words.forEach(function (word) {
+      var test = line ? line + " " + word : word;
+      if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = word; }
+      else line = test;
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+  function makePostCard(text, number, total) {
+    var c = document.createElement("canvas"), size = 1080; c.width = size; c.height = size;
+    var ctx = c.getContext("2d");
+    var styles = getComputedStyle(document.body);
+    ctx.fillStyle = styles.getPropertyValue("--page").trim() || "#f4eddf"; ctx.fillRect(0,0,size,size);
+    ctx.strokeStyle = styles.getPropertyValue("--rule").trim() || "#cabda6"; ctx.lineWidth = 3; ctx.strokeRect(56,56,size-112,size-112);
+    ctx.fillStyle = styles.getPropertyValue("--ink").trim() || "#201b17";
+    var fontSize = text.length > 320 ? 42 : text.length > 180 ? 52 : text.length > 90 ? 62 : 72;
+    ctx.font = "600 " + fontSize + "px Georgia, serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    var lines = wrapCanvasText(ctx, text, 820), lineH = fontSize * 1.28;
+    while (lines.length * lineH > 660 && fontSize > 34) {
+      fontSize -= 4; lineH = fontSize * 1.28; ctx.font = "600 " + fontSize + "px Georgia, serif";
+      lines = wrapCanvasText(ctx, text, 820);
+    }
+    var y = Math.max(170, (size - lines.length * lineH) / 2 - 20);
+    lines.forEach(function (line) { ctx.fillText(line,130,y); y += lineH; });
+    ctx.font = "24px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillStyle = styles.getPropertyValue("--muted").trim() || "#746b60";
+    ctx.fillText("JUST THE BITS",130,900); ctx.textAlign = "right"; ctx.fillText(number + " / " + total,950,900);
+    return new Promise(function (resolve) { c.toBlob(resolve, "image/png"); });
+  }
+  function exportPostCards() {
+    var b = benchFind(); if (!b) return;
+    var slides = [b.text].concat(entryAngles(b).map(function (a) { return a.t; })).filter(Boolean);
+    Promise.all(slides.map(function (t,i) { return makePostCard(t,i+1,slides.length); })).then(function (blobs) {
+      var stem = safeFileStem(b.text);
+      var files = blobs.map(function (blob,i) { return new File([blob], stem + "-" + (i+1) + ".png", {type:"image/png"}); });
+      if (navigator.canShare && navigator.share && navigator.canShare({files:files})) {
+        navigator.share({files:files,title:"Just the Bits"}).catch(function () {});
+      } else {
+        blobs.forEach(function (blob,i) { setTimeout(function () { downloadBlob(blob, stem + "-" + (i+1) + ".png"); }, i*180); });
+      }
+    });
+  }
+  document.getElementById("wbShare").onclick = openShareSheet;
+  document.getElementById("shareClose").onclick = closeShareSheet;
+  document.getElementById("shareSheet").onclick = function (e) { if (e.target === this) closeShareSheet(); };
+  document.getElementById("shareCopy").onclick = copyShareText;
+  document.getElementById("shareNative").onclick = nativeShareEntry;
+  document.getElementById("shareText").onclick = function () {
+    var b = benchFind(); if (!b) return;
+    downloadBlob(new Blob([shareEntryText(b)], {type:"text/plain;charset=utf-8"}), safeFileStem(b.text) + ".txt");
+  };
+  document.getElementById("shareCards").onclick = exportPostCards;
 
   // Move the open item between the stuff pool and bits, carrying everything
   // with it (text, workshop notes, tags, history). The workbench stays open on
