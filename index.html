@@ -602,28 +602,6 @@
   .wb-pad { flex: 1 1 auto; min-height: 200px; }
   .wb-meta { font-family: var(--mono); font-size: 10.5px; color: var(--faint); margin: 14px 0 0; }
   .has-notes { font-family: var(--mono); font-size: 11px; color: var(--accent); opacity: .65; }
-  .wb-share { background: transparent; border: 1px solid var(--rule); color: var(--muted); border-radius: 999px;
-    padding: 6px 12px; font-family: var(--mono); font-size: 11px; cursor: pointer; margin-left: auto; }
-  .wb-share:hover { border-color: var(--accent); color: var(--accent); }
-  .share-sheet { position: fixed; inset: 0; z-index: 520; display: none; align-items: flex-end;
-    justify-content: center; background: rgba(0,0,0,.42); padding: 18px; }
-  .share-sheet.open { display: flex; }
-  .share-panel { width: min(520px,100%); max-height: 84dvh; overflow: auto; background: var(--page);
-    border: 1px solid var(--rule); border-radius: 18px 18px 10px 10px; padding: 20px; box-shadow: 0 18px 60px rgba(0,0,0,.25); }
-  .share-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
-  .share-head h2 { margin:0; font-family:var(--serif); font-size:22px; }
-  .share-close { margin-left:auto; background:transparent; border:0; color:var(--muted); font:12px var(--mono); }
-  .share-preview { white-space:pre-wrap; font:15px/1.55 var(--serif); color:var(--ink); background:var(--card);
-    border:1px solid var(--rule); border-radius:10px; padding:14px; max-height:34dvh; overflow:auto; }
-  .share-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
-  .share-actions button { border:1px solid var(--rule); border-radius:9px; padding:11px 9px; background:var(--card);
-    color:var(--ink); font:11px var(--mono); cursor:pointer; }
-  .share-actions button small { display:block; margin-top:5px; opacity:.72; font-size:9px; font-weight:400; }
-  .share-actions button.primary { background:var(--accent); border-color:var(--accent); color:var(--onaccent); }
-  .share-hint { color:var(--faint); font:10px/1.4 var(--mono); margin:10px 2px 0; }
-  @media (min-width:700px) { .share-sheet { align-items:center; } .share-panel { border-radius:18px; } }
-  /* Keep the line being worked visible while the notes below it scroll. */
-  #workbenchOverlay .wb-bit { position: sticky; top: 50px; z-index: 2; box-shadow: 0 10px 14px -14px rgba(0,0,0,.45); }
 
   /* ——— sync auth gate ——— */
   .auth-gate { position: fixed; inset: 0; background: var(--page); z-index: 80; display: none; align-items: center; justify-content: center; padding: 24px; }
@@ -1089,10 +1067,12 @@ body { font-size:16px; }
 .desk-copy { color:var(--muted); font-size:16px; line-height:1.5; margin:8px 0 20px; }
 .desk-grid { display:grid; grid-template-columns:1.15fr 1fr; gap:32px; align-items:start; }
 .desk-capture .capture { display:flex!important; flex-direction:column; gap:10px; margin:0; }
-.desk-capture #draft { min-height:76px!important; max-height:96px; width:100%; font-size:16px; line-height:1.4; overflow-y:auto; }
+.desk-capture #draft { min-height:170px!important; width:100%; font-size:19px; line-height:1.5; }
 .desk-capture .add-btn { align-self:flex-start; min-height:44px; padding:12px 20px; font-size:14px; text-transform:none; letter-spacing:0; }
 .desk-capture #capDest { display:none!important; }
 .desk-save { font:12px var(--mono); color:var(--muted); min-height:18px; margin:10px 0 0; }
+.desk-word-live { align-self:flex-end; font:11px/1.2 var(--mono); color:var(--faint); margin:-3px 2px 0; }
+.desk-word-rollup { font:12px/1.5 var(--mono); color:var(--muted); margin:9px 0 0; text-align:right; }
 .desk-invite { border:1px solid var(--rule); border-top:4px solid var(--accent); background:var(--card); padding:25px; border-radius:4px 4px 10px 10px; }
 .desk-invite h2 { font-size:29px; line-height:1.12; margin:0 0 12px; letter-spacing:-.5px; }
 .desk-invite .desk-btn { width:100%; }
@@ -1151,7 +1131,7 @@ body { font-size:16px; }
  .desk-tools .desk-btn { padding:8px 10px; font-size:13px; }
  .desk-grid { grid-template-columns:1fr; gap:25px; }
  .desk-invite { padding:20px; }
- .desk-capture #draft { min-height:76px!important; max-height:96px; }
+ .desk-capture #draft { min-height:135px!important; }
  .desk-invite h2 { font-size:26px; }
  .desk-week { margin-top:18px; }
  .desk-writing { min-height:200px; font-size:18px; }
@@ -1167,19 +1147,6 @@ body { font-size:16px; }
 .desk-tag.selected { color:var(--accent2); background:var(--tagbg); border-color:var(--accent); font-weight:700; }
 .desk-tag.selected::before { content:'✓ '; }
 .desk-tag:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-.capture-tags-bar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:-2px 0 4px; }
-.capture-tag-toggle { border:0; background:transparent; color:var(--accent2); padding:7px 2px; font:12px var(--mono); }
-.capture-tag-summary { color:var(--muted); font:11px/1.4 var(--mono); }
-.capture-tag-tray { width:100%; border-top:1px solid var(--rule); padding-top:9px; }
-.capture-tag-input-row { display:flex; gap:7px; }
-.capture-tag-input-row input { flex:1; min-width:0; border:1px solid var(--rule); border-radius:7px; background:var(--card); color:var(--ink); padding:8px 10px; font:13px var(--mono); }
-.capture-tag-input-row button { border:1px solid var(--rule); border-radius:7px; background:var(--card); color:var(--ink); padding:8px 11px; font:12px var(--mono); }
-.capture-tag-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
-.capture-tag-chip { border:1px solid var(--rule); border-radius:999px; background:transparent; color:var(--muted); padding:5px 9px; font:11px var(--mono); }
-.capture-tag-chip.on { border-color:var(--accent); background:var(--tagbg); color:var(--accent2); }
-.desk-entry-actions { display:flex; align-items:center; gap:8px; margin-top:10px; padding-top:9px; border-top:1px solid var(--rule); }
-.desk-entry-action { border:0; background:transparent; color:var(--accent2); padding:5px 6px 5px 0; font:12px var(--mono); }
-.desk-entry-action + .desk-entry-action { color:var(--muted); }
 
 /* Quiet capture; the writing workspace lives behind its own navigation item. */
 body.capture-view .wrap { max-width:620px; }
@@ -1192,7 +1159,7 @@ body.capture-view .desk-capture > .desk-title { display:none; }
 body.capture-view .desk-invite { display:none; }
 body.capture-view .desk-invite > :not(#deskStart) { display:none; }
 body.capture-view #deskStart { background:none; border-color:var(--rule); color:var(--accent2); width:auto; font-weight:400; }
-body.capture-view .desk-capture #draft { min-height:76px!important; max-height:96px; }
+body.capture-view .desk-capture #draft { min-height:190px!important; }
 body.capture-view .wisdom { margin:4px 0 20px; padding:24px 18px 8px; }
 body.capture-view .wisdom-q { opacity:1; }
 body.capture-view .wisdom-by { opacity:.85; }
@@ -1272,6 +1239,7 @@ body.capture-typing #deskCaptureTags .desk-quick-tags { flex-wrap:nowrap; gap:8p
 body.capture-typing #deskCaptureTags .desk-tag { flex:1; min-width:0; padding:8px 6px; font-size:14px; }
 body.capture-typing .desk-capture #addBtn { flex:0 0 auto; align-self:stretch; min-height:44px; padding:10px 16px; }
 body.capture-typing #deskCaptureStatus { flex:0 0 auto; margin:0; font-size:12px; min-height:16px; }
+body.capture-typing #deskWordRollup { display:none!important; }
 
 
 /* Fresh writing uses the same above-keyboard workspace as Capture. */
@@ -1375,7 +1343,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 <div id="deskDemo" class="desk-demo" hidden>Trial notebook · Saved only in this browser. <a href="?">Sign in to your notebook</a></div>
 <main id="deskHomePanel">
  <div class="desk-grid">
-  <section class="desk-capture"><p class="desk-kicker">Catch it</p><h1 class="desk-title">Before you forget.</h1><div id="deskCaptureHost"></div><p class="desk-save" id="deskCaptureStatus" role="status" aria-live="polite"></p></section>
+  <section class="desk-capture"><p class="desk-kicker">Catch it</p><h1 class="desk-title">Before you forget.</h1><div id="deskCaptureHost"></div><p class="desk-save" id="deskCaptureStatus" role="status" aria-live="polite"></p><p class="desk-word-rollup" id="deskWordRollup" aria-live="polite"></p></section>
   <section class="desk-invite"><p class="desk-kicker">Make it</p><h2 id="deskInviteTitle">Show up. Write something.</h2><p class="desk-copy" id="deskInviteCopy">One subject. A few different attempts. A rough version you can say out loud.</p><button class="desk-btn primary" id="deskStart">Start writing</button><div id="deskWeek" class="desk-week"></div><p class="desk-meta" id="deskWeekNote"></p></section>
  </div>
  <section class="desk-section" hidden><div class="desk-section-head"><h2>Recently captured</h2><button class="desk-btn text" id="deskAll">Open notebook</button></div><div class="desk-recent" id="deskRecent"></div></section>
@@ -1412,6 +1380,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   <span class="cap-dest" id="capDest">capture → stuff</span>
   <div class="capture">
     <textarea id="draft" rows="7"></textarea>
+    <span class="desk-word-live" id="deskCaptureWords">0 words</span>
     <button class="add-btn" id="addBtn">Add</button>
   </div>
   <div class="form-row cap-forms" id="capForms"></div>
@@ -2142,17 +2111,6 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       </div>
     </div>
   </div>
-  <div class="share-sheet" id="shareSheet" role="dialog" aria-modal="true" aria-labelledby="shareTitle">
-    <div class="share-panel">
-      <div class="share-head"><h2 id="shareTitle">Share</h2><button class="share-close" id="shareClose">done</button></div>
-      <div class="share-preview" id="sharePreview"></div>
-      <div class="share-actions">
-        <button class="primary" id="shareScreen">One screen<small>bit + alternate lines</small></button>
-        <button id="shareCards">Slides<small>one line per image</small></button>
-      </div>
-      <p class="share-hint">Working notes stay private.</p>
-    </div>
-  </div>
   <div class="notes-overlay" id="notesOverlay">
     <div class="notes-inner">
       <div class="notes-head">
@@ -2224,12 +2182,12 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.6.0";
+  var APP_VERSION = "v2.5.0";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
   })();
-  var state = { poolMigrated: true, bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [], theme: "ember", notesPin: null, forms: null, sb: null };
+  var state = { poolMigrated: true, bits: [], quota: 10, mics: [], riffs: [], planned: [], notes: [], buried: [], truths: [], sets: [], theme: "ember", notesPin: null, forms: null, sb: null, wordLog: {}, wordTrackingSeeded: 0 };
   var stageFilter = "home";
   var tagEditing = null;
   var pendingRemote = null;
@@ -2323,6 +2281,8 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     state = Object.assign({}, data);
     state.writeSessions = data.writeSessions || [];
     state.stories = data.stories || [];
+    state.wordLog = data.wordLog || {};
+    state.wordTrackingSeeded = data.wordTrackingSeeded || 0;
     var toPool = [];
     state.bits = (data.bits || []).filter(function (b) {
       if (!b.tags) b.tags = [];
@@ -2407,6 +2367,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     state.poolMigrated = true;
     state.sets = data.sets || [];
     state.updatedAt = data.updatedAt || 0;
+    deskSeedWordTracking();
   }
   function load() {
     try {
@@ -3096,7 +3057,6 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
 
   var pendingForms = [];
-  var pendingTags = [];
   var capOrigin = null;   // earned/forced for the home capture box
   var batchForms = [];   // noticing badges armed for the next fired line
   var batchOrigin = null;   // "earned" | "forced" | null — premise lane only, optional
@@ -3133,6 +3093,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   function addBit() {
     var text = draft.value.trim();
     if (!text) return;
+    deskTrackWords(deskWordCount(text), Date.now());
     var forms = pendingForms.slice();
     var taggedTruth = forms.indexOf("truth") !== -1;
     function resetCapOrigin() {
@@ -3143,12 +3104,10 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       if (!state.truths) state.truths = [];
       var t0 = { id: uid(), text: text, created: Date.now() };
       if (forms.length) t0.forms = forms;
-      if (pendingTags.length) t0.tags = pendingTags.slice();
       /* Quick tags describe an entry, not its quality. */   // a truth is a badged entry; auto-star it
       if (capOrigin) t0.origin = capOrigin;
       state.truths.unshift(t0);
       draft.value = "";
-      pendingTags = [];
       pendingForms = []; renderCapForms();
       resetCapOrigin();
       save(); render();
@@ -3157,7 +3116,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var b0 = {
       id: uid(),
       text: text,
-      tags: pendingTags.slice(),
+      tags: [],
       created: Date.now(),
       statusAt: Date.now()
     };
@@ -3165,7 +3124,6 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     if (capOrigin) b0.origin = capOrigin;
     state.bits.unshift(b0);
     draft.value = "";
-    pendingTags = [];
     pendingForms = []; renderCapForms();
     resetCapOrigin();
     draft.placeholder = PLACEHOLDERS[Math.floor(Math.random() * PLACEHOLDERS.length)];
@@ -3461,7 +3419,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var who = document.getElementById("authWho");
     if (sbUser) {
       gate.classList.remove("open");
-      if (!draft.value) { try { draft.value=localStorage.getItem(deskDraftKey())||""; pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+"-forms")||"[]"); if(!Array.isArray(pendingForms))pendingForms=[]; pendingTags=JSON.parse(localStorage.getItem(deskDraftKey()+"-tags")||"[]"); if(!Array.isArray(pendingTags))pendingTags=[]; deskRenderCaptureTags(); } catch(e) {} }
+      if (!draft.value) { try { draft.value=localStorage.getItem(deskDraftKey())||""; pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+"-forms")||"[]"); if(!Array.isArray(pendingForms))pendingForms=[]; deskRenderCaptureTags(); } catch(e) {} }
       if (who) who.textContent = sbUser.email || "signed in";
     } else {
       gate.classList.add("open");
@@ -3575,118 +3533,6 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     }
   }
 
-  // ——— share / export ———
-  // Full-entry sharing preserves the work around a bit. Social cards deliberately
-  // publish only the written material; scratchpad notes never leak into images.
-  function shareEntryText(b) {
-    var out = [b.text || ""];
-    var angles = entryAngles(b);
-    if (angles.length) {
-      out.push("", "ALTERNATE LINES");
-      angles.forEach(function (a) { out.push("— " + a.t); });
-    }
-    if (b.workshop && b.workshop.trim()) out.push("", "WORKING NOTES", b.workshop.trim());
-    if (b.tags && b.tags.length) out.push("", "TAGS", b.tags.join(" · "));
-    out.push("", "— Just the Bits");
-    return out.join("\n");
-  }
-  function sharePublicText(b) {
-    var out=[b.text||""];
-    entryAngles(b).forEach(function(a){out.push("",a.t);});
-    return out.join("\n");
-  }
-  var shareTarget = null;
-  function openShareSheet(target) {
-    if (!target) saveWorkbench();
-    var b = target || benchFind();
-    if (!b) return;
-    shareTarget = b;
-    document.getElementById("sharePreview").textContent = sharePublicText(b);
-    document.getElementById("shareSheet").classList.add("open");
-  }
-  function closeShareSheet() { document.getElementById("shareSheet").classList.remove("open"); }
-  function safeFileStem(text) {
-    var stem = (text || "bit").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 42);
-    return stem || "bit";
-  }
-  function downloadBlob(blob, name) {
-    var a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = name; a.click();
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1200);
-  }
-  function copyShareText() {
-    var b = shareTarget || benchFind(); if (!b) return;
-    var text = shareEntryText(b);
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () { alert("Copied."); }, function () { legacyCopy(text); });
-    } else legacyCopy(text);
-  }
-  function legacyCopy(text) {
-    var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
-    document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); alert("Copied.");
-  }
-  function nativeShareEntry() {
-    var b = shareTarget || benchFind(); if (!b) return;
-    var payload = { title: "Just the Bits", text: shareEntryText(b) };
-    if (navigator.share) navigator.share(payload).catch(function () {}); else copyShareText();
-  }
-  function wrapCanvasText(ctx, text, maxWidth) {
-    var words = String(text).split(/\s+/), lines = [], line = "";
-    words.forEach(function (word) {
-      var test = line ? line + " " + word : word;
-      if (ctx.measureText(test).width > maxWidth && line) { lines.push(line); line = word; }
-      else line = test;
-    });
-    if (line) lines.push(line);
-    return lines;
-  }
-  function makePostCard(text, number, total) {
-    var c = document.createElement("canvas"), size = 1080; c.width = size; c.height = size;
-    var ctx = c.getContext("2d");
-    var styles = getComputedStyle(document.body);
-    ctx.fillStyle = styles.getPropertyValue("--page").trim() || "#f4eddf"; ctx.fillRect(0,0,size,size);
-    ctx.strokeStyle = styles.getPropertyValue("--rule").trim() || "#cabda6"; ctx.lineWidth = 3; ctx.strokeRect(56,56,size-112,size-112);
-    ctx.fillStyle = styles.getPropertyValue("--ink").trim() || "#201b17";
-    var fontSize = text.length > 320 ? 42 : text.length > 180 ? 52 : text.length > 90 ? 62 : 72;
-    ctx.font = "600 " + fontSize + "px Georgia, serif"; ctx.textAlign = "left"; ctx.textBaseline = "top";
-    var lines = wrapCanvasText(ctx, text, 820), lineH = fontSize * 1.28;
-    while (lines.length * lineH > 660 && fontSize > 34) {
-      fontSize -= 4; lineH = fontSize * 1.28; ctx.font = "600 " + fontSize + "px Georgia, serif";
-      lines = wrapCanvasText(ctx, text, 820);
-    }
-    var y = Math.max(170, (size - lines.length * lineH) / 2 - 20);
-    lines.forEach(function (line) { ctx.fillText(line,130,y); y += lineH; });
-    ctx.font = "24px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.fillStyle = styles.getPropertyValue("--muted").trim() || "#746b60";
-    ctx.fillText("JUST THE BITS",130,900); ctx.textAlign = "right"; ctx.fillText(number + " / " + total,950,900);
-    return new Promise(function (resolve) { c.toBlob(resolve, "image/png"); });
-  }
-  function exportPostCards() {
-    var b = shareTarget || benchFind(); if (!b) return;
-    var slides = [b.text].concat(entryAngles(b).map(function (a) { return a.t; })).filter(Boolean);
-    Promise.all(slides.map(function (t,i) { return makePostCard(t,i+1,slides.length); })).then(function (blobs) {
-      var stem = safeFileStem(b.text);
-      var files = blobs.map(function (blob,i) { return new File([blob], stem + "-" + (i+1) + ".png", {type:"image/png"}); });
-      if (navigator.canShare && navigator.share && navigator.canShare({files:files})) {
-        navigator.share({files:files,title:"Just the Bits"}).catch(function () {});
-      } else {
-        blobs.forEach(function (blob,i) { setTimeout(function () { downloadBlob(blob, stem + "-" + (i+1) + ".png"); }, i*180); });
-      }
-    });
-  }
-  function exportOneScreen() {
-    var b=shareTarget||benchFind();if(!b)return;
-    makePostCard(sharePublicText(b),1,1).then(function(blob){
-      var stem=safeFileStem(b.text),file=new File([blob],stem+".png",{type:"image/png"});
-      if(navigator.canShare&&navigator.share&&navigator.canShare({files:[file]}))navigator.share({files:[file],title:"Just the Bits"}).catch(function(){});
-      else downloadBlob(blob,stem+".png");
-    });
-  }
-  document.getElementById("shareClose").onclick = closeShareSheet;
-  document.getElementById("shareSheet").onclick = function (e) { if (e.target === this) closeShareSheet(); };
-  document.getElementById("shareScreen").onclick = exportOneScreen;
-  document.getElementById("shareCards").onclick = exportPostCards;
-
   // Move the open item between the stuff pool and bits, carrying everything
   // with it (text, workshop notes, tags, history). The workbench stays open on
   // the same item — you just changed what kind of thing it is.
@@ -3780,6 +3626,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     if (!v || !b) return;
     if (!b.angles) b.angles = [];
     b.angles.push({ t: v, at: Date.now() });
+    deskTrackWords(deskWordCount(v), Date.now());
     b.touched = Date.now();   // adding an angle is real work, not just a look
     inp.value = "";
     buzz();
@@ -3791,6 +3638,9 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     if (!b) return;
     var m = document.getElementById("wbMeta");
     var bits = [];
+    bits.push(deskWordCount(b.text) + "w bit");
+    var noteWords = deskWordCount(b.workshop || "");
+    if (noteWords) bits.push(noteWords + "w notes");
     var n = entryAngles(b).length;
     if (n) bits.push(n + (n === 1 ? " jab" : " jabs"));
     // b.mined is the stored field name; it counts jabs that became bits.
@@ -3806,12 +3656,18 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     if (!workbenchId) return;
     var b = benchFind();
     if (!b) return;
+    var beforeBit = deskWordCount(b.text), beforePad = deskWordCount(b.workshop || "");
     var v = document.getElementById("wbBit").value.trim();
     var pad = document.getElementById("wbPad").value;
     if ((v && v !== b.text) || pad !== (b.workshop || "")) b.touched = Date.now();
     if (v) b.text = v;
     b.workshop = pad;
-    return save();
+    var added = Math.max(0, deskWordCount(b.text) - beforeBit) + Math.max(0, deskWordCount(pad) - beforePad);
+    if (added) deskTrackWords(added, Date.now());
+    var out = save();
+    renderWbMeta();
+    deskRenderWordCounts();
+    return out;
   }
   document.getElementById("flipClose").onclick = closeFlip;
   document.getElementById("flipPrev").onclick = function () { flipGo(-1); };
@@ -4772,6 +4628,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       var entry = { id: uid(), text: v, created: Date.now(),
                     prompt: iRun.prompt, forms: ["interpret"] };
       state.truths.unshift(entry);
+      deskTrackWords(deskWordCount(v), entry.created);
       iRun.kept++;
       (iRun.recent = iRun.recent || []).push(v);
       buzz(); save(); renderInterpretRun();
@@ -5231,8 +5088,10 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     if (!v || !m) return;
     if (drill.step === "truth") {
       var tid = uid();
-      state.truths.unshift({ id: tid, text: v, created: Date.now(),
+      var truthAt = Date.now();
+      state.truths.unshift({ id: tid, text: v, created: truthAt,
                              forms: ["truth"], src: m.id, flag: true });
+      deskTrackWords(deskWordCount(v), truthAt);
       m.distilled = tid;                 // the moment remembers what it produced
       drill.truthText = v;
       drill.truthId = tid;
@@ -5240,8 +5099,10 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       buzz(); save(); renderDrill();
       circuitProgress("truth");
     } else {
-      state.truths.unshift({ id: uid(), text: v, created: Date.now(),
+      var contraAt = Date.now();
+      state.truths.unshift({ id: uid(), text: v, created: contraAt,
                              kind: "contradiction", src: drill.truthId });
+      deskTrackWords(deskWordCount(v), contraAt);
       buzz(); save();
       nextDrill();
     }
@@ -5373,7 +5234,9 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var inp = document.getElementById("questionInput");
     var v = inp.value.trim();
     if (!v) return;
-    state.truths.unshift({ id: uid(), text: v, created: Date.now(), forms: ["question"], qkind: qAddKind });
+    var qAt = Date.now();
+    state.truths.unshift({ id: uid(), text: v, created: qAt, forms: ["question"], qkind: qAddKind });
+    deskTrackWords(deskWordCount(v), qAt);
     inp.value = "";
     save(); renderQuestionLib(); render();
   }
@@ -5407,7 +5270,9 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var inp = document.getElementById("truthDirectInput");
     var v = inp.value.trim();
     if (!v) return;
-    state.truths.unshift({ id: uid(), text: v, created: Date.now(), forms: ["truth"], flag: true });
+    var directAt = Date.now();
+    state.truths.unshift({ id: uid(), text: v, created: directAt, forms: ["truth"], flag: true });
+    deskTrackWords(deskWordCount(v), directAt);
     inp.value = "";
     save(); renderTruthLib(); render();
   }
@@ -6652,6 +6517,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     }
     if (sbSession) { entry.sb = sbSession.id; sbSession.lineIds.push(lineId); }
     state.truths.unshift(entry);
+    deskTrackWords(deskWordCount(text), entry.created);
     batchWritten.push(text);
     wroteThisOpener++;
     batchForms = [];
@@ -7313,6 +7179,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     // a typed subject becomes a real captured entry so riffs attach to it
     var seed = { id: uid(), text: word, created: Date.now(), seed: true };
     state.truths.unshift(seed);
+    deskTrackWords(deskWordCount(word), seed.created);
     save();
     document.getElementById("riffOverlay").classList.remove("open");
     browseDeck = [{ id: seed.id, kind: "truth", at: seed.created, flag: false }];
@@ -8011,26 +7878,9 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     bridge.label='Keep this & try versions';return [bridge].concat(versions);
   }
   function deskSessionSteps(s) { return s.steps || DESK_STEPS; }
-  var captureTagTrayOpen=false;
   function deskRenderCaptureTags() {
     var host=document.getElementById('deskCaptureTags');if(!host)return;host.innerHTML='';
     host.appendChild(deskTagRow(pendingForms,function(forms){pendingForms=forms;deskRenderCaptureTags();deskPersistCapture();}));
-    var bar=el('div','capture-tags-bar');
-    var toggle=el('button','capture-tag-toggle',captureTagTrayOpen?'done tagging':'+ tag');toggle.type='button';
-    toggle.setAttribute('aria-expanded',String(captureTagTrayOpen));
-    toggle.onclick=function(){captureTagTrayOpen=!captureTagTrayOpen;deskRenderCaptureTags();};bar.appendChild(toggle);
-    if(pendingTags.length)bar.appendChild(el('span','capture-tag-summary',pendingTags.join(' · ')));
-    host.appendChild(bar);
-    if(!captureTagTrayOpen)return;
-    var tray=el('div','capture-tag-tray'),inputRow=el('div','capture-tag-input-row');
-    var input=el('input');input.placeholder='tag…';input.setAttribute('aria-label','Add a tag');
-    function addTag(raw){var tag=(raw||'').trim().toLowerCase();if(tag&&pendingTags.indexOf(tag)===-1)pendingTags.push(tag);deskPersistCapture();deskRenderCaptureTags();}
-    input.onkeydown=function(e){if(e.key==='Enter'||e.key===','){e.preventDefault();addTag(input.value);}else if(e.key==='Escape'){captureTagTrayOpen=false;deskRenderCaptureTags();draft.focus();}};
-    var add=el('button',null,'add');add.type='button';add.onclick=function(){addTag(input.value);};inputRow.appendChild(input);inputRow.appendChild(add);tray.appendChild(inputRow);
-    var chips=el('div','capture-tag-chips');
-    pendingTags.forEach(function(tag){var chip=el('button','capture-tag-chip on',tag+' ×');chip.type='button';chip.onclick=function(){pendingTags=pendingTags.filter(function(x){return x!==tag;});deskPersistCapture();deskRenderCaptureTags();};chips.appendChild(chip);});
-    allTagCounts().slice(0,10).forEach(function(item){if(pendingTags.indexOf(item.tag)!==-1)return;var chip=el('button','capture-tag-chip',item.tag);chip.type='button';chip.onclick=function(){pendingTags.push(item.tag);deskPersistCapture();deskRenderCaptureTags();};chips.appendChild(chip);});
-    tray.appendChild(chips);host.appendChild(tray);setTimeout(function(){var field=host.querySelector('.capture-tag-input-row input');if(field)field.focus();},0);
   }
   function deskRenderWorkbenchTags() {
     var host=document.getElementById('deskWorkbenchTags'),b=benchFind();if(!host||!b)return;host.innerHTML='';
@@ -8054,6 +7904,46 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   ];
   var deskStarterIndex = 0;
   function deskDay(ts) { var d=new Date(ts); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+  function deskWordCount(text) {
+    var m=String(text||'').trim().match(/\S+/g);
+    return m ? m.length : 0;
+  }
+  function deskTrackWords(n,ts) {
+    n=Math.max(0,Math.floor(Number(n)||0)); if(!n)return;
+    if(!state.wordLog)state.wordLog={};
+    var key=deskDay(ts||Date.now());
+    state.wordLog[key]=(state.wordLog[key]||0)+n;
+  }
+  function deskWeekStart(ts) {
+    var d=new Date(ts||Date.now()); d.setHours(0,0,0,0); d.setDate(d.getDate()-d.getDay()); return d;
+  }
+  function deskWordTotals(ts) {
+    var now=new Date(ts||Date.now()),today=deskDay(now.getTime()),start=deskWeekStart(now.getTime()),sum=0;
+    var log=state.wordLog||{};
+    Object.keys(log).forEach(function(key){
+      var parts=key.split('-'); if(parts.length!==3)return;
+      var d=new Date(Number(parts[0]),Number(parts[1])-1,Number(parts[2]));
+      if(d>=start&&d<=now)sum+=Number(log[key])||0;
+    });
+    return {today:Number(log[today])||0,week:sum};
+  }
+  function deskRenderWordCounts() {
+    var live=document.getElementById('deskCaptureWords');
+    if(live){var n=deskWordCount(draft&&draft.value);live.textContent=n+' '+(n===1?'word':'words');}
+    var roll=document.getElementById('deskWordRollup');
+    if(roll){var t=deskWordTotals();roll.textContent='Today '+t.today+' · This week '+t.week+' words';}
+  }
+  function deskSeedWordTracking() {
+    if(state.wordTrackingSeeded)return;
+    if(!state.wordLog)state.wordLog={};
+    var start=deskWeekStart(Date.now()).getTime(),seen={};
+    (state.truths||[]).concat(state.bits||[],state.buried||[]).forEach(function(e){
+      if(!e||seen[e.id])return; seen[e.id]=true;
+      if((e.created||0)>=start)deskTrackWords(deskWordCount(e.text),e.created);
+      if(e.workshop&&e.touched&&e.touched>=start)deskTrackWords(deskWordCount(e.workshop),e.touched);
+    });
+    state.wordTrackingSeeded=Date.now();
+  }
   function deskSessions() { return state.writeSessions || (state.writeSessions=[]); }
   function deskCurrent() { return deskSessions().find(function(s){return s.id===deskSessionId;}); }
   function deskOpenSession() { return deskSessions().find(function(s){return !s.finished;}); }
@@ -8077,6 +7967,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var e={id:p.id,text:text,created:p.created,writingSession:s.id,writingKind:p.kind,prompt:step.cue,subject:s.subject,forms:deskForms(s.forms)};
     if(s.sourceId) e.src=s.sourceId;
     (state.truths||(state.truths=[])).unshift(e);
+    deskTrackWords(deskWordCount(text), p.created);
     s.step++; s.draft=''; s.updated=Date.now();
     if(s.step===plan.length) s.finished=Date.now();
     return true;
@@ -8088,8 +7979,9 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   }
   function deskDraftKey() { return deskTrial ? deskTrialKey+'-capture' : KEY+'-capture-'+(sbUser ? sbUser.id : 'device'); }
   function deskPersistCapture() {
-    try { localStorage.setItem(deskDraftKey(),draft.value); localStorage.setItem(deskDraftKey()+'-forms',JSON.stringify(pendingForms)); localStorage.setItem(deskDraftKey()+'-tags',JSON.stringify(pendingTags)); document.getElementById('deskCaptureStatus').textContent=draft.value ? 'Draft saved on this device' : ''; }
+    try { localStorage.setItem(deskDraftKey(),draft.value); localStorage.setItem(deskDraftKey()+'-forms',JSON.stringify(pendingForms)); document.getElementById('deskCaptureStatus').textContent=draft.value ? 'Draft saved on this device' : ''; }
     catch(e) { document.getElementById('deskCaptureStatus').textContent='Draft could not save. Keep this page open.'; }
+    deskRenderWordCounts();
   }
   function deskButton(label,fn,cls) { var b=el('button','desk-btn'+(cls?' '+cls:''),label); b.onclick=fn; return b; }
   function deskRoute(view) {
@@ -8117,6 +8009,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   }
   function deskRenderHome() {
     var active=deskOpenSession(), sessions=deskSessions();
+    deskRenderWordCounts();
     document.getElementById('deskInviteTitle').textContent=active?'Pick up where you left off.':'Show up. Write something.';
     document.getElementById('deskInviteCopy').textContent=active ? active.subject : 'One subject. A few different attempts. A rough version you can say out loud.';
     document.getElementById('deskStart').textContent=active?'Continue writing':'Write today';
@@ -8198,6 +8091,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var entry={id:p.id,text:text,created:now,writingSession:s.id,writingKind:'attempt',prompt:cue,subject:s.subject,forms:[]};
     if(p.src)entry.src=p.src;
     (state.truths||(state.truths=[])).unshift(entry);
+    deskTrackWords(deskWordCount(text), now);
     s.draft='';s.updated=now;return p;
   }
   function deskRenderWarmup(h,s) {
@@ -8396,10 +8290,11 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     draft.placeholder='Catch the thought…';draft.setAttribute('aria-label','Capture a funny thought');document.getElementById('addBtn').textContent='Save thought';
     try{draft.value=localStorage.getItem(deskDraftKey())||'';}catch(e){}
     try{pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+'-forms')||'[]');if(!Array.isArray(pendingForms))pendingForms=[];}catch(e){pendingForms=[];}
-    try{pendingTags=JSON.parse(localStorage.getItem(deskDraftKey()+'-tags')||'[]');if(!Array.isArray(pendingTags))pendingTags=[];}catch(e){pendingTags=[];}
+    deskRenderWordCounts();
     var tags=el('div');tags.id='deskCaptureTags';document.getElementById('addBtn').insertAdjacentElement('beforebegin',tags);deskRenderCaptureTags();
     var wbTags=el('div');wbTags.id='deskWorkbenchTags';document.getElementById('wbBit').insertAdjacentElement('beforebegin',wbTags);
     draft.addEventListener('input',deskPersistCapture);
+    deskInitCaptureKeyboard();
     deskInitWriteKeyboard();
     document.getElementById('deskHome').onclick=function(){deskRoute('home');};
     document.getElementById('deskStart').onclick=deskBegin;
@@ -8454,12 +8349,8 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       var card=el('article','bone-card truth-card desk-unified-card');
       if(e.prompt)card.appendChild(el('div','card-prompt',e.prompt));
       var star=starToggle(e);card.appendChild(star);
-      var body=el('p',null,e.text);attachLongPressCopy(body,function(){return e.text;});card.appendChild(body);
-      var meta=[];if(deskIsWorked(e,row.kind))meta.push('Worked');var forms=deskTagText(e.forms);if(forms)meta.push(forms);if(e.tags&&e.tags.length)meta.push(e.tags.join(' · '));if(meta.length)card.appendChild(el('div','desk-meta',meta.join(' · ')));
-      var actions=el('div','desk-entry-actions');
-      var develop=el('button','desk-entry-action','Develop');develop.type='button';develop.onclick=function(){openWorkbench(e.id,row.kind);};actions.appendChild(develop);
-      var share=el('button','desk-entry-action','Share');share.type='button';share.onclick=function(){openShareSheet(e);};actions.appendChild(share);
-      card.appendChild(actions);
+      var body=el('p',null,e.text);deskEntryAccess(body);body.onclick=function(){openWorkbench(e.id,row.kind);};attachLongPressCopy(body,function(){return e.text;});card.appendChild(body);
+      var meta=[deskWordCount(e.text)+'w'];if(deskIsWorked(e,row.kind))meta.push('Worked');var forms=deskTagText(e.forms);if(forms)meta.push(forms);card.appendChild(el('div','desk-meta',meta.join(' · ')));
       list.appendChild(card);
     });
   }
@@ -8544,6 +8435,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   };
 
   load();
+  deskSeedWordTracking();
 
   deskInit();
   deskNotebookInit();
