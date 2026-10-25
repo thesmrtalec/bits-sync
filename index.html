@@ -1397,6 +1397,16 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 .post-share-native { border:0; background:var(--accent); color:var(--onaccent); font-weight:700; }
 .post-download { border:1px solid var(--rule); background:transparent; color:var(--ink); }
 @media(min-width:720px){ .post-preview canvas{width:330px;} }
+
+#bitsWeekOverlay .notes-inner {overflow-y:auto;}
+.bits-week-nav {display:flex;align-items:center;justify-content:space-between;gap:12px;margin:12px 0;}
+.bits-week-summary {font-size:20px;line-height:1.5;margin:20px 0 8px;}
+.bits-week-help {font-size:13px;color:var(--muted);line-height:1.5;}
+.bits-week-day {margin:22px 0 8px;padding-bottom:8px;border-bottom:1px solid var(--rule);font-family:var(--mono);font-size:12px;}
+.bits-week-entry {display:block;width:100%;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--rule);border-radius:8px;padding:14px;margin:10px 0;}
+.bits-week-text {white-space:pre-wrap;font:16px/1.5 var(--serif);}
+.bits-week-meta {font:11px/1.5 var(--mono);color:var(--muted);margin-bottom:6px;}
+.swipe-act {font-size:11px;}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -1428,7 +1438,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 <div id="deskDemo" class="desk-demo" hidden>Trial notebook · Saved only in this browser. <a href="?">Sign in to your notebook</a></div>
 <main id="deskHomePanel">
  <div class="desk-grid">
-  <section class="desk-capture"><p class="desk-kicker">Catch it</p><h1 class="desk-title">Before you forget.</h1><div id="deskCaptureHost"></div><p class="desk-save" id="deskCaptureStatus" role="status" aria-live="polite"></p><p class="desk-word-rollup" id="deskWordRollup" aria-live="polite"></p></section>
+  <section class="desk-capture"><p class="desk-kicker">Catch it</p><h1 class="desk-title">Before you forget.</h1><div id="deskCaptureHost"></div><p class="desk-save" id="deskCaptureStatus" role="status" aria-live="polite"></p><p class="desk-word-rollup" id="deskWordRollup" aria-live="polite"></p><button class="notes-tab" id="bitsWeekOpen">Week Recap</button></section>
   <section class="desk-invite"><p class="desk-kicker">Make it</p><h2 id="deskInviteTitle">Show up. Write something.</h2><p class="desk-copy" id="deskInviteCopy">One subject. A few different attempts. A rough version you can say out loud.</p><button class="desk-btn primary" id="deskStart">Start writing</button><div id="deskWeek" class="desk-week"></div><p class="desk-meta" id="deskWeekNote"></p></section>
  </div>
  <section class="desk-section" hidden><div class="desk-section-head"><h2>Recently captured</h2><button class="desk-btn text" id="deskAll">Open notebook</button></div><div class="desk-recent" id="deskRecent"></div></section>
@@ -8706,7 +8716,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 
   deskRenderUnifiedNotebook=function(){
     var list=document.getElementById('list');list.innerHTML='';var rows=deskUnifiedEntries();if(!rows.length){list.appendChild(el('p','desk-empty',deskNotebookStatus==='new'?'No untouched thoughts here.':deskNotebookStatus==='worked'?'Nothing worked yet.':'Nothing here yet.'));return;}var last='';
-    rows.forEach(function(row){var e=row.entry,key=truthDayKey(e.created||Date.now());if(key!==last){last=key;list.appendChild(el('div','rollup-head desk-unified-date',key===truthDayKey(Date.now())?'Today':new Date(e.created||Date.now()).toLocaleDateString(undefined,{month:'short',day:'numeric'})));}var open=deskExpandedEntry===e.id,card=el('article','bone-card truth-card desk-unified-card'+(open?' open':''));if(e.prompt)card.appendChild(el('div','card-prompt',e.prompt));card.appendChild(starToggle(e));var body=el('p',null,e.text);deskEntryAccess(body);body.title=(open?'Tap to collapse':'Tap to open')+' · long-press to copy';body.onclick=function(){deskExpandedEntry=open?null:e.id;deskCardTagEdit=null;render();};attachLongPressCopy(body,function(){return e.text;});card.appendChild(body);var meta=[deskWordCount(e.text)+'w'];if(deskIsWorked(e,row.kind))meta.push('Worked');var forms=deskTagText(e.forms);if(forms)meta.push(forms);card.appendChild(el('div','desk-meta',meta.join(' · ')));if(open)card.appendChild(deskRenderEntryExpanded(e,row.kind));list.appendChild(card);});
+    rows.forEach(function(row){var e=row.entry,key=truthDayKey(e.created||Date.now());if(key!==last){last=key;list.appendChild(el('div','rollup-head desk-unified-date',key===truthDayKey(Date.now())?'Today':new Date(e.created||Date.now()).toLocaleDateString(undefined,{month:'short',day:'numeric'})));}var open=deskExpandedEntry===e.id,card=el('article','bone-card truth-card desk-unified-card swipe-face'+(open?' open':''));if(e.prompt)card.appendChild(el('div','card-prompt',e.prompt));card.appendChild(starToggle(e));var body=el('p',null,e.text);deskEntryAccess(body);body.title=(open?'Tap to collapse':'Tap to open')+' · long-press to copy';body.onclick=function(){if(swipeOpenCard===card){closeSwipe();return;}deskExpandedEntry=open?null:e.id;deskCardTagEdit=null;render();};attachLongPressCopy(body,function(){return e.text;});card.appendChild(body);var meta=[deskWordCount(e.text)+'w'];if(deskIsWorked(e,row.kind))meta.push('Worked');var forms=deskTagText(e.forms);if(forms)meta.push(forms);card.appendChild(el('div','desk-meta',meta.join(' · ')));if(open)card.appendChild(deskRenderEntryExpanded(e,row.kind));list.appendChild(deskSwipeEntry(e,row.kind,card));});
   };
   deskEntryAccess=function(p){p.setAttribute('role','button');p.tabIndex=0;p.title='Tap to open · long-press to copy';p.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();p.click();}};};
 
@@ -8734,6 +8744,67 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   load();
   deskSeedWordTracking();
 
+
+  function deskBuryEntry(entry,kind){
+    var bucket=kind==='bit'?'bits':'truths';
+    if(!(state[bucket]||[]).some(function(x){return x.id===entry.id;}))return;
+    entry.buriedAt=Date.now();entry.from=kind==='bit'?'bit':'stuff';
+    if(!state.buried)state.buried=[];
+    state.buried.unshift(entry);state[bucket]=state[bucket].filter(function(x){return x.id!==entry.id;});
+    deskExpandedEntry=null;closeSwipe();save();render();
+  }
+  function deskSwipeEntry(entry,kind,card){
+    var shell=el('div','swipe-shell'),grave=el('button','swipe-act swipe-kill','Grave'),develop=el('button','swipe-act swipe-promote','Develop');
+    grave.title='Send to grave — recover from the boneyard';grave.setAttribute('aria-label',grave.title);
+    grave.onclick=function(event){event.stopPropagation();deskBuryEntry(entry,kind);};
+    develop.onclick=function(event){event.stopPropagation();closeSwipe();openWorkbench(entry.id,kind);};
+    shell.appendChild(grave);shell.appendChild(develop);shell.appendChild(card);attachSwipe(shell,card);return shell;
+  }
+  var bitsWeekOffset=0;
+  function bitsWeekData(offset,now){
+    var start=deskWeekStart(now);start.setDate(start.getDate()+offset*7);
+    var end=new Date(start);end.setDate(end.getDate()+7);
+    var seen={},rows=[];
+    [['truths','truth'],['bits','bit'],['buried','buried']].forEach(function(pair){
+      (state[pair[0]]||[]).forEach(function(e){if(seen[e.id])return;seen[e.id]=true;
+        if(e.created>=start.getTime()&&e.created<end.getTime())rows.push({entry:e,kind:pair[1]});
+      });
+    });
+    rows.sort(function(a,b){return a.entry.created-b.entry.created;});
+    var days=[],total=0;
+    for(var i=0;i<7;i++){var date=new Date(start);date.setDate(date.getDate()+i);var key=deskDay(date.getTime()),words=Number((state.wordLog||{})[key])||0;total+=words;days.push({date:date,key:key,words:words});}
+    return {start:start,end:end,rows:rows,days:days,words:total};
+  }
+  function bitsWeekRender(){
+    var host=document.getElementById('bitsWeekContent');host.innerHTML='';var data=bitsWeekData(bitsWeekOffset,Date.now()),last=new Date(data.end);last.setDate(last.getDate()-1);
+    document.getElementById('bitsWeekRange').textContent=data.start.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})+' – '+last.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    document.getElementById('bitsWeekNext').disabled=bitsWeekOffset>=0;
+    host.appendChild(el('p','bits-week-summary',data.words.toLocaleString()+' words logged'));
+    host.appendChild(el('p','bits-week-help','Logged writing includes captured entries and additions to working notes. It is not the current word count of your bits. Older weeks may have incomplete tracking.'));
+    var current=data.rows.reduce(function(sum,row){return sum+deskWordCount(row.entry.text);},0);
+    host.appendChild(el('p','bits-week-help',data.rows.length+' entries created · '+current.toLocaleString()+' words in those entries now. Includes entries sent to the grave.'));
+    data.days.forEach(function(day){
+      host.appendChild(el('h3','bits-week-day',day.date.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})+' · '+day.words+' words logged'));
+      data.rows.filter(function(row){return deskDay(row.entry.created)===day.key;}).forEach(function(row){
+        var e=row.entry,card=el('button','bits-week-entry');
+        card.appendChild(el('div','bits-week-meta',(row.kind==='buried'?'Grave':row.kind==='bit'?'Bit':'Entry')+' · '+deskWordCount(e.text)+' words'));
+        card.appendChild(el('div','bits-week-text',e.text||''));
+        if(e.workshop)card.appendChild(el('div','bits-week-help',e.workshop));
+        card.onclick=function(){document.getElementById('bitsWeekOverlay').classList.remove('open');if(row.kind==='buried'){renderBoneyard();document.getElementById('boneOverlay').classList.add('open');}else openWorkbench(e.id,row.kind);};host.appendChild(card);
+      });
+    });
+  }
+  function bitsWeekInit(){
+    var overlay=el('div','notes-overlay');overlay.id='bitsWeekOverlay';
+    overlay.innerHTML='<div class="notes-inner"><div class="notes-head"><h2>Week Recap</h2><button class="notes-tab" id="bitsWeekClose">Close</button></div><div class="bits-week-nav"><button class="notes-tab" id="bitsWeekPrev">← Previous</button><span id="bitsWeekRange"></span><button class="notes-tab" id="bitsWeekNext">Next →</button></div><div id="bitsWeekContent"></div></div>';
+    document.body.appendChild(overlay);
+    document.getElementById('bitsWeekOpen').onclick=function(){bitsWeekOffset=0;bitsWeekRender();overlay.classList.add('open');};
+    document.getElementById('bitsWeekClose').onclick=function(){overlay.classList.remove('open');};
+    document.getElementById('bitsWeekPrev').onclick=function(){bitsWeekOffset--;bitsWeekRender();};
+    document.getElementById('bitsWeekNext').onclick=function(){if(bitsWeekOffset<0){bitsWeekOffset++;bitsWeekRender();}};
+  }
+
+  bitsWeekInit();
   deskInit();
   deskNotebookInit();
   deskGoodPlatesAccessInit();
