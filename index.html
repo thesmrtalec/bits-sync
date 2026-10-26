@@ -1407,6 +1407,35 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 .bits-week-text {white-space:pre-wrap;font:16px/1.5 var(--serif);}
 .bits-week-meta {font:11px/1.5 var(--mono);color:var(--muted);margin-bottom:6px;}
 .swipe-act {font-size:11px;}
+
+/* Wide writing desk; phone rules remain below this breakpoint. */
+@media (min-width:960px) {
+ .wrap,body.capture-view .wrap {max-width:1280px;padding-left:40px;padding-right:40px;}
+ .desk-nav {max-width:540px;margin-bottom:30px;}
+ body.capture-view #deskHomePanel {display:grid;grid-template-columns:minmax(0,1.3fr) minmax(280px,.8fr);gap:48px;align-items:start;}
+ body.capture-view #deskHomePanel[hidden] {display:none;}
+ body.capture-view #deskHomePanel>.desk-grid {min-width:0;}
+ body.capture-view #deskHomePanel>#wisdom {margin:0;padding:24px 18px;border-left:1px solid var(--rule);}
+ body.capture-view:not(.capture-typing) .desk-capture #draft {min-height:340px!important;}
+ #list {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 24px;align-items:start;}
+ #list>.rollup-head,#list>.desk-unified-date,#list>.day-header,#list>.day-mark,#list>.day-fold,#list>.band-split,#list>.desk-empty {grid-column:1 / -1;}
+ #list>.swipe-shell {min-width:0;}
+ .desk-unified-card p {overflow-wrap:anywhere;}
+ .notes-inner {max-width:1000px;}
+ #workbenchOverlay:not(.unused) .notes-inner {max-width:1200px;}
+ body:not(.bench-typing) #workbenchOverlay .notes-inner {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);column-gap:40px;row-gap:12px;align-content:start;align-items:start;}
+ #workbenchOverlay .notes-head {grid-column:1 / -1;grid-row:1;}
+ #wbBitLabel {grid-column:1;grid-row:2;}
+ #deskOriginal,#wbBit {grid-column:1;grid-row:3;min-width:0;}
+ #deskWideNotesLabel {grid-column:2;grid-row:2;}
+ #wbPad {grid-column:2;grid-row:3 / 6;min-width:0;min-height:440px;}
+ #deskBenchLines {grid-column:1;grid-row:4;}
+ #deskEntryDetails {grid-column:1;grid-row:5;}
+ #workbenchOverlay .wb-foot {grid-column:1 / -1;grid-row:6;}
+ #bitsWeekOverlay .notes-inner {max-width:920px;}
+ .bits-week-nav {flex-wrap:wrap;}
+}
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -8808,6 +8837,16 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   deskInit();
   deskNotebookInit();
   deskGoodPlatesAccessInit();
+
+  function deskWideLayoutInit(){
+    var wisdom=document.getElementById('wisdom'),home=document.getElementById('deskHomePanel');
+    var place=document.createComment('quotation position');wisdom.before(place);
+    var label=document.getElementById('wbPad').previousElementSibling;label.id='deskWideNotesLabel';
+    var wide=window.matchMedia('(min-width:960px)');
+    function update(){if(wide.matches)home.appendChild(wisdom);else place.after(wisdom);}
+    wide.addEventListener('change',update);update();
+  }
+  deskWideLayoutInit();
   drawerRoute("deskLegacyPrompts", "shadowBtn");
   drawerRoute("deskLegacyLibrary", "libraryBtn");
   drawerRoute("deskLegacyRiff", "shuffleBtn");
