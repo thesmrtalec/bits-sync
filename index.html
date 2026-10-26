@@ -1436,6 +1436,36 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
  .bits-week-nav {flex-wrap:wrap;}
 }
 
+
+/* Landscape capture: one writing surface, one column of supporting controls. */
+@media (min-width:960px) {
+ .wrap,body.capture-view .wrap {max-width:1540px;padding-left:34px;padding-right:34px;}
+ .desk-header {justify-content:center;padding:30px 0 24px;margin-bottom:20px;border-bottom:3px solid var(--accent);}
+ .desk-brand {font-size:36px;letter-spacing:-.5px;}
+ .desk-nav {max-width:none;margin-bottom:28px;gap:30px;}
+ .desk-nav button {font-size:17px;}
+ body.capture-view #deskHomePanel {display:block;}
+ body.capture-view .desk-capture {display:grid;grid-template-columns:minmax(0,1fr) 250px;grid-template-rows:auto auto 1fr auto auto auto auto;column-gap:32px;row-gap:12px;}
+ body.capture-view .desk-capture>.desk-kicker {display:block;grid-column:1 / -1;grid-row:1;margin:0 0 8px;font-size:11px;}
+ body.capture-view .desk-capture>.desk-title {display:none;}
+ body.capture-view:not(.capture-typing) #deskCaptureHost,
+ body.capture-view:not(.capture-typing) #deskCaptureHost .capture {display:contents!important;}
+ body.capture-view:not(.capture-typing) .desk-capture #draft {grid-column:1;grid-row:2 / 7;align-self:stretch;min-height:440px!important;height:clamp(440px,55vh,660px);margin:0;resize:vertical;font-size:24px;}
+ body.capture-view:not(.capture-typing) #deskCaptureTags {grid-column:2;grid-row:2;align-self:start;}
+ body.capture-view:not(.capture-typing) #deskCaptureTags .desk-quick-tags {display:flex;flex-wrap:wrap;gap:5px;margin:0;padding:4px 0 16px;border-bottom:1px solid var(--rule);}
+ body.capture-view:not(.capture-typing) #deskCaptureTags .desk-tag {flex:1 0 auto;background:transparent;border-color:transparent;border-radius:4px;padding:10px 8px;font-size:15px;}
+ body.capture-view:not(.capture-typing) #deskCaptureTags .desk-tag.selected {background:var(--tagbg);border-color:var(--rule);}
+ body.capture-view .desk-capture>#wisdom {grid-column:2;grid-row:3;align-self:start;margin:0;padding:10px 6px 18px;border:0;min-width:0;}
+ body.capture-view .desk-capture>#wisdom .wisdom-q {font-size:19px;line-height:1.45;}
+ body.capture-view .desk-capture>#wisdom .wisdom-by {font-size:14px;}
+ body.capture-view:not(.capture-typing) #deskCaptureStatus {grid-column:2;grid-row:4;min-height:16px;margin:0;font-size:11px;}
+ body.capture-view:not(.capture-typing) #deskWordRollup {grid-column:2;grid-row:5;text-align:left;font-size:11px;margin:0 0 8px;}
+ body.capture-view:not(.capture-typing) .desk-capture #addBtn {grid-column:2;grid-row:6;justify-self:end;align-self:end;min-width:130px;min-height:48px;margin:0;padding:12px 20px;}
+ body.capture-view:not(.capture-typing) .desk-word-live {grid-column:1;grid-row:7;margin:0;font-size:11px;}
+ body.capture-view #bitsWeekOpen {grid-column:2;grid-row:7;justify-self:start;margin:0;padding:6px 0;font-size:12px;color:var(--accent2);}
+ body.capture-view .backup {margin-top:32px;}
+}
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -8839,11 +8869,11 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   deskGoodPlatesAccessInit();
 
   function deskWideLayoutInit(){
-    var wisdom=document.getElementById('wisdom'),home=document.getElementById('deskHomePanel');
+    var wisdom=document.getElementById('wisdom'),capture=document.querySelector('.desk-capture');
     var place=document.createComment('quotation position');wisdom.before(place);
     var label=document.getElementById('wbPad').previousElementSibling;label.id='deskWideNotesLabel';
     var wide=window.matchMedia('(min-width:960px)');
-    function update(){if(wide.matches)home.appendChild(wisdom);else place.after(wisdom);}
+    function update(){if(wide.matches)capture.appendChild(wisdom);else place.after(wisdom);}
     wide.addEventListener('change',update);update();
   }
   deskWideLayoutInit();
