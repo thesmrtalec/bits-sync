@@ -8930,6 +8930,32 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   var studioStyle=document.createElement('style');studioStyle.textContent='.studio-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}.studio-field{display:block;margin:16px 0}.studio-field>span{display:block;font-size:12px;opacity:.7;margin-bottom:7px}.studio-field input,.studio-field textarea,.studio-tools select{width:100%;box-sizing:border-box;background:transparent;color:inherit;border:1px solid currentColor;border-radius:7px;padding:12px;font:inherit}.studio-field textarea{resize:vertical;line-height:1.6;min-height:120px}.studio-hint{font-size:13px;opacity:.7;line-height:1.5}.studio-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:28px}.studio-order{align-self:start;position:sticky;top:20px}.studio-topic{border-bottom:1px solid #8884;padding:8px 0}.studio-topic.selected{border-left:3px solid currentColor;padding-left:8px}.studio-topic>.desk-btn{text-align:left;width:100%}.studio-piece,.studio-match{border:1px solid #8885;border-radius:8px;padding:16px;margin:14px 0}.studio-piece.parked{border-style:dashed;opacity:.65}.studio-match p{white-space:pre-wrap;max-height:150px;overflow:auto}.studio-set{display:flex;flex-direction:column;gap:8px;width:100%;text-align:left;padding:22px;margin:12px 0;color:inherit;background:transparent;border:1px solid #8885;border-radius:8px;font:inherit}.studio-set span{font-size:13px;opacity:.65}.studio-find{padding:15px 0}.studio-find summary{cursor:pointer}.studio-rehearse{position:fixed;inset:0;z-index:100000;background:var(--bg,#f4f0e7);color:var(--ink,#24221d);overflow:auto;padding:6vh 8vw}.studio-slide{white-space:pre-wrap;font:clamp(24px,4vw,48px)/1.5 Georgia,serif;min-height:55vh;padding:30px 0}@media(max-width:700px){.studio-layout{grid-template-columns:minmax(0,1fr);gap:10px}.studio-order{position:static}.studio-topic{display:inline-block;max-width:100%;margin-right:10px}.studio-topic .studio-tools{margin:4px 0}.studio-piece{padding:12px}}';document.head.appendChild(studioStyle);
   document.getElementById('deskSets').textContent='Build a set';
 
+  // Keep dynamically created writing controls out of the browser's login group.
+  function protectWritingAutofill(){
+    var writingForm=document.createElement('form');
+    writingForm.id='bitsWritingFields';
+    writingForm.autocomplete='off';
+    writingForm.hidden=true;
+    writingForm.onsubmit=function(e){e.preventDefault();};
+    document.body.appendChild(writingForm);
+    function protect(field){
+      if(!field.matches('input,textarea'))return;
+      if(field.id==='authEmail'||field.id==='authPass'||field.type==='password'||field.type==='email')return;
+      if(field.dataset.bitsWritingField)return;
+      field.dataset.bitsWritingField='true';
+      field.setAttribute('autocomplete','off');
+      field.setAttribute('form','bitsWritingFields');
+      field.setAttribute('data-lpignore','true');
+      field.setAttribute('data-1p-ignore','true');
+      field.setAttribute('data-bwignore','true');
+      field.setAttribute('data-form-type','other');
+      if(!field.name)field.name='bits-writing-'+(field.id||studioId());
+    }
+    document.querySelectorAll('input,textarea').forEach(protect);
+    new MutationObserver(function(changes){changes.forEach(function(change){change.addedNodes.forEach(function(node){if(node.nodeType!==1)return;protect(node);node.querySelectorAll('input,textarea').forEach(protect);});});}).observe(document.body,{childList:true,subtree:true});
+    document.addEventListener('focusin',function(e){if(e.target.matches('input,textarea'))protect(e.target);},true);
+  }
+  protectWritingAutofill();
   applyTheme();
   render();
   initSupabase();
