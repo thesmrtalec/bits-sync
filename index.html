@@ -8951,7 +8951,19 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     page.appendChild(el('p','studio-hint',paperTab==='considering'?'Topics, scraps, possibilities. Nothing here commits you to using it.':'One continuous draft. Put it in the order you want to say it.'));
     var editor=studioField(page,paperTab==='considering'?'Thinking space':'Set draft',p[paperTab],function(v){p[paperTab]=v;persist();count.textContent=deskWordCount(v)+' words';},true);editor.classList.add('paper-editor');editor.placeholder=paperTab==='considering'?'Leave a thought here. Come back to it.':'Write here or bring something over from Considering.';var count=el('div','paper-count',deskWordCount(p[paperTab])+' words');page.appendChild(count);
     var acts=el('div','studio-tools');
-    if(paperTab==='considering'){studioButton(acts,'Add selection to set →',function(){var text=editor.value.slice(editor.selectionStart,editor.selectionEnd).trim();if(!text){toast('Select the words you want to bring into the set.');return;}p.draft+=(p.draft.trim()?'\n\n':'')+text;persist();toast('Added to the set. Your thinking notes are still here.');});}
+    if(paperTab==='considering'){
+      var addToSet=studioButton(acts,'Add to set →',function(){
+        var selected=editor.value.slice(editor.selectionStart,editor.selectionEnd).trim();
+        var text=selected||editor.value.trim();
+        if(!text){toast('Nothing to add yet.');return;}
+        p.considering=editor.value;
+        p.draft+=(p.draft.trim()?'\n\n':'')+text;
+        persist();paperTab='draft';renderSets();
+        toast('Added to the set. Considering notes kept.');
+      });
+      addToSet.addEventListener('pointerdown',function(event){event.preventDefault();});
+      acts.appendChild(el('span','studio-hint','Adds highlighted text, or all notes if nothing is selected.'));
+    }
     else{studioButton(acts,'Rehearse',function(){studioRehearse(s);});studioButton(acts,'Export slides',function(){studioSlides(s,false);});var options=document.createElement('details');options.className='paper-options';options.appendChild(el('summary',null,'Slide options'));options.appendChild(el('p','studio-hint','Blank lines separate slides. A line starting with # names the next section.'));studioField(options,'Memory cues (optional; blank lines separate slides)',p.cues,function(v){p.cues=v;persist();},true);studioButton(options,'Export cue slides',function(){if(!p.cues.trim()){toast('Add your memory cues above first.');return;}studioSlides(s,true);});page.appendChild(options);}
     page.appendChild(acts);
     side.appendChild(el('h3',null,'Within reach'));
