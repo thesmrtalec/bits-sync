@@ -9003,14 +9003,46 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 
   var listOpenId=null,listQuery='';
   function thoughtLists(){return state.thoughtLists||(state.thoughtLists=[]);}
+  function thoughtDeleteList(list){
+    if(!thoughtLists().some(function(x){return x.id===list.id;}))return;
+    closeSwipe();
+    list.deletedAt=Date.now();
+    (state.deletedThoughtLists||(state.deletedThoughtLists=[])).unshift(list);
+    state.thoughtLists=thoughtLists().filter(function(x){return x.id!==list.id;});
+    if(listOpenId===list.id)listOpenId=null;
+    save();render();
+  }
+  function thoughtRestoreList(id){
+    var trash=state.deletedThoughtLists||[],list=trash.find(function(x){return x.id===id;});
+    if(!list)return;
+    state.deletedThoughtLists=trash.filter(function(x){return x.id!==id;});
+    delete list.deletedAt;
+    thoughtLists().unshift(list);save();render();
+  }
+  function thoughtSwipeList(list,card){
+    var shell=el('div','swipe-shell thought-list-swipe');
+    var remove=el('button','swipe-act swipe-kill','Delete');
+    var develop=el('button','swipe-act swipe-promote','Develop');
+    remove.type=develop.type='button';
+    remove.setAttribute('aria-label','Delete list '+(list.title||'Untitled list'));
+    develop.setAttribute('aria-label','Develop list '+(list.title||'Untitled list'));
+    remove.onclick=function(e){e.stopPropagation();thoughtDeleteList(list);};
+    develop.onclick=function(e){e.stopPropagation();closeSwipe();listOpenId=list.id;render();};
+    card.classList.add('swipe-face');
+    card.onclick=function(){if(swipeOpenCard===card){closeSwipe();return;}closeSwipe();listOpenId=list.id;render();};
+    shell.appendChild(remove);shell.appendChild(develop);shell.appendChild(card);attachSwipe(shell,card);return shell;
+  }
   function thoughtNew(title){var l={id:uid(),title:title||'',items:[],draft:'',created:Date.now(),updated:Date.now()};thoughtLists().unshift(l);listOpenId=l.id;save();render();}
   function thoughtAdd(l){var lines=l.draft.split(/\r?\n/).map(function(x){return x.trim();}).filter(Boolean);lines.forEach(function(text){l.items.push({id:uid(),text:text,star:false,created:Date.now()});deskTrackWords(deskWordCount(text));});l.draft='';l.updated=Date.now();save();return lines.length;}
   var listsPanel=el('section','thought-lists');listsPanel.id='thoughtListsPanel';listsPanel.hidden=true;document.getElementById('deskWriter').after(listsPanel);
   var listsNav=el('button',null,'Lists');listsNav.dataset.desk='lists';listsNav.onclick=function(){deskRoute('lists');};document.querySelector('.desk-nav').appendChild(listsNav);
   function thoughtRender(){var h=listsPanel;h.innerHTML='';var all=thoughtLists(),l=all.find(function(x){return x.id===listOpenId;});
     if(!l){var head=el('div','range-head');head.appendChild(el('h1',null,'Lists'));studioButton(head,'+ New list',function(){thoughtNew('');});h.appendChild(head);h.appendChild(el('p','studio-hint','Give it a heading. Fire off items. Come back whenever.'));
-      var search=studioField(h,'Find a list',listQuery,function(v){listQuery=v;paint();});search.type='search';var cards=el('div');h.appendChild(cards);function paint(){cards.innerHTML='';var q=listQuery.toLowerCase();all.filter(function(x){return !q||x.title.toLowerCase().includes(q)||x.items.some(function(i){return i.text.toLowerCase().includes(q);});}).forEach(function(x){var b=el('button','studio-set');b.appendChild(el('strong',null,x.title||'Untitled list'));b.appendChild(el('span',null,x.items.length+' items'+(x.draft?' · unfinished draft':'')));var sample=x.items.slice(-2).map(function(i){return i.text;}).join(' / ');if(sample)b.appendChild(el('span',null,sample.slice(0,170)));b.onclick=function(){listOpenId=x.id;render();};cards.appendChild(b);});}paint();
-      if(!all.length){var starts=el('div','studio-tools');studioButton(starts,'Things people said to me as bishop',function(){thoughtNew('Things people said to me as bishop');});studioButton(starts,'Compliments from my daughter',function(){thoughtNew('Compliments from my daughter');});h.appendChild(starts);}return;}
+      var search=studioField(h,'Find a list',listQuery,function(v){listQuery=v;closeSwipe();paint();});search.type='search';var cards=el('div');h.appendChild(cards);function paint(){cards.innerHTML='';var q=listQuery.toLowerCase();all.filter(function(x){return !q||x.title.toLowerCase().includes(q)||x.items.some(function(i){return i.text.toLowerCase().includes(q);});}).forEach(function(x){var b=el('button','studio-set');b.appendChild(el('strong',null,x.title||'Untitled list'));b.appendChild(el('span',null,x.items.length+' items'+(x.draft?' · unfinished draft':'')));var sample=x.items.slice(-2).map(function(i){return i.text;}).join(' / ');if(sample)b.appendChild(el('span',null,sample.slice(0,170)));cards.appendChild(thoughtSwipeList(x,b));});}paint();
+      if(!all.length)h.appendChild(el('p','studio-hint','No lists yet. Start with + New list.'));
+      var deleted=state.deletedThoughtLists||[];
+      if(deleted.length){var trash=document.createElement('details');trash.className='range-history';trash.appendChild(el('summary',null,'Deleted lists · '+deleted.length));deleted.forEach(function(x){var row=el('div','studio-tools');row.appendChild(el('span',null,x.title||'Untitled list'));studioButton(row,'Restore',function(){thoughtRestoreList(x.id);});trash.appendChild(row);});h.appendChild(trash);}
+      return;}
     var bar=el('div','studio-tools');studioButton(bar,'‹ All lists',function(){listOpenId=null;render();});h.appendChild(bar);var status=el('div','range-status','Saved');function persist(){l.updated=Date.now();status.textContent=save()===false?'Could not save. Keep this page open.':'Saved';}
     var name=studioField(h,'List title',l.title,function(v){l.title=v;persist();});name.classList.add('paper-title');name.placeholder='Things people say…';
     var draft=studioField(h,'Add items · one per line',l.draft,function(v){l.draft=v;persist();},true);draft.rows=3;draft.placeholder='Fire away…';draft.classList.add('list-capture');
@@ -9024,6 +9056,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   var listsClassicRender=render;render=function(){listsClassicRender();var on=deskView==='lists';listsPanel.hidden=!on;document.body.classList.toggle('lists-view',on);if(on)thoughtRender();};
   var listsStyle=document.createElement('style');listsStyle.textContent='body.lists-view #list,body.lists-view #searchOut{display:none!important}.thought-lists{width:100%;min-width:0}.thought-item{border-top:1px solid var(--rule,#8885);padding:12px 0;margin-top:16px}.list-capture{min-height:100px!important;font:18px/1.6 Georgia,serif!important}.list-item-text{min-height:65px!important;border:0!important;border-left:2px solid #8885!important;border-radius:0!important;resize:vertical;line-height:1.6!important}.thought-item .studio-field>span{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}.thought-item .studio-tools{margin:4px 0}.thought-item .desk-btn{font-size:12px;padding:7px 10px}.thought-lists .studio-tools select{max-width:100%;width:auto;font-size:12px}.desk-nav{flex-wrap:wrap}@media(max-width:600px){.desk-nav{gap:18px}.desk-nav button{font-size:14px}}';document.head.appendChild(listsStyle);
 
+  var listSwipeStyle=document.createElement('style');listSwipeStyle.textContent='.thought-list-swipe{margin:12px 0}.thought-list-swipe>.studio-set{margin:0!important;background:var(--card,#f4f0e7);width:100%;touch-action:pan-y}.thought-list-swipe .swipe-act{font-size:10px}';document.head.appendChild(listSwipeStyle);
   // Keep dynamically created writing controls out of the browser's login group.
   function protectWritingAutofill(){
     var writingForm=document.createElement('form');
