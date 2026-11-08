@@ -1286,7 +1286,19 @@ body.write-typing #deskWriter > .desk-section .desk-btn { min-height:36px; paddi
 .desk-original { display:block; width:100%; text-align:left; white-space:pre-wrap; overflow-wrap:anywhere; background:var(--card); color:var(--ink); border:1px solid var(--rule); border-radius:7px; padding:14px; font:500 22px/1.4 'Caveat','Bradley Hand',cursive; margin-bottom:18px; }
 .desk-original[hidden],#wbBit[hidden] { display:none!important; }
 .punchline-mark { background:#ffdc78; color:#271e10; border-radius:2px; }
-#wbPunchline[hidden],#deskBenchStatus:empty { display:none!important; }
+#deskBenchStatus:empty { display:none!important; }
+#entryReader { position:fixed; inset:0; width:100%; height:100%; height:100dvh; max-width:none; max-height:none; box-sizing:border-box; margin:0; padding:0; border:0; background:var(--page); color:var(--ink); overscroll-behavior:contain; }
+#entryReader::backdrop { background:var(--page); }
+body:has(#entryReader[open]) { overflow:hidden; }
+.reader-head { position:sticky; top:0; z-index:1; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:max(8px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 8px max(20px,env(safe-area-inset-left)); background:var(--page); border-bottom:1px solid var(--rule); }
+.reader-head .desk-btn { min-height:44px; }
+.reader-hint { margin:0; color:var(--muted); font:12px/1.4 var(--mono); }
+.reader-meta { color:var(--ink); }
+.reader-text { box-sizing:border-box; width:min(100%,750px); margin:auto; padding:clamp(32px,8vh,90px) max(22px,env(safe-area-inset-right)) max(40px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left)); white-space:pre-wrap; overflow-wrap:anywhere; font:clamp(22px,4.6vw,32px)/1.8 var(--serif); user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+.reader-word { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.reader-word:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:2px; }
+.desk-entry-meta-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.desk-entry-meta-row button,.search-develop { min-height:40px; padding:0 8px; border:0; background:transparent; color:var(--muted); font:12px var(--mono); }
 #workbenchOverlay:has(#wbBit:not([hidden])) #deskBenchKeyboardDone { display:block; }
 #workbenchOverlay #wbBit,#workbenchOverlay #wbPad { flex:none; max-height:none; overflow:hidden; resize:none; }
 #workbenchOverlay .notes-head { flex-wrap:wrap; }
@@ -2310,6 +2322,13 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   </div>
 </div>
 
+  <dialog id="entryReader" aria-label="Entry reader">
+    <header class="reader-head">
+      <button class="desk-btn" id="entryReaderBack" type="button" autofocus>← Back</button>
+      <p class="reader-hint"><span id="entryReaderCount" class="reader-meta"></span><br>Tap words to highlight or clear.</p>
+    </header>
+    <article class="reader-text" id="entryReaderText" aria-label="Entry text"></article>
+  </dialog>
   <div class="entry-share-overlay" id="entryShareOverlay" aria-hidden="true">
     <div class="entry-share-shell">
       <div class="entry-share-top">
@@ -7388,17 +7407,22 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 
       var card = el("div", "bone-card search-hit swipe-face");
       var p = punchlineEntryNode("p", null, it);
-      p.style.cursor = "pointer";
-      p.title = "Tap to go into the gym";
+      deskEntryAccess(p);
+      p.title = "Read entry · long-press to copy";
+      p.dataset.readerEntry=it.id;
       p.onclick = function () {
         if (swipeOpenCard === card) { closeSwipe(); return; }
-        openWorkbench(it.id, isStuff ? "truth" : "bit");
+        deskOpenReader(it,isStuff?"truth":"bit",p);
       };
       attachLongPressCopy(p, function () { return it.text; });
       card.appendChild(p);
 
       var actions = el("div", "bone-actions");
-      actions.appendChild(el("span", "i-mined", r.kind));
+      actions.appendChild(el("span", "i-mined", deskEntryCounts(it)));
+      var develop=el("button","search-develop","Develop →");
+      develop.type="button";
+      develop.onclick=function(){openWorkbench(it.id,isStuff?"truth":"bit");};
+      actions.appendChild(develop);
       card.appendChild(actions);
 
       shell.appendChild(card);
@@ -8625,12 +8649,108 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var star=document.getElementById('deskStarred');star.setAttribute('aria-pressed',String(deskOnlyStarred));star.classList.toggle('active',deskOnlyStarred);
   }
   function deskBenchGrow(node){if(!node||node===deskBenchActive)return;node.style.height='auto';node.style.height=Math.max(node.scrollHeight,node.id==='wbPad'?200:80)+'px';}
+  function deskTogglePunchline(entry,start,end){
+    var ranges=entry.punchlines||[];
+    if(!punchlinesInSlice(ranges,start,end).length) return mergePunchlines(ranges.concat({start:start,end:end}));
+    return ranges.flatMap(function(range){
+      if(range.end<=start || range.start>=end) return [range];
+      var remainder=[];
+      if(range.start<start){
+        var left=entry.text.slice(range.start,start).trimEnd();
+        if(left.trim()) remainder.push({start:range.start,end:range.start+left.length});
+      }
+      if(range.end>end){
+        var right=entry.text.slice(end,range.end).trimStart();
+        if(right.trim()) remainder.push({start:range.end-right.length,end:range.end});
+      }
+      return remainder;
+    });
+  }
+  function deskEntryCounts(entry){
+    var text=entry.text||'',count=0,previousEnd=-1;
+    (entry.punchlines||[]).forEach(function(range){
+      if(!text.slice(range.start,range.end).trim()) return;
+      // Consecutive marked words in a phrase count once; a line break starts another.
+      if(previousEnd<0 || /[^\t ]/.test(text.slice(previousEnd,range.start))) count++;
+      previousEnd=range.end;
+    });
+    return deskWordCount(text)+' words · '+count+(count===1?' punchline':' punchlines');
+  }
+  function deskOpenReader(entry,kind,origin){
+    var dialog=document.getElementById('entryReader');
+    if(dialog.open) return;
+    var page=document.getElementById('entryReaderText'),counter=document.getElementById('entryReaderCount');
+    var text=entry.text||'',words=[],offset=0,changed=false;
+    page.replaceChildren();
+    counter.textContent=deskEntryCounts(entry);
+    function paint(word,start,end){
+      var marks=punchlinesInSlice(entry.punchlines||[],start,end);
+      paintPunchlines(word,text.slice(start,end),marks);
+      word.setAttribute('aria-pressed',String(marks.length>0));
+    }
+    function mark(word,start,end){
+      var latest=(state[kind==='bit'?'bits':'truths']||[]).find(function(item){return item.id===entry.id;});
+      if(latest!==entry || entry.text!==text){
+        dialog.close();
+        toast('Entry updated. Open it again to highlight.');
+        return;
+      }
+      var previous=entry.punchlines,touched=entry.touched;
+      entry.punchlines=deskTogglePunchline(entry,start,end);
+      entry.touched=Date.now();
+      if(save()===false){
+        entry.punchlines=previous;
+        entry.touched=touched;
+        return;
+      }
+      changed=true;
+      paint(word,start,end);
+      counter.textContent=deskEntryCounts(entry);
+    }
+    for(var match of text.matchAll(/\S+/g)){
+      let start=match.index,end=start+match[0].length;
+      let word=el('span','reader-word');
+      word.setAttribute('role','button');
+      word.tabIndex=words.length?-1:0;
+      paint(word,start,end);
+      word.onclick=function(){mark(word,start,end);};
+      words.push(word);
+      page.append(document.createTextNode(text.slice(offset,start)),word);
+      offset=end;
+    }
+    page.appendChild(document.createTextNode(text.slice(offset)));
+    page.onkeydown=function(event){
+      var index=words.indexOf(event.target);
+      if(index<0) return;
+      if(event.key===' ' || event.key==='Enter'){
+        event.preventDefault();
+        words[index].click();
+      }
+      var delta={ArrowLeft:-1,ArrowUp:-1,ArrowRight:1,ArrowDown:1}[event.key];
+      if(delta && words[index+delta]){
+        event.preventDefault();
+        words[index].tabIndex=-1;
+        words[index+delta].tabIndex=0;
+        words[index+delta].focus();
+      }
+    };
+    document.getElementById('entryReaderBack').onclick=function(){dialog.close();};
+    dialog.onclose=function(){
+      page.replaceChildren();
+      page.onkeydown=null;
+      if(changed) render();
+      var target=origin&&origin.isConnected?origin:Array.from(document.querySelectorAll('[data-reader-entry]'))
+        .find(function(node){return node.dataset.readerEntry===entry.id;});
+      if(target) target.focus({preventScroll:true});
+    };
+    dialog.showModal();
+    dialog.scrollTop=0;
+  }
   function deskBenchShowEntry(){
     var bit=document.getElementById('wbBit'),preview=document.getElementById('deskOriginal');
     var entry=benchFind();
     if(entry) paintPunchlines(preview,entry.text,entry.punchlines||[]);
     bit.hidden=true;preview.hidden=false;
-    document.getElementById('wbPunchline').hidden=true;
   }
   function deskBenchRefresh(){
     deskBenchShowEntry();
@@ -8654,35 +8774,8 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     document.querySelector('.desk-notebook-menu').addEventListener('click',function(e){if(e.target.closest('button'))document.getElementById('deskNotebookMenu').open=false;});
     var overlay=document.getElementById('workbenchOverlay'),inner=overlay.querySelector('.notes-inner'),bit=document.getElementById('wbBit'),pad=document.getElementById('wbPad');
     var preview=el('button','desk-original');preview.id='deskOriginal';preview.setAttribute('aria-label','Original thought — tap to edit');bit.before(preview);
-    var punchline=deskButton('Highlight punchline',function(){
-      var entry=benchFind();
-      if(!entry) return;
-      var selected=bit.value.slice(bit.selectionStart,bit.selectionEnd), text=selected.trim();
-      if(!text){status.textContent='Select the punchline first.';return;}
-      var leading=bit.value.length-bit.value.trimStart().length;
-      var start=bit.selectionStart+selected.indexOf(text)-leading,end=start+text.length;
-      saveWorkbench();
-      var ranges=entry.punchlines||[];
-      var remove=ranges.some(function(range){return range.start<=start && range.end>=end;});
-      if(remove){
-        ranges=ranges.flatMap(function(range){
-          if(range.end<=start || range.start>=end) return [range];
-          var remainder=[];
-          if(range.start<start) remainder.push({start:range.start,end:start});
-          if(range.end>end) remainder.push({start:end,end:range.end});
-          return remainder;
-        });
-      }else ranges=mergePunchlines(ranges.concat({start:start,end:end}));
-      entry.punchlines=ranges;
-      entry.touched=Date.now();
-      if(save()!==false) status.textContent=remove?'Highlight removed':'Punchline highlighted';
-    },'text');
-    punchline.id='wbPunchline';punchline.hidden=true;
-    punchline.title='Select text and tap to toggle its highlight';
-    punchline.addEventListener('pointerdown',function(e){e.preventDefault();});
-    overlay.querySelector('.notes-head').appendChild(punchline);
     preview.onclick=function(){
-      preview.hidden=true;bit.hidden=false;punchline.hidden=false;
+      preview.hidden=true;bit.hidden=false;
       deskBenchGrow(bit);bit.focus({preventScroll:true});
     };
     var label=pad.previousElementSibling;bit.after(label,pad);
@@ -8934,14 +9027,50 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 
   deskRenderUnifiedNotebook=function(){
     var list=document.getElementById('list');list.innerHTML='';var rows=deskUnifiedEntries();if(!rows.length){list.appendChild(el('p','desk-empty',deskNotebookStatus==='new'?'No untouched thoughts here.':deskNotebookStatus==='worked'?'Nothing worked yet.':'Nothing here yet.'));return;}var last='';
-    rows.forEach(function(row){var e=row.entry,key=truthDayKey(e.created||Date.now());if(key!==last){last=key;list.appendChild(el('div','rollup-head desk-unified-date',key===truthDayKey(Date.now())?'Today':new Date(e.created||Date.now()).toLocaleDateString(undefined,{month:'short',day:'numeric'})));}var open=deskExpandedEntry===e.id,card=el('article','bone-card truth-card desk-unified-card swipe-face'+(open?' open':''));if(e.prompt)card.appendChild(el('div','card-prompt',e.prompt));card.appendChild(starToggle(e));var body=punchlineEntryNode('p',null,e);deskEntryAccess(body);body.title=(open?'Tap to collapse':'Tap to open')+' · long-press to copy';body.onclick=function(){if(swipeOpenCard===card){closeSwipe();return;}deskExpandedEntry=open?null:e.id;deskCardTagEdit=null;render();};attachLongPressCopy(body,function(){return e.text;});card.appendChild(body);var meta=[deskWordCount(e.text)+'w'];if(deskIsWorked(e,row.kind))meta.push('Worked');var forms=deskTagText(e.forms);if(forms)meta.push(forms);card.appendChild(el('div','desk-meta',meta.join(' · ')));if(open)card.appendChild(deskRenderEntryExpanded(e,row.kind));list.appendChild(deskSwipeEntry(e,row.kind,card));});
+    rows.forEach(function(row){
+      var entry=row.entry,day=truthDayKey(entry.created||Date.now());
+      if(day!==last){
+        last=day;
+        var label=day===truthDayKey(Date.now())?'Today':new Date(entry.created||Date.now()).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+        list.appendChild(el('div','rollup-head desk-unified-date',label));
+      }
+      var open=deskExpandedEntry===entry.id,card=el('article','bone-card truth-card desk-unified-card swipe-face'+(open?' open':''));
+      if(entry.prompt) card.appendChild(el('div','card-prompt',entry.prompt));
+      card.appendChild(starToggle(entry));
+      var body=punchlineEntryNode('p',null,entry);
+      deskEntryAccess(body);
+      body.title='Read entry · long-press to copy';
+      body.dataset.readerEntry=entry.id;
+      body.onclick=function(){
+        if(swipeOpenCard===card){closeSwipe();return;}
+        deskOpenReader(entry,row.kind,body);
+      };
+      attachLongPressCopy(body,function(){return entry.text;});
+      card.appendChild(body);
+
+      var meta=[deskEntryCounts(entry)],forms=deskTagText(entry.forms);
+      if(deskIsWorked(entry,row.kind)) meta.push('Worked');
+      if(forms) meta.push(forms);
+      var footer=el('div','desk-entry-meta-row'),details=el('button',null,open?'Hide details':'Details');
+      details.type='button';
+      details.setAttribute('aria-expanded',String(open));
+      details.onclick=function(){
+        deskExpandedEntry=open?null:entry.id;
+        deskCardTagEdit=null;
+        render();
+      };
+      footer.append(el('div','desk-meta',meta.join(' · ')),details);
+      card.appendChild(footer);
+      if(open) card.appendChild(deskRenderEntryExpanded(entry,row.kind));
+      list.appendChild(deskSwipeEntry(entry,row.kind,card));
+    });
   };
   deskEntryAccess=function(p){p.setAttribute('role','button');p.tabIndex=0;p.title='Tap to open · long-press to copy';p.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();p.click();}};};
 
   function deskGoodPlatesAccessInit(){
     var overlay=document.getElementById('workbenchOverlay'),head=overlay.querySelector('.notes-head'),close=document.getElementById('wbClose');document.getElementById('wbTitle').textContent='Workbench';
     var actions=el('div','notes-head-actions'),share=el('button','share-head','share');share.id='wbShare';actions.appendChild(share);actions.appendChild(close);head.appendChild(actions);
-    document.getElementById('wbBitLabel').textContent='The entry · tap to edit or highlight';var pad=document.getElementById('wbPad'),padLabel=pad.previousElementSibling;if(padLabel&&padLabel.classList.contains('wb-label'))padLabel.textContent='Working notes';
+    document.getElementById('wbBitLabel').textContent='The entry';var pad=document.getElementById('wbPad'),padLabel=pad.previousElementSibling;if(padLabel&&padLabel.classList.contains('wb-label'))padLabel.textContent='Working notes';
     var details=document.createElement('details');details.id='deskEntryDetails';var sum=document.createElement('summary');sum.appendChild(document.createTextNode('Entry details'));sum.appendChild(el('span',null,'Noticing · Tags'));details.appendChild(sum);
     var dg1=el('div','desk-wb-detail-group');dg1.appendChild(el('div','desk-wb-detail-label','Noticing'));dg1.appendChild(document.getElementById('deskWorkbenchTags'));details.appendChild(dg1);
     var dg2=el('div','desk-wb-detail-group');dg2.appendChild(el('div','desk-wb-detail-label','Tags'));dg2.appendChild(document.getElementById('wbTags'));details.appendChild(dg2);pad.after(details);
