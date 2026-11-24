@@ -1483,6 +1483,29 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
  body.capture-view .backup {margin-top:32px;}
 }
 
+
+/* v2.6.1 — material type and capture topics */
+.desk-material-label{font:11px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:2px 0 6px}
+.desk-material-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.desk-material-row .desk-tag{flex:1 1 auto;min-width:0;padding:8px 10px;font-size:14px}
+.desk-material-hint{font-size:12px;color:var(--muted);margin:5px 0 2px;line-height:1.3}
+.desk-capture-extra{margin:5px 0 0;min-width:0}
+.desk-capture-extra summary{cursor:pointer;font:13px var(--mono);color:var(--muted);padding:7px 0;overflow-wrap:anywhere}
+.desk-capture-extra .tag-input-row{display:flex;gap:6px;margin-bottom:6px}
+.desk-capture-extra .tag-input{flex:1;min-width:0;width:auto;font-size:16px}
+.desk-capture-topic-chips{max-height:110px;overflow-y:auto}
+.desk-capture-extra .desk-quick-tags{margin:3px 0 6px}
+.desk-material-filters{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0 8px}
+.desk-material-filters .desk-btn{font-size:12px;padding:7px 10px;border:1px solid var(--rule);border-radius:999px;min-height:34px}
+.desk-material-filters .desk-btn.active{color:var(--onaccent);background:var(--accent);border-color:var(--accent)}
+.desk-topic-filter{width:100%;max-width:360px;font:14px var(--mono);padding:8px;color:var(--ink);background:var(--card);border:1px solid var(--rule);border-radius:6px;margin-bottom:12px}
+.desk-workbench-material{margin:14px 0 10px}
+body.capture-typing #deskCaptureHost{overflow-y:auto}
+body.capture-typing .desk-capture #draft{min-height:65px!important}
+body.capture-typing #deskCaptureTags .desk-material-hint{display:none}
+body.capture-typing #deskCaptureTags .desk-material-row .desk-tag{padding:6px 8px}
+@media(min-width:960px){body.capture-view:not(.capture-typing) #deskCaptureTags .desk-material-row .desk-tag{padding:8px 6px;font-size:14px;flex:1 1 auto}body.capture-view:not(.capture-typing) #deskCaptureTags .desk-quick-tags{padding:4px 0;border:0}}
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -1522,6 +1545,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
 </main>
 <section id="deskNotebookHead" hidden>
  <div class="desk-section-head"><h1 class="desk-title">Your notebook.</h1><details id="deskNotebookMenu"><summary aria-label="Notebook menu" title="Notebook menu">•••</summary><div class="desk-notebook-menu"><button class="desk-btn" id="deskSets" data-desk="sets">Set lists</button><button class="desk-btn" id="deskAxe">🪓 Axe mode</button></div></details></div>
+ <div id="deskMaterialFilters" class="desk-material-filters" role="group" aria-label="Filter by material type"></div>
  <div class="desk-status-tabs" role="group" aria-label="Notebook view"><button class="desk-btn active" id="deskAllStatus" aria-pressed="true">All</button><button class="desk-btn" id="deskNewStatus" aria-pressed="false">New</button><button class="desk-btn" id="deskWorkedStatus" aria-pressed="false">Worked</button></div>
  <details id="deskFilters"><summary>Filter</summary><div id="deskFilterChoices"></div><button class="desk-btn" id="deskStarred">Starred only</button><button class="desk-btn text" id="deskClearFilters">Clear filters</button></details>
 </section>
@@ -2410,7 +2434,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     "You had it in the car. Where'd it go?"
   ];
 
-  var APP_VERSION = "v2.6.0";
+  var APP_VERSION = "v2.6.1";
   (function () {
     var vc = document.getElementById("verChip");
     if (vc) vc.textContent = APP_VERSION;
@@ -3369,6 +3393,8 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     if (!text) return;
     deskTrackWords(deskWordCount(text), Date.now());
     var forms = pendingForms.slice();
+    var material=deskCaptureMaterial, topics=deskCaptureTopicValues();
+    deskCaptureMaterial='';deskCaptureTopics=[];deskCaptureTopicDraft='';deskCaptureTopicsOpen=false;deskCaptureNoticingOpen=false;
     var taggedTruth = forms.indexOf("truth") !== -1;
     function resetCapOrigin() {
       capOrigin = null;
@@ -3378,6 +3404,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       if (!state.truths) state.truths = [];
       var t0 = { id: uid(), text: text, created: Date.now() };
       if (forms.length) t0.forms = forms;
+      if(material)t0.materialType=material; if(topics.length)t0.tags=topics;
       /* Quick tags describe an entry, not its quality. */   // a truth is a badged entry; auto-star it
       if (capOrigin) t0.origin = capOrigin;
       state.truths.unshift(t0);
@@ -3395,6 +3422,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       statusAt: Date.now()
     };
     if (forms.length) b0.forms = forms;
+    if(material)b0.materialType=material; if(topics.length)b0.tags=topics;
     if (capOrigin) b0.origin = capOrigin;
     state.bits.unshift(b0);
     draft.value = "";
@@ -3693,7 +3721,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var who = document.getElementById("authWho");
     if (sbUser) {
       gate.classList.remove("open");
-      if (!draft.value) { try { draft.value=localStorage.getItem(deskDraftKey())||""; pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+"-forms")||"[]"); if(!Array.isArray(pendingForms))pendingForms=[]; deskRenderCaptureTags(); } catch(e) {} }
+      if (!draft.value) { try { draft.value=localStorage.getItem(deskDraftKey())||""; pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+"-forms")||"[]"); if(!Array.isArray(pendingForms))pendingForms=[]; deskRestoreCaptureMeta(); deskRenderCaptureTags(); } catch(e) {} }
       if (who) who.textContent = sbUser.email || "signed in";
     } else {
       gate.classList.add("open");
@@ -8160,13 +8188,40 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     bridge.label='Keep this & try versions';return [bridge].concat(versions);
   }
   function deskSessionSteps(s) { return s.steps || DESK_STEPS; }
+  // Development is independent of noticing, topic tags, and the worked status.
+  var deskMaterialDefs=[{key:'premise',label:'Premise',hint:'An idea or observation — find the comedic angle.'},{key:'setup',label:'Setup',hint:'A framed expectation — find the punchline.'},{key:'joke',label:'Joke',hint:'Has an intended punchline — not necessarily tested.'}];
+  var deskCaptureMaterial='',deskCaptureTopics=[],deskCaptureTopicDraft='',deskCaptureTopicsOpen=false,deskCaptureNoticingOpen=false;
+  var deskMaterialFilter='all',deskTopicFilter='';
+  function deskMaterial(value){return deskMaterialDefs.some(function(d){return d.key===value;})?value:'';}
+  function deskMaterialLabel(value){var d=deskMaterialDefs.find(function(x){return x.key===value;});return d?d.label:'Unclassified';}
+  function deskMaterialRow(value,change){
+    var row=el('div','desk-material-row');row.setAttribute('role','group');row.setAttribute('aria-label','Material type — optional');
+    deskMaterialDefs.forEach(function(d){var on=value===d.key,b=el('button','desk-tag'+(on?' selected':''),d.label);b.type='button';b.title=d.hint;b.setAttribute('aria-pressed',String(on));b.onclick=function(){change(on?'':d.key);};row.appendChild(b);});return row;
+  }
+  function deskNormalizeTopics(values){return Array.from(new Set((values||[]).map(function(t){return String(t).trim().toLowerCase();}).filter(Boolean)));}
+  function deskCaptureTopicValues(){return deskNormalizeTopics(deskCaptureTopics.concat(deskCaptureTopicDraft.split(/[,\n]/)));}
+  function deskRestoreCaptureMeta(){
+    deskCaptureMaterial='';deskCaptureTopics=[];deskCaptureTopicDraft='';
+    try{var m=JSON.parse(localStorage.getItem(deskDraftKey()+'-material')||'{}');deskCaptureMaterial=deskMaterial(m.type);deskCaptureTopics=deskNormalizeTopics(Array.isArray(m.tags)?m.tags:[]);deskCaptureTopicDraft=typeof m.draft==='string'?m.draft:'';}catch(e){}
+  }
   function deskRenderCaptureTags() {
     var host=document.getElementById('deskCaptureTags');if(!host)return;host.innerHTML='';
-    host.appendChild(deskTagRow(pendingForms,function(forms){pendingForms=forms;deskRenderCaptureTags();deskPersistCapture();}));
+    host.appendChild(el('div','desk-material-label','What have you got?'));
+    host.appendChild(deskMaterialRow(deskCaptureMaterial,function(next){deskCaptureMaterial=next;deskRenderCaptureTags();deskPersistCapture();}));
+    var def=deskMaterialDefs.find(function(d){return d.key===deskCaptureMaterial;});if(def)host.appendChild(el('div','desk-material-hint',def.hint));
+    var topics=document.createElement('details');topics.className='desk-capture-extra';topics.open=deskCaptureTopicsOpen;var summary=el('summary',null);summary.textContent=deskCaptureTopics.length?'Tags · '+deskCaptureTopics.join(' · '):'+ Add tags';topics.appendChild(summary);topics.ontoggle=function(){deskCaptureTopicsOpen=topics.open;};
+    var inputRow=el('div','tag-input-row'),inp=el('input','tag-input');inp.type='text';inp.placeholder='Type a tag…';inp.setAttribute('aria-label','Topic tag');inp.value=deskCaptureTopicDraft;
+    var chips=el('div','tag-suggest desk-capture-topic-chips');
+    function paint(){chips.innerHTML='';summary.textContent=deskCaptureTopics.length?'Tags · '+deskCaptureTopics.join(' · '):'+ Add tags';deskCaptureTopics.forEach(function(t){var b=el('button','tag-pick on',t+' ×');b.type='button';b.onclick=function(){deskCaptureTopics=deskCaptureTopics.filter(function(x){return x!==t;});paint();deskPersistCapture();};chips.appendChild(b);});var q=inp.value.trim().toLowerCase();allTagCounts().filter(function(x){return deskCaptureTopics.indexOf(x.tag.toLowerCase())===-1&&(!q||x.tag.toLowerCase().includes(q));}).slice(0,8).forEach(function(x){var b=el('button','tag-pick',x.tag);b.type='button';b.onclick=function(){deskCaptureTopics=deskNormalizeTopics(deskCaptureTopics.concat(x.tag));deskCaptureTopicDraft='';inp.value='';paint();deskPersistCapture();};chips.appendChild(b);});}
+    function commit(){deskCaptureTopics=deskCaptureTopicValues();deskCaptureTopicDraft='';inp.value='';paint();deskPersistCapture();}
+    inp.oninput=function(){deskCaptureTopicDraft=inp.value;paint();deskPersistCapture();};inp.onkeydown=function(e){if(e.key==='Enter'||e.key===','){e.preventDefault();commit();}};
+    var plus=el('button','tag-add-btn','+ Add');plus.type='button';plus.onclick=commit;inputRow.append(inp,plus);topics.append(inputRow,chips);paint();host.appendChild(topics);
+    var noticing=document.createElement('details');noticing.className='desk-capture-extra';noticing.open=deskCaptureNoticingOpen;noticing.appendChild(el('summary',null,'Noticing'+(deskTagText(pendingForms)?' · '+deskTagText(pendingForms):'')));noticing.ontoggle=function(){deskCaptureNoticingOpen=noticing.open;};noticing.appendChild(deskTagRow(pendingForms,function(forms){pendingForms=forms;deskRenderCaptureTags();deskPersistCapture();}));host.appendChild(noticing);
   }
   function deskRenderWorkbenchTags() {
     var host=document.getElementById('deskWorkbenchTags'),b=benchFind();if(!host||!b)return;host.innerHTML='';
     host.appendChild(deskTagRow(b.forms,function(forms){b.forms=forms;b.touched=Date.now();save();deskRenderWorkbenchTags();}));
+    var material=document.getElementById('deskWorkbenchMaterial');if(material){material.innerHTML='';material.appendChild(el('div','desk-material-label','Material'));material.appendChild(deskMaterialRow(deskMaterial(b.materialType),function(next){if(next)b.materialType=next;else delete b.materialType;save();deskRenderWorkbenchTags();}));}
   }
   function deskChangeSessionForms(s,forms) {
     s.forms=deskForms(forms);s.updated=Date.now();
@@ -8261,7 +8316,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   }
   function deskDraftKey() { return deskTrial ? deskTrialKey+'-capture' : KEY+'-capture-'+(sbUser ? sbUser.id : 'device'); }
   function deskPersistCapture() {
-    try { localStorage.setItem(deskDraftKey(),draft.value); localStorage.setItem(deskDraftKey()+'-forms',JSON.stringify(pendingForms)); document.getElementById('deskCaptureStatus').textContent=draft.value ? 'Draft saved on this device' : ''; }
+    try { localStorage.setItem(deskDraftKey(),draft.value); localStorage.setItem(deskDraftKey()+'-forms',JSON.stringify(pendingForms)); localStorage.setItem(deskDraftKey()+'-material',JSON.stringify({type:deskCaptureMaterial,tags:deskCaptureTopics,draft:deskCaptureTopicDraft})); document.getElementById('deskCaptureStatus').textContent=draft.value ? 'Draft saved on this device' : ''; }
     catch(e) { document.getElementById('deskCaptureStatus').textContent='Draft could not save. Keep this page open.'; }
     deskRenderWordCounts();
   }
@@ -8548,10 +8603,10 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     draft.addEventListener('blur',function(){setTimeout(function(){if(!host.contains(document.activeElement))setActive(false);},0);});
     host.addEventListener('pointerdown',function(e){
       var button=e.target.closest('button');
-      if(active && button && button!==done){e.preventDefault();draft.focus({preventScroll:true});}
+      if(active && button && button!==done && !button.closest('#deskCaptureTags')){e.preventDefault();draft.focus({preventScroll:true});}
     });
     host.addEventListener('click',function(e){
-      if(active && e.target.closest('button') && e.target.closest('button')!==done)draft.focus({preventScroll:true});
+      if(active && e.target.closest('button') && e.target.closest('button')!==done && !e.target.closest('#deskCaptureTags'))draft.focus({preventScroll:true});
     });
     if(viewport){viewport.addEventListener('resize',update);viewport.addEventListener('scroll',update);}
     window.addEventListener('resize',update);
@@ -8572,6 +8627,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     draft.placeholder='Catch the thought…';draft.setAttribute('aria-label','Capture a funny thought');document.getElementById('addBtn').textContent='Save thought';
     try{draft.value=localStorage.getItem(deskDraftKey())||'';}catch(e){}
     try{pendingForms=JSON.parse(localStorage.getItem(deskDraftKey()+'-forms')||'[]');if(!Array.isArray(pendingForms))pendingForms=[];}catch(e){pendingForms=[];}
+    deskRestoreCaptureMeta();
     deskRenderWordCounts();
     var tags=el('div');tags.id='deskCaptureTags';document.getElementById('addBtn').insertAdjacentElement('beforebegin',tags);deskRenderCaptureTags();
     var wbTags=el('div');wbTags.id='deskWorkbenchTags';document.getElementById('wbBit').insertAdjacentElement('beforebegin',wbTags);
@@ -8618,7 +8674,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var bits=(state.bits||[]).map(function(x){return {entry:x,kind:'bit'};});
     return truths.concat(bits).filter(function(row){
       var worked=deskIsWorked(row.entry,row.kind);
-      return (!stuffLens||lensMatch(row.entry,stuffLens))&&(!deskOnlyStarred||row.entry.flag)&&(deskNotebookStatus==='all'||(deskNotebookStatus==='worked'?worked:!worked));
+      return (deskMaterialFilter==='all'||deskMaterial(row.entry.materialType)===(deskMaterialFilter==='unclassified'?'':deskMaterialFilter))&&(!deskTopicFilter||(row.entry.tags||[]).some(function(t){return String(t).toLowerCase()===deskTopicFilter;}))&&(!stuffLens||lensMatch(row.entry,stuffLens))&&(!deskOnlyStarred||row.entry.flag)&&(deskNotebookStatus==='all'||(deskNotebookStatus==='worked'?worked:!worked));
     }).sort(function(a,b){return (b.entry.created||0)-(a.entry.created||0);});
   }
   function deskRenderUnifiedNotebook(){
@@ -8644,8 +8700,14 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     var panel=document.getElementById('deskFilters');if(!panel)return;
     panel.hidden=deskView!=='pool';
     var pool=(state.truths||[]).concat(state.bits||[]),host=document.getElementById('deskFilterChoices');host.innerHTML='';
+    var types=document.getElementById('deskMaterialFilters');types.innerHTML='';
+    [{key:'all',label:'All material'},{key:'premise',label:'Premises'},{key:'setup',label:'Setups'},{key:'joke',label:'Jokes'},{key:'unclassified',label:'Unclassified'}].forEach(function(d){var n=d.key==='all'?pool.length:pool.filter(function(x){return deskMaterial(x.materialType)===(d.key==='unclassified'?'':d.key);}).length;var on=deskMaterialFilter===d.key,b=el('button','desk-btn'+(on?' active':''),d.label+' · '+n);b.type='button';b.setAttribute('aria-pressed',String(on));b.onclick=function(){deskMaterialFilter=d.key;render();};types.appendChild(b);});
+    host.appendChild(el('div','desk-material-label','Subject tags'));
+    var topic=document.createElement('select');topic.className='desk-topic-filter';topic.setAttribute('aria-label','Filter by subject tag');var opt=document.createElement('option');opt.value='';opt.textContent='All subjects';topic.appendChild(opt);
+    var names=deskNormalizeTopics(pool.flatMap(function(x){return x.tags||[];})).sort(function(a,b){return a.localeCompare(b);});if(deskTopicFilter&&!names.includes(deskTopicFilter))names.unshift(deskTopicFilter);names.forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;topic.appendChild(o);});topic.value=deskTopicFilter;topic.onchange=function(){deskTopicFilter=topic.value;render();};host.appendChild(topic);
+    host.appendChild(el('div','desk-material-label','Noticing'));
     host.appendChild(buildLensRow(pool,stuffLens,function(k){stuffLens=k;render();}));
-    panel.querySelector('summary').textContent='Filter'+(stuffLens?' · '+(stuffLens==='__none'?'Untagged':deskFormLabel(stuffLens)):'')+(deskOnlyStarred?' · Starred':'');
+    panel.querySelector('summary').textContent='Filter'+(deskTopicFilter?' · '+deskTopicFilter:'')+(stuffLens?' · '+(stuffLens==='__none'?'Untagged':deskFormLabel(stuffLens)):'')+(deskOnlyStarred?' · Starred':'');
     var star=document.getElementById('deskStarred');star.setAttribute('aria-pressed',String(deskOnlyStarred));star.classList.toggle('active',deskOnlyStarred);
   }
   function deskBenchGrow(node){if(!node||node===deskBenchActive)return;node.style.height='auto';node.style.height=Math.max(node.scrollHeight,node.id==='wbPad'?200:80)+'px';}
@@ -8769,7 +8831,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   function deskNotebookInit(){
     var search=document.getElementById('searchRow'),filters=document.getElementById('deskFilters');search.appendChild(filters);
     document.getElementById('deskStarred').onclick=function(){deskOnlyStarred=!deskOnlyStarred;render();};
-    document.getElementById('deskClearFilters').onclick=function(){deskOnlyStarred=false;stuffLens=null;deskNotebookStatus='all';render();};
+    document.getElementById('deskClearFilters').onclick=function(){deskOnlyStarred=false;stuffLens=null;deskNotebookStatus='all';deskMaterialFilter='all';deskTopicFilter='';render();};
     [['deskAllStatus','all'],['deskNewStatus','new'],['deskWorkedStatus','worked']].forEach(function(pair){document.getElementById(pair[0]).onclick=function(){deskNotebookStatus=pair[1];render();};});
     document.querySelector('.desk-notebook-menu').addEventListener('click',function(e){if(e.target.closest('button'))document.getElementById('deskNotebookMenu').open=false;});
     var overlay=document.getElementById('workbenchOverlay'),inner=overlay.querySelector('.notes-inner'),bit=document.getElementById('wbBit'),pad=document.getElementById('wbPad');
@@ -9021,12 +9083,12 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
   }
   function deskDetailRow(label,node){var row=el('div','desk-entry-detail');row.appendChild(el('div','desk-entry-detail-label',label));if(typeof node==='string')row.appendChild(el('div','desk-entry-detail-value',node));else row.appendChild(node);return row;}
   function deskRenderEntryExpanded(entry,kind){
-    var box=el('div','desk-entry-expanded'),formVal=el('div','desk-entry-detail-value');var forms=deskTagRow(entry.forms,function(next){entry.forms=next;entry.touched=Date.now();save();render();});forms.onclick=function(e){e.stopPropagation();};formVal.appendChild(forms);box.appendChild(deskDetailRow('Noticing',formVal));box.appendChild(deskDetailRow('Tags',deskExpandedTagControl(entry)));
+    var box=el('div','desk-entry-expanded');var material=deskMaterialRow(deskMaterial(entry.materialType),function(next){if(next)entry.materialType=next;else delete entry.materialType;save();render();});box.appendChild(deskDetailRow('Material',material));var formVal=el('div','desk-entry-detail-value');var forms=deskTagRow(entry.forms,function(next){entry.forms=next;entry.touched=Date.now();save();render();});forms.onclick=function(e){e.stopPropagation();};formVal.appendChild(forms);box.appendChild(deskDetailRow('Noticing',formVal));box.appendChild(deskDetailRow('Tags',deskExpandedTagControl(entry)));
     var acts=el('div','desk-entry-actions'),share=el('button','desk-entry-action share','Share'),develop=el('button','desk-entry-action develop','Develop →');share.onclick=function(e){e.stopPropagation();deskOpenEntryShare(entry,kind);};develop.onclick=function(e){e.stopPropagation();openWorkbench(entry.id,kind);};acts.appendChild(share);acts.appendChild(develop);box.appendChild(acts);return box;
   }
 
   deskRenderUnifiedNotebook=function(){
-    var list=document.getElementById('list');list.innerHTML='';var rows=deskUnifiedEntries();if(!rows.length){list.appendChild(el('p','desk-empty',deskNotebookStatus==='new'?'No untouched thoughts here.':deskNotebookStatus==='worked'?'Nothing worked yet.':'Nothing here yet.'));return;}var last='';
+    var list=document.getElementById('list');list.innerHTML='';var rows=deskUnifiedEntries();if(!rows.length){list.appendChild(el('p','desk-empty',deskMaterialFilter!=='all'||deskTopicFilter?'No entries match these filters.':deskNotebookStatus==='new'?'No untouched thoughts here.':deskNotebookStatus==='worked'?'Nothing worked yet.':'Nothing here yet.'));return;}var last='';
     rows.forEach(function(row){
       var entry=row.entry,day=truthDayKey(entry.created||Date.now());
       if(day!==last){
@@ -9048,7 +9110,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
       attachLongPressCopy(body,function(){return entry.text;});
       card.appendChild(body);
 
-      var meta=[deskEntryCounts(entry)],forms=deskTagText(entry.forms);
+      var meta=[deskMaterialLabel(entry.materialType),deskEntryCounts(entry)],forms=deskTagText(entry.forms);
       if(deskIsWorked(entry,row.kind)) meta.push('Worked');
       if(forms) meta.push(forms);
       var footer=el('div','desk-entry-meta-row'),details=el('button',null,open?'Hide details':'Details');
@@ -9073,7 +9135,7 @@ body.bench-typing #deskBenchLines > :not(.desk-bench-active) { display:none!impo
     document.getElementById('wbBitLabel').textContent='The entry';var pad=document.getElementById('wbPad'),padLabel=pad.previousElementSibling;if(padLabel&&padLabel.classList.contains('wb-label'))padLabel.textContent='Working notes';
     var details=document.createElement('details');details.id='deskEntryDetails';var sum=document.createElement('summary');sum.appendChild(document.createTextNode('Entry details'));sum.appendChild(el('span',null,'Noticing · Tags'));details.appendChild(sum);
     var dg1=el('div','desk-wb-detail-group');dg1.appendChild(el('div','desk-wb-detail-label','Noticing'));dg1.appendChild(document.getElementById('deskWorkbenchTags'));details.appendChild(dg1);
-    var dg2=el('div','desk-wb-detail-group');dg2.appendChild(el('div','desk-wb-detail-label','Tags'));dg2.appendChild(document.getElementById('wbTags'));details.appendChild(dg2);pad.after(details);
+    var dg2=el('div','desk-wb-detail-group');dg2.appendChild(el('div','desk-wb-detail-label','Tags'));dg2.appendChild(document.getElementById('wbTags'));details.appendChild(dg2);pad.after(details);var material=el('div','desk-workbench-material');material.id='deskWorkbenchMaterial';details.before(material);
     share.onclick=function(){saveWorkbench();deskOpenEntryShare(benchFind(),workbenchKind);};
     var original=document.getElementById('deskOriginal');if(original){original.title='Tap to edit the entry';original.setAttribute('aria-label','The entry — tap to edit');}
     var classicOpen=openWorkbench;openWorkbench=function(id,kind){deskExpandedEntry=null;classicOpen(id,kind);document.getElementById('wbTitle').textContent='Workbench';};
